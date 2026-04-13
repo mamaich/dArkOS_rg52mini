@@ -3,10 +3,16 @@
 
 ROOT_FILESYSTEM_FORMAT="btrfs"
 if [ "$ROOT_FILESYSTEM_FORMAT" == "xfs" ] || [ "$ROOT_FILESYSTEM_FORMAT" == "btrfs" ]; then
-  ROOT_FILESYSTEM_FORMAT_PARAMETERS="-f -L ROOTFS"
   if [ "$ROOT_FILESYSTEM_FORMAT" != "btrfs" ]; then
+    ROOT_FILESYSTEM_FORMAT_PARAMETERS="-f -L ROOTFS"
     ROOT_FILESYSTEM_MOUNT_OPTIONS="defaults,noatime"
   else
+    # Only disable free-space-tree if it is supported by mkfs.btrfs
+    if sudo mkfs.btrfs -O list-all 2>&1 | grep -q "free-space-tree"; then
+      ROOT_FILESYSTEM_FORMAT_PARAMETERS="-O ^free-space-tree -f -L ROOTFS"
+    else
+      ROOT_FILESYSTEM_FORMAT_PARAMETERS="-f -L ROOTFS"
+    fi
     ROOT_FILESYSTEM_MOUNT_OPTIONS="defaults,noatime,compress=zstd"
   fi
 elif [[ "$ROOT_FILESYSTEM_FORMAT" == *"ext"* ]]; then
