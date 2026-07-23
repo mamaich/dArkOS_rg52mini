@@ -2,7 +2,7 @@
 
 directory=$(dirname "$1" | cut -d "/" -f2)
 unlink /opt/hypseus-singe/roms
-ln -sfv /$directory/alg/roms2/ /opt/hypseus-singe/roms
+ln -sfv /$directory/alg/roms/ /opt/hypseus-singe/roms
 
 if [[ $1 == "/$directory/alg/Scan_for_new_games.alg" ]]
 then
