@@ -17,3 +17,9 @@ BSP/mali32/
 
 # Stale DTB backups (DTBs are now built from DTS source in the kernel tree)
 BSP/*.dtb.bak
+
+# Build artifacts left in the tree by the build scripts
+ArkOS_File_System.img
+mnt/
+prebuilts/
+*.orig
