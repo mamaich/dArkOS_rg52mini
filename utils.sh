@@ -211,7 +211,11 @@ function remove_arkbuild32() {
   return 0
 }
 
-updateapt="N"
+# One flag per chroot: a single global made the 32-bit chroot inherit the
+# 64-bit one's "already updated" state, so it never got contrib/non-free
+# and never ran apt update.
+updateapt_Arkbuild="N"
+updateapt_Arkbuild32="N"
 function install_package() {
   if [ "$1" == "32" ]; then
     NEEDED_ARCH=""
@@ -228,13 +232,14 @@ function install_package() {
   do
      sudo chroot ${CHROOT_DIR}/ dpkg -s "${libs}${NEEDED_ARCH}" &>/dev/null
      if [[ $? != "0" ]]; then
-       if [[ "$updateapt" == "N" ]]; then
+       updateapt_var="updateapt_${CHROOT_DIR}"
+       if [[ "${!updateapt_var}" == "N" ]]; then
          if test -z "$(cat ${CHROOT_DIR}/etc/apt/sources.list | grep contrib)"
          then
            sudo sed -i '/main/s//main contrib non-free non-free-firmware/' ${CHROOT_DIR}/etc/apt/sources.list
 		 fi
          sudo chroot ${CHROOT_DIR}/ apt -y update
-         updateapt="Y"
+         printf -v "${updateapt_var}" "Y"
        fi
        sudo chroot ${CHROOT_DIR}/ bash -c "DEBIAN_FRONTEND=noninteractive eatmydata apt -y install ${libs}${NEEDED_ARCH}"
        if [[ $? != "0" ]]; then
