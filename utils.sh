@@ -10,7 +10,7 @@ git config --global http.postBuffer 524288000
 # under ./prebuilts/ if /opt/toolchains exists but isn't writeable by the
 # current user (common when an old root-owned attempt left it that way).
 OPT_TOOLCHAIN_DIR="/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu"
-LOCAL_TOOLCHAIN_DIR="prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu"
+LOCAL_TOOLCHAIN_DIR="/home/mamaich/rg52/dArkOS_rg52mini/prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu"
 
 if [ -d "$OPT_TOOLCHAIN_DIR" ]; then
   : # already installed system-wide
