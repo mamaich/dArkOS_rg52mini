@@ -104,6 +104,77 @@ else
   echo "  WARNING: no aarch64 strip found, modules keep their debug info"
 fi
 
+# Second swap tier on the eMMC, behind zram.  The 256 MB GPT partition named
+# "swap" is there on these devices but ships unformatted (filled with 0xcc),
+# so it needs one mkswap before it is usable.  That is the one destructive
+# step in this whole image, so it is fenced in:
+#
+#   - the partition is found by GPT label, never by a device path, so it
+#     cannot drift onto mmcblk0p3 because someone repartitioned;
+#   - blkid must report either nothing or an existing swap.  Any filesystem
+#     down there and the script refuses and says so;
+#   - the size has to look like the partition we expect;
+#   - it must not be mounted.
+#
+# Priority 10, below zram's 100: zram takes everything it can compress and
+# only what it cannot reaches the flash.  This matters for eMMC wear.
+echo "Installing eMMC swap service..."
+sudo tee Arkbuild/usr/local/sbin/emmc-swap > /dev/null <<'EMMCEOF'
+#!/bin/sh
+# Enable the eMMC swap partition as a second tier behind zram.
+set -e
+DEV=/dev/disk/by-partlabel/swap
+
+[ -b "$DEV" ] || exit 0
+REAL=$(readlink -f "$DEV")
+grep -q "^$REAL " /proc/swaps && exit 0
+
+# Never touch something that is mounted.
+if grep -q "^$REAL " /proc/mounts; then
+    echo "emmc-swap: $REAL is mounted, refusing" >&2
+    exit 0
+fi
+
+# Never touch something that already holds a filesystem.
+TYPE=$(blkid -o value -s TYPE "$REAL" 2>/dev/null || true)
+case "$TYPE" in
+    swap) swapon "$REAL" -p 10; exit 0 ;;
+    "")   ;;   # raw, as shipped - safe to format
+    *)    echo "emmc-swap: $REAL holds $TYPE, refusing to mkswap" >&2; exit 0 ;;
+esac
+
+# Sanity-check the size before formatting: 64 MB .. 2 GB.
+SZ=$(blockdev --getsize64 "$REAL" 2>/dev/null || echo 0)
+if [ "$SZ" -lt 67108864 ] || [ "$SZ" -gt 2147483648 ]; then
+    echo "emmc-swap: $REAL is $SZ bytes, not the expected swap partition" >&2
+    exit 0
+fi
+
+echo "emmc-swap: formatting $REAL ($SZ bytes) as swap"
+mkswap -L rg52swap "$REAL" > /dev/null
+swapon "$REAL" -p 10
+EMMCEOF
+sudo chmod 755 Arkbuild/usr/local/sbin/emmc-swap
+
+sudo tee Arkbuild/etc/systemd/system/emmc-swap.service > /dev/null <<'EMMCUNITEOF'
+[Unit]
+Description=Swap on the eMMC swap partition (second tier, behind zram)
+DefaultDependencies=no
+After=local-fs.target zram-swap.service
+Before=swap.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/emmc-swap
+ExecStop=/bin/sh -c 'swapoff /dev/disk/by-partlabel/swap 2>/dev/null || true'
+
+[Install]
+WantedBy=multi-user.target
+EMMCUNITEOF
+
+call_chroot "systemctl enable emmc-swap"
+
 # Compressed swap in RAM.  The RG52 Mini has 2 GB, which Dolphin and PCSX2 can
 # exhaust; swapping to compressed RAM is far cheaper than swapping to the eMMC,
 # and costs nothing when unused.  Priority 100 deliberately outranks any
