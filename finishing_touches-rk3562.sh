@@ -84,6 +84,26 @@ EOF
   call_chroot "systemctl enable bluetooth bluealsa enable_bluetooth"
 fi
 
+# Kernel modules are built with CONFIG_DEBUG_INFO=y, same as the vendor's
+# EmuELEC config.  EmuELEC strips them while packing its squashfs; we have no
+# such step, so the DWARF rides along into the image - 97% of every .ko.
+# Measured on a trivial DVB driver: a8293.ko 359304 -> 9968 bytes.
+# --strip-debug, never a plain strip: the symbol table carries the CRCs that
+# CONFIG_MODVERSIONS=y checks at load time, and without it nothing loads -
+# including aic8800, i.e. no wifi.
+echo "Stripping debug info from kernel modules..."
+MODSTRIP="$(ls ${PWD}/prebuilts/gcc/linux-x86/aarch64/*/bin/aarch64-linux-gnu-strip 2>/dev/null | head -1)"
+if [ -z "${MODSTRIP}" ]; then
+  MODSTRIP=/opt/toolchains/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-strip
+fi
+if [ -x "${MODSTRIP}" ]; then
+  echo "  modules before: $(sudo du -sh Arkbuild/lib/modules 2>/dev/null | cut -f1)"
+  sudo find Arkbuild/lib/modules -name '*.ko' -exec "${MODSTRIP}" --strip-debug {} +
+  echo "  modules after:  $(sudo du -sh Arkbuild/lib/modules 2>/dev/null | cut -f1)"
+else
+  echo "  WARNING: no aarch64 strip found, modules keep their debug info"
+fi
+
 # Compressed swap in RAM.  The RG52 Mini has 2 GB, which Dolphin and PCSX2 can
 # exhaust; swapping to compressed RAM is far cheaper than swapping to the eMMC,
 # and costs nothing when unused.  Priority 100 deliberately outranks any
