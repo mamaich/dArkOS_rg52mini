@@ -187,7 +187,9 @@ sudo tee Arkbuild/usr/local/sbin/zram-swap > /dev/null <<'ZRAMEOF'
 # modprobe is only a fallback for a modular kernel.
 set -e
 DEV=/dev/zram0
-SIZE=1G
+SIZE=1536M        # a ceiling, not a reservation: RAM is taken as pages arrive.
+                  # Bigger means the eMMC tier below is reached later, which is
+                  # the only real lever on how much gets written to flash.
 ALGO=lz4          # lz4 trades ratio for speed, which is the right way round
                   # on four A53s; switch to zstd if RAM matters more than CPU.
 
@@ -222,7 +224,17 @@ WantedBy=multi-user.target
 ZRAMUNITEOF
 
 # Swapping into RAM is cheap, so lean on it harder than the default of 60.
-echo "vm.swappiness = 100" | sudo tee Arkbuild/etc/sysctl.d/99-zram.conf > /dev/null
+sudo tee Arkbuild/etc/sysctl.d/99-zram.conf > /dev/null <<SYSCTLEOF
+# Swapping into compressed RAM is cheap, so lean on it harder than the
+# default of 60. The eMMC tier sits at priority 10 and only sees what zram
+# could not take, so a high value here does not translate into flash writes.
+vm.swappiness = 100
+
+# One page per swap-in instead of eight. The default assumes a rotating disk
+# where reading ahead is nearly free; with zram every extra page costs a
+# decompression that is usually wasted.
+vm.page-cluster = 0
+SYSCTLEOF
 
 call_chroot "systemctl enable zram-swap"
 
