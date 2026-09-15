@@ -97,6 +97,25 @@ PRESEED
       chmod 777 ArkOS-Kodi-Build-alt.sh
       "
 
+    # kodi-install is cloned at master, and it has grown patches of its own that
+    # now land on the same files as ours.  Both failures in the build log come
+    # from that:
+    #
+    #   0017-kodi-patch-mali-egl-display is our own kodi-patch-002 - upstream
+    #   adopted it ("Fix egl for g29p1 blob thanks to patch from bmdhacks dArkOS
+    #   rg52mini repo", 25d99273).  Applying both makes patch report the second
+    #   one as already applied.
+    #
+    #   0016-miniloong-internal-only-rotate270 rotates a different device's panel
+    #   the other way and edits the same DRM paths our 90-degree rotation does.
+    #   That is the hunk that actually fails, and with it Kodi never builds:
+    #   "DRMAtomic.cpp Hunk #1 FAILED" then "tar: Arkbuild/opt/kodi: Cannot stat".
+    #
+    # Drop both and keep ours, the same way build_retroarch.sh drops the
+    # miniloong patches from the 32-bit core_builds.
+    sudo rm -f Arkbuild/home/ark/kodi/kodi-install/patches/0016-miniloong-internal-only-rotate270.patch
+    sudo rm -f Arkbuild/home/ark/kodi/kodi-install/patches/0017-kodi-patch-mali-egl-display.patch
+
     # All RK3562 devices: fix EGL display init for Mali g29p1. Kodi hardcodes
     # EGL_MESA_platform_gbm which Mali doesn't advertise; fallback eglGetDisplay
     # with a GBM device pointer also fails. Patch uses EGL_KHR_platform_gbm
