@@ -125,7 +125,17 @@ sudo tee Arkbuild/usr/local/sbin/emmc-swap > /dev/null <<'EMMCEOF'
 set -e
 DEV=/dev/disk/by-partlabel/swap
 
-[ -b "$DEV" ] || exit 0
+# udev may not have laid out /dev/disk/by-partlabel yet. Wait, briefly, rather
+# than exiting quietly and leaving swap off with nothing to show for it.
+i=0
+while [ ! -b "$DEV" ] && [ $i -lt 30 ]; do
+    sleep 1
+    i=$((i + 1))
+done
+if [ ! -b "$DEV" ]; then
+    echo "emmc-swap: no partition labelled 'swap' after ${i}s, nothing to do" >&2
+    exit 0
+fi
 REAL=$(readlink -f "$DEV")
 grep -q "^$REAL " /proc/swaps && exit 0
 
@@ -159,9 +169,11 @@ sudo chmod 755 Arkbuild/usr/local/sbin/emmc-swap
 sudo tee Arkbuild/etc/systemd/system/emmc-swap.service > /dev/null <<'EMMCUNITEOF'
 [Unit]
 Description=Swap on the eMMC swap partition (second tier, behind zram)
-DefaultDependencies=no
-After=local-fs.target zram-swap.service
-Before=swap.target
+# No DefaultDependencies=no here: this one needs /dev/disk/by-partlabel, which
+# only exists once udev has run, and the default ordering after sysinit.target
+# is what guarantees that.
+Wants=systemd-udev-settle.service
+After=systemd-udev-settle.service local-fs.target zram-swap.service
 
 [Service]
 Type=oneshot
