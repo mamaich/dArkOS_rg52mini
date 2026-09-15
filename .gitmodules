@@ -3,7 +3,7 @@
 	url = https://github.com/mamaich/kernel_rk3562.git
 [submodule "rk3562_core_builds"]
 	path = rk3562_core_builds
-	url = git@github.com:bmdhacks/rk3566_core_builds.git
+	url = https://github.com/mamaich/rk3566_core_builds.git
 [submodule "bootloader"]
 	path = bootloader
-	url = git@github.com:bmdhacks/aislpc-bootloader-tool.git
+	url = https://github.com/bmdhacks/aislpc-bootloader-tool.git
