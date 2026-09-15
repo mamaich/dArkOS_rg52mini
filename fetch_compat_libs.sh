@@ -5,6 +5,8 @@
 # Requires: utils.sh (verify_action, call_chroot), BUILD_ARMHF env var
 # ==============================================================================
 
+COMPAT_LIBS_MISSING=""
+
 install_lib() {
     local url="$1"
     local lib_name="$2"
@@ -18,8 +20,15 @@ install_lib() {
     #verify_action
     dpkg --fsys-tarfile "$deb_arm64" | tar -xO --wildcards "*$wildcard*" > "$lib_name"
     if [ ! -s "$lib_name" ]; then
-        echo "[Error] Extraction failed for $lib_name"
-        exit 1
+        # These are optional shims for old PortMaster ports. Several of the
+        # URLs below pin versions that Debian security has since superseded and
+        # removed, so a 404 here is expected to happen again as bullseye ages.
+        # Warn and carry on: one missing shim is not worth discarding a build
+        # that takes most of a day. COMPAT_LIBS_MISSING is reported at the end.
+        echo "[WARNING] could not fetch $lib_name (arm64) from $url - skipping"
+        COMPAT_LIBS_MISSING="${COMPAT_LIBS_MISSING} ${lib_name}"
+        rm -f "$lib_name" "$deb_arm64"
+        return 0
     fi
     sudo mv -f "$lib_name" Arkbuild/usr/lib/aarch64-linux-gnu/
     call_chroot "chown root:root /usr/lib/aarch64-linux-gnu/$lib_name"
@@ -33,8 +42,10 @@ install_lib() {
         #verify_action
         dpkg --fsys-tarfile "$deb_armhf" | tar -xO --wildcards "*$wildcard*" > "$lib_name"
         if [ ! -s "$lib_name" ]; then
-            echo "[Error] Extraction failed for $lib_name (armhf)"
-            exit 1
+            echo "[WARNING] could not fetch $lib_name (armhf) - skipping"
+            COMPAT_LIBS_MISSING="${COMPAT_LIBS_MISSING} ${lib_name}:armhf"
+            rm -f "$lib_name" "$deb_armhf"
+            return 0
         fi
         sudo mv -f "$lib_name" Arkbuild/usr/lib/arm-linux-gnueabihf/
         call_chroot "chown root:root /usr/lib/arm-linux-gnueabihf/$lib_name"
@@ -147,3 +158,8 @@ install_lib \
     "http://archive.debian.org/debian/pool/main/libs/libssh/libssh-gcrypt-4_0.8.7-1+deb10u1_arm64.deb" \
     "libssh-gcrypt.so.4" "libssh-gcrypt.so.4"
 
+if [ -n "${COMPAT_LIBS_MISSING}" ]; then
+    echo ""
+    echo "[WARNING] compatibility libraries missing from this image:${COMPAT_LIBS_MISSING}"
+    echo "          PortMaster ports that need them will not start."
+fi
