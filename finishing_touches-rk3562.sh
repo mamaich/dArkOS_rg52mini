@@ -750,3 +750,7 @@ sync
 sudo rm -rf ${fat32_mountpoint}
 
 echo "Finishing touches complete for RK3562"
+
+# Report what did not make it into the image, while Arkbuild is still mounted
+# and before cleanup_filesystem.sh removes the sources. Informational only.
+bash scripts/audit-components.sh Arkbuild build.log
