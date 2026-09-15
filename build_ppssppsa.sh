@@ -24,7 +24,17 @@ else
 	    rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/ppsspp-patch-010-rk3562-vulkan-rotation.patch
 	  fi
 	fi
+	# PPSSPP is the only emulator we build from source that still picks up
+	# Debian gcc's default -fstack-protector-strong and _FORTIFY_SOURCE=2:
+	# RetroArch, Flycast, ScummVM, PCSX2 and Mednafen all come out without
+	# them because their own build systems set the flags. Those checks land
+	# in the JIT and GPU hot paths, and this is an offline handheld that only
+	# runs ROMs its owner put there, so drop them here too.
+	# CMake seeds CMAKE_{C,CXX}_FLAGS from these on the first configure, and
+	# builds-alt.sh always clones a fresh tree, so exporting them is enough.
 	call_chroot "cd /home/ark &&
+	  export CFLAGS=\"\${CFLAGS} -fno-stack-protector -U_FORTIFY_SOURCE\" &&
+	  export CXXFLAGS=\"\${CXXFLAGS} -fno-stack-protector -U_FORTIFY_SOURCE\" &&
 	  cd ${CHIPSET}_core_builds &&
 	  chmod 777 builds-alt.sh &&
 	  eatmydata ./builds-alt.sh ppsspp
