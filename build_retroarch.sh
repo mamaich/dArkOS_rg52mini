@@ -10,6 +10,7 @@ fi
 if [ -f "Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.commit)" == "${RETROARCH_TAG}" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.tar.gz
 else
+	RA_TRIES=0
 	while true
 	do
 	  # Restore core_builds patches to pristine state before device-specific modifications.
@@ -32,6 +33,12 @@ else
 		eatmydata ./builds-alt.sh retroarch
 		"
 	  if [[ "$?" -ne "0" ]]; then
+		RA_TRIES=$((RA_TRIES+1))
+		if [ "$RA_TRIES" -ge 3 ]; then
+			echo "ERROR: retroarch step failed $RA_TRIES times in a row; giving up"
+			echo "       instead of retrying forever. See the patch errors above."
+			break
+		fi
 		sleep 30
 		continue
 	  else
@@ -145,6 +152,7 @@ sudo rm -rf Arkbuild/home/ark/.config/retroarch/shaders/shaders_glsl/Sharp-Shimm
 if [ -f "Arkbuild_package_cache/${CHIPSET}/easyrpg.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/easyrpg.commit)" = "$(curl -s https://raw.githubusercontent.com/christianhaitian/${CORE_BUILDS_CHIPSET}_core_builds/refs/heads/master/scripts/easyrpg.sh | grep -oP '(?<=tag=").*?(?=")')" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/easyrpg.tar.gz
 else
+	RA_TRIES=0
 	while true
 	do
 	  call_chroot "cd /home/ark &&
@@ -153,6 +161,12 @@ else
 		eatmydata ./builds-alt.sh easyrpg
 		"
 	  if [[ "$?" -ne "0" ]]; then
+		RA_TRIES=$((RA_TRIES+1))
+		if [ "$RA_TRIES" -ge 3 ]; then
+			echo "ERROR: retroarch step failed $RA_TRIES times in a row; giving up"
+			echo "       instead of retrying forever. See the patch errors above."
+			break
+		fi
 		sleep 30
 		continue
 	  else
@@ -223,16 +237,27 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 	else
 		setup_arkbuild32
 		sudo chroot Arkbuild32/ mkdir -p /home/ark
+		RA_TRIES=0
 		while true
 		do
 		  # Restore core_builds patches to pristine state before device-specific modifications.
 		  # Prevents cross-contamination when building multiple devices with shared Arkbuild32.
 		  sudo git -C Arkbuild32/home/ark/${CHIPSET}_core_builds checkout -- patches/ 2>/dev/null || true
-		  # For rk3562: the 32-bit chroot's core_builds was cloned from upstream
-		  # rk3566_core_builds (by build_sdl2.sh) which lacks the rk3562-specific
-		  # rotation patches (0000, 0008). Overlay them from the local fork.
-		  if [ "$CHIPSET" == "rk3562" ]; then
-		    sudo cp rk3562_core_builds/patches/retroarch-patch-* Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/
+		  # For rk3562 the 32-bit chroot used to get core_builds from a plain
+		  # "git clone christianhaitian/rk3566_core_builds" with the rk3562 patches
+		  # copied on top.  That leaves the union of two patch sets: the miniloong
+		  # patches from upstream touch the same lines of drm_go2_ctx.c as
+		  # retroarch-patch-0000-rk3562-rotation-90, so patch reports
+		  # "Reversed (or previously applied) patch detected", builds-alt.sh stops,
+		  # and the retry loop above span forever.  Use the very same local fork the
+		  # 64-bit build uses, so both chroots see one consistent patch set.
+		  if [ "$CHIPSET" == "rk3562" ] && [ ! -f "Arkbuild32/home/ark/${CHIPSET}_core_builds/.darkos-local-fork" ]; then
+		    echo "Replacing the 32-bit chroot's core_builds with the local rk3562 fork..."
+		    sudo rm -rf Arkbuild32/home/ark/${CHIPSET}_core_builds
+		    sudo mkdir -p Arkbuild32/home/ark
+		    sudo cp -a rk3562_core_builds Arkbuild32/home/ark/${CHIPSET}_core_builds
+		    sudo touch Arkbuild32/home/ark/${CHIPSET}_core_builds/.darkos-local-fork
+		    sudo chown -R 1000:1000 Arkbuild32/home/ark/${CHIPSET}_core_builds
 		  fi
 		  # Copy dArkOS-specific RetroArch patches into core_builds patches dir (32-bit)
 		  if ls retroarch-patches/retroarch-patch-* 1>/dev/null 2>&1; then
@@ -254,6 +279,12 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 			./builds-alt.sh retroarch
 			"
 		  if [[ "$?" -ne "0" ]]; then
+			RA_TRIES=$((RA_TRIES+1))
+			if [ "$RA_TRIES" -ge 3 ]; then
+				echo "ERROR: retroarch step failed $RA_TRIES times in a row; giving up"
+				echo "       instead of retrying forever. See the patch errors above."
+				break
+			fi
 			sleep 30
 			continue
 		  else
