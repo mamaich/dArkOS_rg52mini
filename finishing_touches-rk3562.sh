@@ -84,6 +84,57 @@ EOF
   call_chroot "systemctl enable bluetooth bluealsa enable_bluetooth"
 fi
 
+# Compressed swap in RAM.  The RG52 Mini has 2 GB, which Dolphin and PCSX2 can
+# exhaust; swapping to compressed RAM is far cheaper than swapping to the eMMC,
+# and costs nothing when unused.  Priority 100 deliberately outranks any
+# on-disk swap (the rg43h fstab entry uses pri=10), so zram always fills first
+# and the slow device only takes what zram could not compress.
+echo "Installing zram swap..."
+sudo tee Arkbuild/usr/local/sbin/zram-swap > /dev/null <<'ZRAMEOF'
+#!/bin/sh
+# Bring up /dev/zram0 as swap.  CONFIG_ZRAM=y, so the device already exists;
+# modprobe is only a fallback for a modular kernel.
+set -e
+DEV=/dev/zram0
+SIZE=1G
+ALGO=lz4          # lz4 trades ratio for speed, which is the right way round
+                  # on four A53s; switch to zstd if RAM matters more than CPU.
+
+[ -e "$DEV" ] || modprobe zram num_devices=1 2>/dev/null || true
+[ -e "$DEV" ] || exit 0
+grep -q "^$DEV " /proc/swaps && exit 0
+
+swapoff "$DEV" 2>/dev/null || true
+echo 1 > /sys/block/zram0/reset 2>/dev/null || true
+echo "$ALGO" > /sys/block/zram0/comp_algorithm 2>/dev/null || true
+echo "$SIZE" > /sys/block/zram0/disksize
+mkswap "$DEV" > /dev/null
+swapon "$DEV" -p 100
+ZRAMEOF
+sudo chmod 755 Arkbuild/usr/local/sbin/zram-swap
+
+sudo tee Arkbuild/etc/systemd/system/zram-swap.service > /dev/null <<'ZRAMUNITEOF'
+[Unit]
+Description=Compressed swap in RAM (zram)
+DefaultDependencies=no
+After=local-fs.target
+Before=swap.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/zram-swap
+ExecStop=/sbin/swapoff /dev/zram0
+
+[Install]
+WantedBy=multi-user.target
+ZRAMUNITEOF
+
+# Swapping into RAM is cheap, so lean on it harder than the default of 60.
+echo "vm.swappiness = 100" | sudo tee Arkbuild/etc/sysctl.d/99-zram.conf > /dev/null
+
+call_chroot "systemctl enable zram-swap"
+
 # Sleep script and set default SuspendState to freeze
 sudo mkdir -p Arkbuild/usr/lib/systemd/system-sleep
 sudo cp scripts/sleep.${CHIPSET} Arkbuild/usr/lib/systemd/system-sleep/sleep
