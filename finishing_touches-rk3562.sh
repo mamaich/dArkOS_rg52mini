@@ -227,13 +227,17 @@ SIZE=1536M        # a ceiling, not a reservation: RAM is taken as pages arrive.
                   # Bigger means the eMMC tier below is reached later, which is
                   # the only real lever on how much gets written to flash.
 # Preference order, first one the kernel offers wins. Writing a name that is
-# not in comp_algorithm fails silently and leaves the default in place, which
-# is how the first build ended up on lzo-rle by accident: this kernel has
-# "lzo lzo-rle zstd" and no lz4 at all. lzo-rle is a fine answer - it trades
-# ratio for speed, which is the right way round on four A53s - but it should
-# be a decision, not a fallback. Put zstd first instead if holding more in RAM
-# matters more than the CPU it costs.
-ALGO_PREF="lz4 lzo-rle zstd lzo"
+# not in comp_algorithm fails silently and leaves the default in place, so the
+# list is walked against what the kernel actually reports.
+#
+# lzo-rle leads because speed is what matters here: four A53s are the scarce
+# resource, and zram only earns its keep if compressing costs less than the
+# fault it avoids. It has been the kernel's own default since 5.1 for the same
+# reason. lz4 is next (the kernel now carries it, see CONFIG_CRYPTO_LZ4), then
+# zstd, which compresses appreciably better and would push the eMMC tier
+# further out of reach - move it to the front if RAM turns out to be tighter
+# than CPU.
+ALGO_PREF="lzo-rle lz4 zstd lzo"
 
 [ -e "$DEV" ] || modprobe zram num_devices=1 2>/dev/null || true
 [ -e "$DEV" ] || exit 0
