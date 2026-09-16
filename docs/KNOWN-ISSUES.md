@@ -16,7 +16,7 @@ that names them, so start there rather than reading 80 000 lines:
 
 ## Components that do not build
 
-Four fail the same way: a patch in `rk3562_core_builds/patches/` no longer
+Three fail the same way: a patch in `rk3562_core_builds/patches/` no longer
 applies to its upstream, `builds-alt.sh` stops, and the copy that follows
 finds nothing.
 
@@ -25,33 +25,35 @@ finds nothing.
 | ECWolf | `ecwolf-patch-002-add-exit-menu.patch` |
 | Hypseus Singe | `hypseussinge-patch-0001-buildfix.patch` |
 | GameTank | `gametank-patch-001-disable-joystick.patch` |
-| Yabasanshiro | upstream repository is gone, see below |
 
-Fixing the first three means working out what changed upstream and rewriting
-the hunks — one job each, not a batch. They are all secondary emulators.
+Fixing them means working out what changed upstream and rewriting the hunks —
+one job each, not a batch. They are all secondary emulators.
 
-**Yabasanshiro is different.** `scripts/yabasanshirosa.sh` clones
-`https://github.com/devmiyax/yabause` at tag `pi4-1-9-0`, and the repository
-no longer exists — git asks for a username and the build reports it as a
-network problem. There is no drop-in replacement; none of the surviving
-mirrors carries that tag:
+Yabasanshiro used to be a fourth, for a different reason, and is now building
+again — see below.
+
+**Yabasanshiro was different, and is now fixed.** `scripts/yabasanshirosa.sh`
+cloned `https://github.com/devmiyax/yabause` at tag `pi4-1-9-0`, and that
+repository no longer exists — git asks for a username and the build reports it
+as a network problem. No surviving mirror carries the tag:
 
     devmiyax/yabause                            gone
     sydarn/yabasanshiro                         no tags at all
-    Mechafatnick/YabaSanshiroPi                 no such tag
+    Mechafatnick/YabaSanshiroPi                 no tags at all
     pirrypirrypirry/yabasanshiro-pirry-release  four tags, not this one
     gfhhhg/lr-yabasanshiro                      no such tag
     libretro/yabause                            a different project
 
-Picking another fork means picking an arbitrary revision and checking the
-recipe still applies. The libretro Saturn core is built and works, so only the
-standalone is missing.
+It is now built from `Mechafatnick/YabaSanshiroPi`, pinned to commit
+`91990f8` (2021-09-04, roughly the 1.9.0 era) rather than to master, so it stays
+reproducible. Four of the eleven patches apply; the other seven are skipped for
+reasons rather than convenience, listed in the recipe. `YAB_WANT_VULKAN=OFF`,
+because that fork has no `yabause/src/vulkan` at all — not because the device
+lacks Vulkan, which it has. The `n2.cmake` toolchain file stays: it is the
+aarch64 one, and `pi4.cmake` would build for armv7.
 
-Watch out for the cache when changing any of this: `build_yabasanshirosa.sh`
-takes its cache key by curling the **upstream** christianhaitian script for its
-`TAG=`, not our fork's. Change the tag here and the key does not move, so a
-stale tarball is restored over the new build. The same trap applies to any
-component whose TAG we edit.
+It compiles, first try, with no errors on the step: a 3.9 MB stripped aarch64
+binary. Whether it runs on the device is untested.
 
 ## Kodi
 
