@@ -194,20 +194,27 @@ else
 		[ -d freej2me-plus ] && rm -rf freej2me-plus || echo \"Cloning into freej2me-plus\" &&
 		git clone --recursive https://github.com/TASEmulators/freej2me-plus.git &&
 		cd freej2me-plus &&
-		sed -i 's/freej2me-lr.jar/freej2me-plus-lr.jar/' build.xml &&
-		sed -i 's/1.6/1.8/' build.xml &&
+		sed -i '/source\.version\|target\.version/s/value=\"[^\"]*\"/value=\"1.8\"/' build.xml &&
 		ant
 		"
    sudo mkdir -p Arkbuild/usr/local/bin/freej2me_files/
-   sudo cp Arkbuild/home/ark/${CHIPSET}_core_builds/freej2me-plus/build/freej2me-plus-lr.jar Arkbuild/usr/local/bin/freej2me_files/
+   # ant builds freej2me_plus-lr.jar, with an underscore; everything downstream
+   # wants freej2me-plus-lr.jar, with a hyphen. Rename on the way in rather than
+   # patching build.xml, which is where the previous attempt at this went stale.
+   sudo cp Arkbuild/home/ark/${CHIPSET}_core_builds/freej2me-plus/build/freej2me_plus-lr.jar \
+           Arkbuild/usr/local/bin/freej2me_files/freej2me-plus-lr.jar
    if [ -f "Arkbuild_package_cache/${CHIPSET}/freej2me-plus.tar.gz" ]; then
 	  sudo rm -f Arkbuild_package_cache/${CHIPSET}/freej2me-plus.tar.gz
    fi
    if [ -f "Arkbuild_package_cache/${CHIPSET}/freej2me-plus.commit" ]; then
 	  sudo rm -f Arkbuild_package_cache/${CHIPSET}/freej2me-plus.commit
    fi
-   sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/freej2me-plus.tar.gz Arkbuild/usr/local/bin/freej2me_files/freej2me-plus-lr.jar
-   sudo curl --silent https://api.github.com/repos/TASEmulators/freej2me-plus/releases | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' > Arkbuild_package_cache/${CHIPSET}/freej2me-plus.commit
+   if sudo test -s Arkbuild/usr/local/bin/freej2me_files/freej2me-plus-lr.jar; then
+     sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/freej2me-plus.tar.gz Arkbuild/usr/local/bin/freej2me_files/freej2me-plus-lr.jar
+     sudo curl --silent https://api.github.com/repos/TASEmulators/freej2me-plus/releases | grep '"tag_name":' | head -n 1 | sed -E 's/.*"([^"]+)".*/\1/' > Arkbuild_package_cache/${CHIPSET}/freej2me-plus.commit
+   else
+     echo "freej2me-plus produced no jar - not caching, so the next build retries."
+   fi
 fi
 if [ -f "Arkbuild_package_cache/${CHIPSET}/freej2me.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/freej2me.commit)" == "$(curl -s https://api.github.com/repos/hex007/freej2me/commits/master | jq -r '.sha')" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/freej2me.tar.gz
