@@ -56,6 +56,26 @@ fi
 # Mali GPU blob (g29p1) is installed by build_deps.sh from BSP/mali*.tar.gz
 # Only the DTB and firmware are required from BSP
 
+# Boot logo. U-Boot draws nothing on this device: the device tree it runs with
+# is the Rockchip evaluation-board stub, with no dsi, panel, vop or route nodes,
+# so logo.bmp in the resource partition and logo.bmp on the FAT partition were
+# both tried and both did nothing. The first thing that lights the panel is the
+# kernel, so the logo comes from CONFIG_LOGO and fbcon draws it as soon as the
+# framebuffer is up.
+#
+# The artwork is the vendor's, taken from the EmuELEC boot partition, already
+# rotated counter-clockwise to 1280x720 so that fbcon=rotate:1 turns it back
+# upright. It is stored gzipped because pnmtologo only accepts text PNM, which
+# is 8.3 MB uncompressed and 81 KB packed.
+LOGO_SRC="${BSP_PATH}/logo_linux_clut224.ppm.gz"
+LOGO_DST="${KERNEL_SRC_PATH}/drivers/video/logo/logo_linux_clut224.ppm"
+if [ -f "${LOGO_SRC}" ]; then
+  echo "Installing boot logo..."
+  gzip -dc "${LOGO_SRC}" > "${LOGO_DST}"
+else
+  echo "WARNING: ${LOGO_SRC} missing - the build will show the stock penguin"
+fi
+
 # Ensure kernel .config exists
 if [ ! -f "${KERNEL_SRC_PATH}/.config" ]; then
   echo "Generating kernel .config from ${UNIT}_defconfig..."

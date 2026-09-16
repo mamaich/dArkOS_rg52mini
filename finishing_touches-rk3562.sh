@@ -14,7 +14,20 @@
 # Create extlinux.conf for boot
 sudo mkdir -p ${mountpoint}/extlinux
 # Build kernel command line — portrait-panel devices need fbcon rotation
-KCMD_BASE="root=/dev/mmcblk1p4 rootfstype=btrfs initrd=/uInitrd rootwait rw fsck.repair=yes quiet splash net.ifnames=0 console=ttyFIQ0,1500000 console=tty1 plymouth.ignore-serial-consoles consoleblank=0 loglevel=0"
+# console=tty1 is gone on purpose. With it, every kernel message is printed
+# onto the panel, straight over the boot logo. Messages now go only to the
+# serial port, which is where anyone debugging this will be looking anyway.
+#
+# loglevel is 5 rather than 0 because fbcon refuses to draw the logo at all
+# when console_loglevel <= CONSOLE_LOGLEVEL_QUIET, which is 4:
+#   fbcon.c: if (logo_shown < 0 && console_loglevel <= CONSOLE_LOGLEVEL_QUIET)
+#                logo_shown = FBCON_LOGO_DONTSHOW;
+# Nothing extra reaches the screen from raising it, since the panel is no
+# longer a console.
+#
+# vt.global_cursor_default=0 hides the blinking cursor the logo would
+# otherwise sit behind (rg43h already carries this on rk3566).
+KCMD_BASE="root=/dev/mmcblk1p4 rootfstype=btrfs initrd=/uInitrd rootwait rw fsck.repair=yes quiet splash net.ifnames=0 console=ttyFIQ0,1500000 plymouth.ignore-serial-consoles consoleblank=0 vt.global_cursor_default=0 loglevel=5"
 if [ "$UNIT" == "rg52mini" ]; then
   KCMD_VIDEO="video=HDMI-A-1:1280x720@60 fbcon=rotate:1"
 else
