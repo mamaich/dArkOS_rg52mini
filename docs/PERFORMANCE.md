@@ -126,9 +126,17 @@ costing scheduling; the `-mcpu` was potentially fatal.
 
 ### PPSSPP without hardening
 
-`-fno-stack-protector -U_FORTIFY_SOURCE` for PPSSPPSDL only, passed through
-`CFLAGS`/`CXXFLAGS` rather than by patching upstream's CMakeLists, so it
-survives a version bump.
+`-fno-stack-protector -U_FORTIFY_SOURCE` for PPSSPPSDL only, on the two
+`-DCMAKE_{C,CXX}_FLAGS` arguments in `rk3562_core_builds/scripts/ppsspp.sh`.
+
+They started out exported as `CFLAGS`/`CXXFLAGS` from `build_ppssppsa.sh`,
+which did nothing at all: cmake reads those environment variables only when
+`CMAKE_C_FLAGS`/`CMAKE_CXX_FLAGS` are unset, and that script sets both
+explicitly. Nothing failed, nothing was logged — the build just quietly kept
+the hardening. It was caught by reading `flags.make` out of a running build,
+which is the way to check this kind of change:
+
+    build/CMakeFiles/PPSSPPSDL.dir/flags.make
 
 The reasoning is narrow and does not generalise: this device runs only software
 from this image and never downloads executables, and PPSSPP's inner loops are

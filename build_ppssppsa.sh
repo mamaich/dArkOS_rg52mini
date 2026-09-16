@@ -30,11 +30,13 @@ else
 	# them because their own build systems set the flags. Those checks land
 	# in the JIT and GPU hot paths, and this is an offline handheld that only
 	# runs ROMs its owner put there, so drop them here too.
-	# CMake seeds CMAKE_{C,CXX}_FLAGS from these on the first configure, and
-	# builds-alt.sh always clones a fresh tree, so exporting them is enough.
+	# The flags live in rk3562_core_builds/scripts/ppsspp.sh, on the two
+	# -DCMAKE_{C,CXX}_FLAGS arguments. Exporting CFLAGS/CXXFLAGS here does
+	# nothing: cmake only falls back to the environment when those cache
+	# variables are unset, and that script sets both. This was exactly that
+	# mistake until 2026-09-16, when the generated flags.make showed
+	# -mtune=cortex-a53 present and -fno-stack-protector absent.
 	call_chroot "cd /home/ark &&
-	  export CFLAGS=\"\${CFLAGS} -fno-stack-protector -U_FORTIFY_SOURCE\" &&
-	  export CXXFLAGS=\"\${CXXFLAGS} -fno-stack-protector -U_FORTIFY_SOURCE\" &&
 	  cd ${CHIPSET}_core_builds &&
 	  chmod 777 builds-alt.sh &&
 	  eatmydata ./builds-alt.sh ppsspp
