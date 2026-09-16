@@ -117,6 +117,43 @@ built-in microphone, which is dead in hardware (this reproduces under EmuELEC
 with the vendor's own device tree, so it is not a firmware problem), but it
 does affect a headset.
 
+## The graphics stack
+
+Read off the blobs and the config rather than from documentation, 2026-09-16.
+
+| | |
+|---|---|
+| OpenGL ES | 3.2, plus legacy ES-CM 1.1 |
+| EGL | 1.5, with the Mali AFBC/AFRC framebuffer-compression extensions |
+| Vulkan | 1.3, through the same blob |
+| OpenCL | exported by the blob |
+| Desktop OpenGL | software only — see below |
+
+The hardware path is ARM's `libmali-bifrost-g52-g29p1.so`, 57 MB, installed as
+`libMali.so` with `libEGL`, `libGLESv2`, `libgbm` and friends symlinked onto it
+by `build_deps.sh`. Vulkan comes from the same file: it exports
+`vk_icdGetInstanceProcAddr`, and `finishing_touches` installs
+`BSP/vulkan/rk_vk.json` (`api_version 1.3.276`) pointing at it, a vendor
+`libvulkan.so.1.3.274` loader and `vulkaninfo`. `cleanup_filesystem.sh` deletes
+the Mesa ICDs so only the Mali one is left.
+
+**There is no hardware desktop OpenGL, and there cannot be.** ARM's blob does
+not implement it — no `glBegin`, no GLX. Mesa is installed and provides
+`libGL.so.1`, `libGLX_mesa` and a `dri` directory that includes
+`panfrost_dri.so`, but panfrost cannot attach to this kernel: the GPU is driven
+by ARM's own kbase (`CONFIG_MALI_MIDGARD=y`, the tree that also covers Bifrost)
+and `CONFIG_DRM_PANFROST` is not set. So anything that asks for desktop GL gets
+llvmpipe, which will report a respectable OpenGL 4.5 and rasterise it on four
+Cortex-A53 cores.
+
+The practical rule: an emulator that speaks GLES or Vulkan runs on the GPU, and
+one that needs desktop GL will start and be unplayable. That is why the recipes
+here pass `USE_EGL=ON` and `USING_FBDEV=ON`.
+
+The 32-bit armhf side is GLES 3.2 as well, but from the older `g13p0` blob.
+`build_deps.sh` picks it deliberately: the 32-bit build of g29p1 segfaults
+inside libmali during GL and shader setup (SEGV_ACCERR).
+
 ## Boot logo
 
 U-Boot draws nothing on this device: the device tree it runs with is the
