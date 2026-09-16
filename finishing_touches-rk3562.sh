@@ -226,8 +226,14 @@ DEV=/dev/zram0
 SIZE=1536M        # a ceiling, not a reservation: RAM is taken as pages arrive.
                   # Bigger means the eMMC tier below is reached later, which is
                   # the only real lever on how much gets written to flash.
-ALGO=lz4          # lz4 trades ratio for speed, which is the right way round
-                  # on four A53s; switch to zstd if RAM matters more than CPU.
+# Preference order, first one the kernel offers wins. Writing a name that is
+# not in comp_algorithm fails silently and leaves the default in place, which
+# is how the first build ended up on lzo-rle by accident: this kernel has
+# "lzo lzo-rle zstd" and no lz4 at all. lzo-rle is a fine answer - it trades
+# ratio for speed, which is the right way round on four A53s - but it should
+# be a decision, not a fallback. Put zstd first instead if holding more in RAM
+# matters more than the CPU it costs.
+ALGO_PREF="lz4 lzo-rle zstd lzo"
 
 [ -e "$DEV" ] || modprobe zram num_devices=1 2>/dev/null || true
 [ -e "$DEV" ] || exit 0
@@ -235,7 +241,19 @@ grep -q "^$DEV " /proc/swaps && exit 0
 
 swapoff "$DEV" 2>/dev/null || true
 echo 1 > /sys/block/zram0/reset 2>/dev/null || true
-echo "$ALGO" > /sys/block/zram0/comp_algorithm 2>/dev/null || true
+AVAIL=$(tr -d "[]" < /sys/block/zram0/comp_algorithm 2>/dev/null)
+ALGO=""
+for a in $ALGO_PREF; do
+    for have in $AVAIL; do
+        if [ "$a" = "$have" ]; then ALGO="$a"; break 2; fi
+    done
+done
+if [ -n "$ALGO" ]; then
+    echo "$ALGO" > /sys/block/zram0/comp_algorithm
+    echo "zram: compressing with $ALGO"
+else
+    echo "zram: none of '$ALGO_PREF' available ($AVAIL), keeping the default" >&2
+fi
 echo "$SIZE" > /sys/block/zram0/disksize
 mkswap "$DEV" > /dev/null
 swapon "$DEV" -p 100
