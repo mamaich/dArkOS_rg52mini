@@ -117,8 +117,52 @@ reports `CPU features: detected: CRC32 instructions`); `+crypto` went, because
 AES/SHA are optional on Cortex-A53 and nothing in the device's own logs says
 this part implements them.
 
-**Worth checking on hardware:** whether the Amiga emulator runs. If it used to
-die with SIGILL, that is why.
+The `uae4arm` half of that is a repository fix with no effect on this image:
+dArkOS calls `builds-alt.sh` with twenty-five targets and `uae4arm` is not one
+of them. Amiga on the device comes from somewhere else entirely — `amiga.sh`
+runs `/usr/local/bin/amiberry.sh`, and RetroArch downloads a prebuilt
+`puae_libretro.so` from `christianhaitian/retroarch-cores`. Neither is compiled
+here, so neither ever saw the wrong `-mcpu`.
+
+The `-mtune` half does reach real binaries — RetroArch, mupen64plus and the
+rest — but only those that actually rebuild. See the next section.
+
+## The build cache is keyed by upstream version, not by build flags
+
+Each component caches to `Arkbuild_package_cache/<chipset>/<name>.tar.gz` with a
+`.commit` file holding the upstream tag or commit. That is the whole key.
+Change a compiler flag, a patch, or anything else on our side and the key does
+not move, so the cache is restored and the change does not happen.
+
+Two consequences worth knowing:
+
+* A flag change only lands in components that rebuild for some other reason.
+  After the Cortex-A53 fix, everything restored from the 2026-09-15 cache was
+  still tuned for the A55. Delete the relevant `.tar.gz` and `.commit` pair to
+  force a rebuild.
+* `build_yabasanshirosa.sh` is worse: it derives its key by curling the
+  **upstream** christianhaitian script for its `TAG=`, not our fork's. Editing
+  the tag here leaves the key unchanged and a stale tarball is restored over
+  the new build.
+
+A failed build used to be cached the same way — see below.
+
+## Failures used to be cached like successes
+
+Until 2026-09-16 a component that produced nothing still had its empty
+`/opt/<name>` tarred up, 45 bytes, under a key that matched. Every later build
+restored the failure instead of retrying it, and printed a line saying it was
+using the cache. Six entries were in that state: kodi, bluealsa, freej2me-plus,
+yabasanshiro, ecwolf, gametank. The build started to test Kodi would have
+skipped Kodi.
+
+`build_kodi.sh` now caches only when `/opt/kodi` holds an ELF, and the audit
+lists every cache tarball under 20 KB, which covers the other thirty-odd
+components without editing each script. The bad entries were moved to
+`Arkbuild_package_cache/failed-2026-09-15/`.
+
+If a component is mysteriously missing and the log says it came from the cache,
+look at the size of its tarball first.
 
 ## Smaller things
 
