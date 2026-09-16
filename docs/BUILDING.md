@@ -69,6 +69,26 @@ still in place and the remaining steps can be re-run by hand rather than
 starting over — that is how the 2026-09-15 image was finished after
 `fetch_compat_libs.sh` aborted in `finishing_touches`.
 
+**Nothing started from `wsl.exe` outlives that invocation.** Not with `nohup`,
+not with `setsid`, not with `disown` — WSL kills every process the invocation
+spawned, not merely the foreground process group, so the usual detaching tricks
+all fail. It is not cgroup-based: every client lands in a shared `/init.scope`
+and separate invocations leave each other alone. What survives is a process
+whose parent is systemd:
+
+    sudo systemd-run --unit=darkos-build \
+         --working-directory=/home/mamaich/rg52/dArkOS_rg52mini \
+         --setenv=BUILD_KODI=y make rg52mini
+
+    systemctl status darkos-build
+    journalctl -u darkos-build -f
+
+Start a build that way if the terminal — or the editor, or the agent session —
+that launched it might not be there in nine hours. A build started the ordinary
+way is tied to a live `wsl.exe` client, and closing it is the same as a reboot.
+Nothing can be done about it afterwards: the running build has a controlling
+terminal and a live parent, and neither can be changed from outside.
+
 **Silent losses.** Most `build_<emu>sa.sh` scripts have no `verify_action`: a
 component that fails to patch or clone prints one line among tens of thousands
 and the build moves on, leaving an empty `/opt/<name>` behind. `make rg52mini`
