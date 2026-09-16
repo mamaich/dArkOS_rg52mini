@@ -148,8 +148,20 @@ PRESEED
     if [ -f "Arkbuild_package_cache/${CHIPSET}/kodi_${UNIT}.commit" ]; then
       sudo rm -f Arkbuild_package_cache/${CHIPSET}/kodi_${UNIT}.commit
     fi
-    sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/kodi_${UNIT}.tar.gz Arkbuild/opt/kodi/
-    echo "${KODI_CACHE_KEY}" > Arkbuild_package_cache/${CHIPSET}/kodi_${UNIT}.commit
+    # Only cache a build that produced something. Without this check a failed
+    # build stores a 45-byte tarball under a key that still matches, and every
+    # later build restores the failure instead of retrying it - which is what
+    # happened to Kodi, bluealsa, freej2me-plus, yabasanshiro, ecwolf and
+    # gametank between 2026-09-15 and 2026-09-16, silently. Test for an ELF
+    # rather than a named binary, the same way scripts/audit-components.sh does.
+    if sudo find Arkbuild/opt/kodi -type f -exec head -c4 {} \; 2>/dev/null \
+         | grep -qa $'\x7fELF'; then
+      sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/kodi_${UNIT}.tar.gz Arkbuild/opt/kodi/
+      echo "${KODI_CACHE_KEY}" > Arkbuild_package_cache/${CHIPSET}/kodi_${UNIT}.commit
+    else
+      echo "Kodi produced no binary - not caching, so the next build retries."
+      echo "The audit at the end of this build will report /opt/kodi."
+    fi
 
     # Remove build trees and the build-only -dev packages.
     sudo rm -rf Arkbuild/home/ark/kodi

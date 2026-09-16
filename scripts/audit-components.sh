@@ -12,6 +12,11 @@
 # Rather than hardcode a list of expected binaries that would rot, look for the
 # shape of the failure: a directory under /opt holding no executable at all.
 #
+# It also reports empty tarballs in the package cache. A failed build used to
+# be cached like a successful one, under a key that still matched, so the next
+# build restored the failure rather than retrying it - which is how Kodi stayed
+# missing across two builds while appearing to have been handled.
+#
 # Informational only - never fails the build. Reads Arkbuild/, so it has to run
 # before cleanup_filesystem.sh.
 
@@ -71,6 +76,21 @@ if [ -f "${LOG}" ]; then
     echo "  Packages that failed to install:"
     if grep -aq "^Could not install needed library" "${LOG}"; then
         grep -a "^Could not install needed library" "${LOG}" | sort -u | sed 's/^/    /'
+    else
+        echo "    none"
+    fi
+fi
+
+
+CACHE="Arkbuild_package_cache/${CHIPSET:-rk3562}"
+if [ -d "${CACHE}" ]; then
+    echo ""
+    echo "  Cached failures (an empty tarball under a key that still matches,"
+    echo "  so every later build restores the failure instead of retrying):"
+    bad=$(find "${CACHE}" -name '*.tar.gz' -size -20k -printf '    %s B  %f\n' 2>/dev/null | sort -n)
+    if [ -n "${bad}" ]; then
+        echo "${bad}"
+        echo "    -> delete those .tar.gz and .commit pairs to force a rebuild"
     else
         echo "    none"
     fi
