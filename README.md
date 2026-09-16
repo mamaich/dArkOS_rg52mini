@@ -11,6 +11,22 @@ This is a fork of [christianhaitian's dArkOS](https://github.com/christianhaitia
 
 Both devices use the Rockchip RK3562 SoC with a Mali Bifrost G52 GPU, and ship with EmuELEC as stock firmware. This fork replaces the stock OS with a full Debian Trixie userspace running EmulationStation-fcamod, RetroArch, and 50+ standalone emulators.
 
+### Porting notes for the RG52 Mini
+
+This tree carries hardware fixes for the RG52 Mini that the upstream port does
+not have — Bluetooth, USB host, the Type-C role switch, the boot logo — plus
+build-system fixes and two-tier swap. What was done, what was measured on the
+device, and what is still missing is written up in [docs/](docs/README.md):
+
+| | |
+|---|---|
+| [docs/BUILDING.md](docs/BUILDING.md) | environment, building under WSL, traps that cost hours |
+| [docs/HARDWARE.md](docs/HARDWARE.md) | the four kernel patches and what each one fixed |
+| [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | components missing from the image, and why |
+| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | what makes emulators faster here, and what does not |
+
+They are written to be picked up cold, by a person or by an AI assistant.
+
 ---
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=RC72LJ4SSERSU)
@@ -26,7 +42,7 @@ Don't feel like building the OS from scratch or don't have the resources to do s
 access to over 64,000 packages you can install via the Debian Advanced Package Tool (APT).  Want to build the latest testing or bleeding edge release of Debian? See the notes below on how to accomplish this.
 
 **Building instructions:**
-   - Suggested Environment - Ubuntu or related variants, version 24.04 or newer.  Windows Subsystem for Linux (WSL) is not supported and will not work due to no support for chroot. \
+   - Suggested Environment - Ubuntu or related variants, version 24.04 or newer.  Windows Subsystem for Linux (WSL) is not supported upstream, but does work — chroot is fine there; what is missing is binfmt_misc. See [docs/BUILDING.md](docs/BUILDING.md). \
      Because chroot is used in this process, heavy use of sudo is made.  To reduce the possibility of priviledge issues, \
      it's best to be able to execute sudo without needing a password.  This can be done using one of the 2 methods below.
       - Method 1: - Open a Terminal window and type `sudo visudo` \
