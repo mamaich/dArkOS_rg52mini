@@ -93,8 +93,19 @@ Restart=no
 RemainAfterExit=yes
 EOF
 
-  # Enable bluetooth by default — bluez handles USB dongle hotplug via btusb
-  call_chroot "systemctl enable bluetooth bluealsa enable_bluetooth"
+  # Enable bluetooth by default — bluez handles USB dongle hotplug via btusb.
+  # bluealsa only if it is actually there: enabling a unit whose binary is
+  # missing gives a device that prints "Failed to start bluealsa.service" on
+  # every boot and offers no clue why. That happened once already, when Kodi's
+  # dependency resolution removed libasound2-dev and bluez-alsa then failed to
+  # configure - the build carried on regardless and the service was enabled.
+  if sudo test -x Arkbuild/usr/bin/bluealsa; then
+    call_chroot "systemctl enable bluetooth bluealsa enable_bluetooth"
+  else
+    echo "WARNING: /usr/bin/bluealsa is missing - enabling bluetooth without it."
+    echo "         Bluetooth input will work; Bluetooth audio will not."
+    call_chroot "systemctl enable bluetooth enable_bluetooth"
+  fi
 fi
 
 # Kernel modules are built with CONFIG_DEBUG_INFO=y, same as the vendor's
