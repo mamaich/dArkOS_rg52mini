@@ -13,6 +13,7 @@ hardware it says so; where it is inference it says that too.
 | [HARDWARE.md](HARDWARE.md) | the kernel patches and what they fixed |
 | [KNOWN-ISSUES.md](KNOWN-ISSUES.md) | what is missing from the image and why |
 | [PERFORMANCE.md](PERFORMANCE.md) | what actually makes emulators faster here |
+| [TODO.md](TODO.md) | what is next, and what is waiting on the next build |
 
 ## The device
 

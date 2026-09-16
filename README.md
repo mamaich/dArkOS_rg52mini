@@ -24,6 +24,7 @@ device, and what is still missing is written up in [docs/](docs/README.md):
 | [docs/HARDWARE.md](docs/HARDWARE.md) | the four kernel patches and what each one fixed |
 | [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | components missing from the image, and why |
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | what makes emulators faster here, and what does not |
+| [docs/TODO.md](docs/TODO.md) | what is next, and what is waiting on the next build |
 
 They are written to be picked up cold, by a person or by an AI assistant.
 
