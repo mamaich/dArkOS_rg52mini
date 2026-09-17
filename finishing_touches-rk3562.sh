@@ -99,10 +99,14 @@ EOF
   # every boot and offers no clue why. That happened once already, when Kodi's
   # dependency resolution removed libasound2-dev and bluez-alsa then failed to
   # configure - the build carried on regardless and the service was enabled.
-  if sudo test -x Arkbuild/usr/bin/bluealsa; then
+  # bluez-alsa 4.x renamed the daemon to bluealsad (and bluealsa-cli to
+  # bluealsactl), so test for both: the old name for anything older, the new
+  # one for what we build today. Testing only the old name is how a working
+  # build was reported as missing.
+  if sudo test -x Arkbuild/usr/bin/bluealsad || sudo test -x Arkbuild/usr/bin/bluealsa; then
     call_chroot "systemctl enable bluetooth bluealsa enable_bluetooth"
   else
-    echo "WARNING: /usr/bin/bluealsa is missing - enabling bluetooth without it."
+    echo "WARNING: the bluealsa daemon is missing - enabling bluetooth without it."
     echo "         Bluetooth input will work; Bluetooth audio will not."
     call_chroot "systemctl enable bluetooth enable_bluetooth"
   fi
