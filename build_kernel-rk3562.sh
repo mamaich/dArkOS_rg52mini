@@ -76,9 +76,22 @@ else
   echo "WARNING: ${LOGO_SRC} missing - the build will show the stock penguin"
 fi
 
-# Ensure kernel .config exists
+# Ensure the kernel .config exists and is not older than the defconfig.
+#
+# This used to be "if [ ! -f .config ]", which generated the config once and
+# never again, so every edit to ${UNIT}_defconfig was ignored by every later
+# build - silently, because the kernel still builds fine with the old config.
+# That is how CONFIG_LOGO, CONFIG_CRYPTO_LZ4 and CONFIG_ZRAM_WRITEBACK were all
+# committed, built, and absent from the 2026-09-16 image: its .config was three
+# days older than the defconfig it was supposed to come from.
+KERNEL_DEFCONFIG="${KERNEL_SRC_PATH}/arch/arm64/configs/${UNIT}_defconfig"
 if [ ! -f "${KERNEL_SRC_PATH}/.config" ]; then
   echo "Generating kernel .config from ${UNIT}_defconfig..."
+  make -C "${KERNEL_SRC_PATH}" ${UNIT}_defconfig
+elif [ "${KERNEL_DEFCONFIG}" -nt "${KERNEL_SRC_PATH}/.config" ]; then
+  echo "${UNIT}_defconfig is newer than .config - regenerating."
+  echo "Any hand-made menuconfig changes will be lost; put them in the"
+  echo "defconfig if they are meant to survive."
   make -C "${KERNEL_SRC_PATH}" ${UNIT}_defconfig
 fi
 
