@@ -73,6 +73,42 @@ Bluetooth needs the combo firmware `fmacfwbt_8800d80_h_u02.bin`; the driver
 picks it on its own. All 15 D80 blobs ship in `BSP/firmware/aic8800/` and land
 at `/lib/firmware/aic8800`, which is what `CONFIG_AIC_FW_PATH` points at.
 
+## Bluetooth gamepads need the HID gate opened
+
+A pad can pair, report `Connected: yes`, and still produce no input device at
+all. Nothing in the UI says why; the only trace is one line from the daemon:
+
+    profiles/input/device.c:hidp_add_connection()
+    Rejected connection from !bonded device /org/bluez/hci0/dev_XX_XX_XX_XX_XX_XX
+
+BlueZ refuses HID from a device it does not consider bonded, and has done by
+default since 5.6x — `ClassicBondedOnly`, true unless told otherwise. Plenty of
+gamepads pair the old way and never bond: `bluetoothctl info` shows
+`Paired: yes`, `LegacyPairing: yes`, `Bonded: no`, and that is enough to be
+turned away.
+
+`finishing_touches-rk3562.sh` writes `ClassicBondedOnly=false` into
+`/etc/bluetooth/input.conf`. With it, the same pad brings up two nodes — the
+joystick and a consumer-control keyboard — and EmulationStation picks them up
+without being restarted:
+
+    N: Name="GamepadPlus"                  H: Handlers=js1 event7
+    N: Name="GamepadPlus Consumer Control" H: Handlers=kbd event6
+
+The trade is real and was made deliberately: an unbonded HID link can be
+spoofed, and a spoofed HID link is keystrokes. On a handheld that stores no
+credentials, against an alternative of "Bluetooth gamepads do not work", it is
+the right way round.
+
+The kernel side needs nothing: `BT_HIDP`, `UHID`, `HIDRAW`, `HID_GENERIC`,
+`INPUT_JOYDEV` and `INPUT_EVDEV` are all built in, and `hidp` registers at boot
+(`Bluetooth: HIDP (Human Interface Emulation) ver 1.2`). If a pad is missing,
+read the daemon log before touching the kernel.
+
+There is no equivalent of Android's vendor Bluetooth HAL here, and none is
+needed: BlueZ brings up the HID channel, the kernel turns it into
+`/dev/input/event*`, SDL2 hands it to EmulationStation.
+
 ## Speaker click
 
 The external amplifier is switched by `gpio-115` (`spk-ctl`). The RK817 codec

@@ -99,6 +99,25 @@ EOF
   # every boot and offers no clue why. That happened once already, when Kodi's
   # dependency resolution removed libasound2-dev and bluez-alsa then failed to
   # configure - the build carried on regardless and the service was enabled.
+  # BlueZ refuses HID from a device it does not consider bonded, and has done
+  # by default since 5.6x (ClassicBondedOnly, true unless told otherwise).
+  # Plenty of Bluetooth gamepads pair the old way and never bond, so they pair
+  # happily, show up as Connected, and then produce no input device at all -
+  # the only sign is one line in the daemon log:
+  #
+  #   profiles/input/device.c:hidp_add_connection()
+  #   Rejected connection from !bonded device /org/bluez/hci0/dev_XX_XX_...
+  #
+  # The trade is real: an unbonded HID link can be spoofed, and a spoofed HID
+  # link is keystrokes. On a handheld that stores no credentials and whose
+  # alternative is "gamepads do not work", it is the right way round.
+  if [ -f Arkbuild/etc/bluetooth/input.conf ]; then
+    if ! grep -q '^ClassicBondedOnly' Arkbuild/etc/bluetooth/input.conf; then
+      sudo sed -i 's/^\[General\]/[General]\nClassicBondedOnly=false/' \
+        Arkbuild/etc/bluetooth/input.conf
+    fi
+  fi
+
   # bluez-alsa 4.x renamed the daemon to bluealsad (and bluealsa-cli to
   # bluealsactl), so test for both: the old name for anything older, the new
   # one for what we build today. Testing only the old name is how a working
