@@ -154,6 +154,50 @@ The 32-bit armhf side is GLES 3.2 as well, but from the older `g13p0` blob.
 `build_deps.sh` picks it deliberately: the 32-bit build of g29p1 segfaults
 inside libmali during GL and shader setup (SEGV_ACCERR).
 
+## A silent RGB bridge used to black the screen
+
+`rockchip_rgb` looks for the RK628 bridge and returned `-EPROBE_DEFER` for
+ever when it did not answer on i2c. DRM binds whole or not at all, so an RGB
+output nobody needs took the working DSI panel with it: black from the moment
+the kernel started, on hardware where the panel is fine.
+
+It now waits while initcalls are still running, as before, and binds without
+the RGB output once the kernel has given up. Only HDMI through that bridge is
+lost. `a9450795f`, ported from `mamaich/kernel_rk3562_rg52mini` `f90073f66`.
+
+This matters on boards where the bridge is damaged, unpopulated or absent —
+it is not specific to one revision.
+
+## Two Wi-Fi chips on one power rail
+
+Two RG52 Mini revisions put different chips on the same `wireless-wlan` node
+and the same rail: RK915 (SDIO vendor `0x0296`) and AIC8800 (`0xc8a1`). Both
+drivers pulse `rockchip_wifi_power()` at module init, so loading both in
+sequence leaves the second one having cut power under the first.
+
+Handled, and worth not re-deriving:
+
+* `wifi-driver-load.service` runs `wifi-driver-load.sh`, which tries `rk915`
+  first and falls back to `aic8800_bsp` + `aic8800_fdrv` only if that fails;
+* `modprobe.d/dArkOS-wifi.conf` blacklists both aic8800 modules, because udev
+  would otherwise autoload them off the SDIO vendor id while rk915's probe is
+  still cycling the rail, and the firmware download dies mid-flight.
+
+The fallback keys on `modprobe` failing rather than on the interface
+appearing. That is weaker in principle — a module can load and bind nothing —
+but it is what works on both revisions in practice: `rk915` fails to
+initialise where its chip is absent.
+
+## Diagnostics
+
+`DETECT_HUNG_TASK`, `SOFTLOCKUP_DETECTOR`, `WQ_WATCHDOG` and `PSTORE_PMSG` are
+on, none of them set to panic. `PSTORE_RAM` was already on, so whatever the
+last hang logged survives into the next boot — look in `/sys/fs/pstore`.
+
+`DEBUG_CREDENTIALS` is off: it validates cred structures on every access, and
+this device runs only what its own image contains. `HARDENED_USERCOPY` and
+`ARM64_SW_TTBR0_PAN` are off for the same reason. `cf236becd`.
+
 ## The bootloader
 
 The image ships `mamaich/u-boot-rk3562-rg52mini`, branch `next-dev`, release
@@ -201,6 +245,13 @@ port readable across the handover.
 Do not move the port to `uart0m1` (GPIO1_B3/B4): those pins are the SD card's
 data bus and the device stops booting. The same goes for `uart5m0` and
 `uart7m1`.
+
+**U-Boot rewrites the command line's first `console=` rather than appending
+its own.** Here both sides name the same thing, so nothing moves — but it
+means a `console=` added for debugging will be the one that disappears, and
+that a second console has to go after the first to survive. It is also the
+reason dropping `console=tty1` for the boot logo is safe: what U-Boot
+substitutes is its serial console, never a vt.
 
 ### Charging
 
