@@ -136,6 +136,13 @@ sudo cp "${DTB_FILE}" ${mountpoint}/${UNIT_DTB}.dtb
 # The BMPs must be 24-bit and uncompressed - the vendor's own frames are 8-bit
 # RLE and this U-Boot will not draw them. logo.bmp is 720x1280, the panel's
 # native portrait orientation; the charge frames are 220x110, centred.
+#
+# These are matched to the RG52 Mini bootloader and are copied for every unit.
+# The RG43 Pro still runs the vendor U-Boot (BSP/uboot-rg43h.img, 2017.09 on
+# the rk3562-evb tree), which has no panel nodes and draws nothing either way,
+# so the change is believed to be moot there - but it is untested on that
+# device. Its original 8-bit frames are one command away if that turns out to
+# matter: git show 7e96820:BSP/battery_0.bmp > BSP/battery_0.bmp
 echo "Copying U-Boot artwork..."
 sudo cp ${BSP_PATH}/battery_*.bmp ${mountpoint}/ 2>/dev/null || true
 if [ -f "${BSP_PATH}/logo.bmp" ]; then
