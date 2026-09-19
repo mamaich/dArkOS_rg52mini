@@ -10,10 +10,25 @@ zram on lzo-rle with the eMMC partition as a second tier, stripped modules,
 Cortex-A53 flags for everything that rebuilt, Kodi, Yabasanshiro, freej2me-plus,
 our own U-Boot, and the component audit that runs at the end of every build.
 
-Nothing is queued behind it. The kernel changes that landed after the build
-finished — the RK628 bridge fix, the hang detectors, the bootloader log — were
-rebuilt and written into the released image by hand rather than left waiting,
-so the release and the tree say the same thing.
+The kernel changes that landed after the build finished — the RK628 bridge
+fix, the hang detectors, the bootloader log — were rebuilt and written into the
+released image by hand rather than left waiting.
+
+## Waiting on the next build
+
+Found after the image was released, committed, and deliberately not rebuilt
+into it:
+
+* **flycast and fake-08 were compiled with no optimisation**, `-O0` and `-g`
+  respectively, for the reasons in PERFORMANCE.md. This is the one worth
+  rebuilding for: flycast's SH4 and MMU paths are the hot loop for every
+  demanding Dreamcast title.
+* **`perfmax` never set the GPU governor** on this SoC — it wrote to the RK3566
+  node — so the GPU ran the whole of every game on `simple_ondemand`. Fixed;
+  measured at 10% GPU load on a CPU-bound game, so expect it to matter where
+  the GPU is actually busy and nowhere else.
+* **BlueZ rejected HID from unbonded devices**, which is most legacy Bluetooth
+  gamepads. Fixed in the build and applied to the released image by hand.
 
 ## Open questions on the device
 

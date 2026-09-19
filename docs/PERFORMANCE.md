@@ -144,6 +144,39 @@ the kind of small hot functions where a canary per call is measurable. It has
 not been benchmarked. If someone does measure it and the difference is noise,
 take it back out — the flags exist for a reason.
 
+## Two emulators were built with no optimisation at all
+
+Worth more than everything else on this page put together, and it was found by
+accident while wondering why one Dreamcast game was slow.
+
+**flycast** asked cmake for `CMAKE_BUILD_TYPE=Release` and then set
+`CMAKE_C_FLAGS_RELEASE` and `CMAKE_CXX_FLAGS_RELEASE` to `-DNDEBUG`. Those
+variables *replace* what the build type carries rather than adding to it, and
+cmake's Release is `-O3 -DNDEBUG` — so the `-O3` was thrown away and gcc fell
+back to its default, `-O0`. The build log has `CMAKE_VERBOSE_MAKEFILE` on and
+settles it: of 389 compile lines under `flycast-build`, exactly one carries an
+optimisation flag. The SH4 memory handlers and the MMU translation, which are
+the hot path for anything demanding, were all built unoptimised.
+
+**fake-08** was the second one an audit of the same log found: 57 compiles, no
+`-O` among them. That one is upstream's doing — the recipe builds the
+`SDL2Desktop` target, whose makefile says `-g -Wall` and nothing more, because
+it is the target meant for debugging on a PC. Every handheld target that
+project ships — miyoomini, funkey-s, gcw0, bittboy — uses `-Ofast`.
+
+Both fixed in `mamaich/rk3566_core_builds` (`ae544e5`, `6aaaa37`), which also
+applies the `-march=armv8-a+crc -mtune=cortex-a53` correction from `7290d75`.
+
+**Neither is in the released v09162026 image**, which was built before the
+finding, and there is no rebuild planned for it. They land with the next build.
+
+How to check this for any component, since nothing reports it:
+
+    grep -c 'cc1plus\|cc1' build.log          # compile lines
+    grep 'cc1plus\|cc1' build.log | grep -c '\-O[0-3sfast]'
+
+A component whose second number is near zero is being built for debugging.
+
 ## Not worth doing
 
 * **LSE atomics** (`CONFIG_ARM64_LSE_ATOMICS`). ARMv8.1 feature, this is an
