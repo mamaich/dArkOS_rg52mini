@@ -129,9 +129,26 @@ echo "Copying kernel and DTB..."
 sudo cp "${KERNEL_SRC_PATH}/arch/arm64/boot/Image" ${mountpoint}/
 sudo cp "${DTB_FILE}" ${mountpoint}/${UNIT_DTB}.dtb
 
-# Copy battery charge animation BMPs for U-Boot charge display
-echo "Copying charge animation BMPs..."
+# Artwork for U-Boot: the splash it shows at power-on and the charge
+# animation. Both are read off this partition as ordinary files, because the
+# resource partition is empty on this device.
+#
+# The BMPs must be 24-bit and uncompressed - the vendor's own frames are 8-bit
+# RLE and this U-Boot will not draw them. logo.bmp is 720x1280, the panel's
+# native portrait orientation; the charge frames are 220x110, centred.
+echo "Copying U-Boot artwork..."
 sudo cp ${BSP_PATH}/battery_*.bmp ${mountpoint}/ 2>/dev/null || true
+if [ -f "${BSP_PATH}/logo.bmp" ]; then
+  sudo cp ${BSP_PATH}/logo.bmp ${mountpoint}/
+else
+  echo "WARNING: ${BSP_PATH}/logo.bmp missing - U-Boot will show no splash"
+fi
+
+# Never ship logo_kernel.bmp. U-Boot hands that one to the kernel to keep
+# displaying during boot, and on this device the handover blanks the panel:
+# boot proceeds normally and the screen stays black once the system reaches
+# the display. Without it the kernel brings the display up itself.
+sudo rm -f ${mountpoint}/logo_kernel.bmp
 
 # Install kernel modules from source build
 echo "Installing kernel modules..."

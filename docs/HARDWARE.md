@@ -154,14 +154,64 @@ The 32-bit armhf side is GLES 3.2 as well, but from the older `g13p0` blob.
 `build_deps.sh` picks it deliberately: the 32-bit build of g29p1 segfaults
 inside libmali during GL and shader setup (SEGV_ACCERR).
 
-## Boot logo
+## The bootloader
 
-U-Boot draws nothing on this device: the device tree it runs with is the
-Rockchip evaluation-board stub, twelve kilobytes with no dsi, panel, vop or
-route nodes. Putting `logo.bmp` in the resource partition or on the FAT
-partition was tried on the Android port and changed nothing either time.
+The image ships `mamaich/u-boot-rk3562-rg52mini`, branch `next-dev`, release
+`rg52mini-20260918`, written to the `uboot` partition at sector 16384 by
+`build_kernel-rk3562.sh` from `BSP/uboot-rg52mini.img`. The vendor's own
+U-Boot is kept beside it as `.vendor`.
 
-So the logo comes from the kernel — `CONFIG_LOGO` plus
+It replaces a stock `U-Boot 2017.09` that ran with `rk3562-evb`, the Rockchip
+evaluation-board device tree: twelve kilobytes with no dsi, panel, vop or
+route nodes, which is why nothing the earlier notes here tried ever put a
+picture on the screen. This one brings power-off, exit from charge mode,
+the splash, the charge animation, the LED at power-on and a working console.
+
+What it wants from this side, all on the boot partition (partition 3, the FAT
+one, which carries the GPT legacy-bootable attribute — that is how U-Boot
+finds it):
+
+| | |
+|---|---|
+| `rk3562-rg52mini.dtb` | **required**, exactly that name. U-Boot runs on it, and without it the screen stays black although the device boots |
+| `logo.bmp` | the splash, 720x1280 |
+| `battery_0..5.bmp`, `battery_fail.bmp` | charge animation, 220x110, drawn centred |
+| `extlinux/extlinux.conf` | how it finds the kernel, last of four boot methods it tries |
+
+The BMPs must be **24-bit and uncompressed**. The vendor's charge frames are
+8-bit RLE and this U-Boot will not draw them, which is a silent failure —
+hence the copies in `BSP/`, taken from the release.
+
+**Never ship `logo_kernel.bmp`.** U-Boot hands that file to the kernel so the
+picture survives the handover, and on this device the handover blanks the
+panel: boot proceeds normally and the screen goes black the moment the system
+reaches the display. `build_kernel-rk3562.sh` deletes it defensively.
+
+The resource partition is empty on this device, so everything the vendor would
+normally keep there is read off the boot partition as ordinary files.
+
+### The console
+
+The TX/RX/GND pads are `uart0m0` (GPIO0_D0/D1), 1500000 8N1, 3.3 V; do not
+feed power from the adapter, and note that not every USB bridge will do that
+rate. The kernel's own console rate is separate — `rockchip,baudrate` in the
+`fiq-debugger` node — and is already `1500000` here, which is what keeps the
+port readable across the handover.
+
+Do not move the port to `uart0m1` (GPIO1_B3/B4): those pins are the SD card's
+data bus and the device stops booting. The same goes for `uart5m0` and
+`uart7m1`.
+
+### Charging
+
+With a cable attached the device enters charge mode and does not boot. Hold
+power for about three seconds to leave it; a short press does nothing. On the
+serial port this shows as `Exit charge animation...`. After leaving charge
+mode the splash is drawn, so the last battery frame does not stay on screen.
+
+## Boot logo, kernel side
+
+The kernel draws its own logo after U-Boot's — `CONFIG_LOGO` plus
 `BSP/logo_linux_clut224.ppm.gz`, which `build_kernel-rk3562.sh` unpacks into
 `drivers/video/logo/` before building. The artwork is the vendor's, lifted
 from the EmuELEC boot partition and rotated counter-clockwise to 1280x720 so
@@ -174,4 +224,6 @@ Two things outside the kernel are required, both in the command line built by
   `console_loglevel <= CONSOLE_LOGLEVEL_QUIET`;
 * no `console=tty1`, or the boot log is printed over it.
 
-Added after the 2026-09-15 image, so it is not in that build.
+Both halves — bootloader and kernel — first ship in the 2026-09-16 image.
+Watch out for the trap that kept the kernel half out of it on the first
+attempt: see the `.config` note in BUILDING.md.
