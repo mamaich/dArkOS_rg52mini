@@ -1,75 +1,132 @@
-# <p align="center">Welcome to dArkOS (RK3562 Fork)</p>
+# dArkOS для RG52 Mini
 
-### <p align="center">Fork of dArkOS adding support for AISLPC's RK3562-based handhelds: the RG52 Mini and RG43 Pro.</p>
+Сборка Linux для консоли [AISLPC RG52 Mini](https://aislpc.com/products/rg52mini-retro-handheld-game-console)
+на Rockchip RK3562. Полноценная Debian Trixie вместо заводской EmuELEC:
+EmulationStation-fcamod, RetroArch и около тридцати отдельных эмуляторов.
 
-This is a fork of [christianhaitian's dArkOS](https://github.com/christianhaitian/dArkOS), a Debian-based gaming OS derived from [ArkOS](https://github.com/christianhaitian/arkos/wiki). The upstream project targets RK3326 and RK3566 devices. This fork adds support for [AISLPC](https://aislpc.com/)'s Rockchip RK3562-based handhelds:
-
-| Device | Screen | SoC | RAM |
-|--------|--------|-----|-----|
-| [RG52 Mini](https://aislpc.com/products/rg52mini-retro-handheld-game-console) | 5.5" IPS 1280x720 | RK3562 (4x Cortex-A53 @ 2.0GHz) | 2GB |
-| RG43 Pro | 4.3" IPS 1024x768 | RK3562 (4x Cortex-A53 @ 2.0GHz) | 1GB |
-
-Both devices use the Rockchip RK3562 SoC with a Mali Bifrost G52 GPU, and ship with EmuELEC as stock firmware. This fork replaces the stock OS with a full Debian Trixie userspace running EmulationStation-fcamod, RetroArch, and 50+ standalone emulators.
-
-### Porting notes for the RG52 Mini
-
-This tree carries hardware fixes for the RG52 Mini that the upstream port does
-not have — Bluetooth, USB host, the Type-C role switch, the boot logo — plus
-build-system fixes and two-tier swap. What was done, what was measured on the
-device, and what is still missing is written up in [docs/](docs/README.md):
+[**Скачать образ**](https://github.com/mamaich/dArkOS_rg52mini/releases) ·
+[что изменено](#релизы) · [подробности](#подробности) · [собрать самому](#сборка)
 
 | | |
 |---|---|
-| [docs/BUILDING.md](docs/BUILDING.md) | environment, building under WSL, traps that cost hours |
-| [docs/HARDWARE.md](docs/HARDWARE.md) | the four kernel patches and what each one fixed |
-| [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | components missing from the image, and why |
-| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | what makes emulators faster here, and what does not |
-| [docs/TODO.md](docs/TODO.md) | what is next, and what is waiting on the next build |
+| Процессор | Rockchip RK3562, 4 ядра Cortex-A53 @ 2.0 ГГц, ARMv8.0 |
+| Видео | Mali-G52 (Bifrost), закрытый драйвер g29p1 |
+| Память | 2 ГБ |
+| Экран | DSI 720x1280, портретная панель, консоль повёрнута |
+| Wi-Fi и Bluetooth | AIC8800D80, одна микросхема на двоих, по SDIO |
+| Питание и звук | RK817 — стабилизаторы, кодек, зарядка, датчик заряда |
+| USB | Type-C через HUSB311, без вывода ID |
 
-They are written to be picked up cold, by a person or by an AI assistant.
+## Откуда это растёт
 
----
+Цепочка форков: [christianhaitian/dArkOS](https://github.com/christianhaitian/dArkOS)
+→ [bmdhacks/dArkOS_rg52mini](https://github.com/bmdhacks/dArkOS_rg52mini) (первым
+добавил поддержку RK3562) → этот репозиторий.
 
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/donate?hosted_button_id=RC72LJ4SSERSU)
+Прежний README апстрима со сборочными указаниями и благодарностями сохранён
+как [README.upstream.md](README.upstream.md).
 
-The overarching goals of dArkOS is as follows:
-1. Highly customizable 
-1. Performance
-1. Online Updates (Won't require SD card reflashing unless there are major structural changes like file system changes.)
-1. Enthusiats focused
+## Чем отличается от bmdhacks/dArkOS_rg52mini
 
-This is intended to continue the work from [ArkOS](https://github.com/christianhaitian/arkos/wiki) but in a way that allows others to easily fork and modify the OS to their own taste.  If there's a feature not currently available that you want, you can fork this and add it yourself.
-Don't feel like building the OS from scratch or don't have the resources to do so?  Ok, just download one of the available prebuilt images and make changes right in the OS.  Since this OS is based on the latest stable version of Debian, you have
-access to over 64,000 packages you can install via the Debian Advanced Package Tool (APT).  Want to build the latest testing or bleeding edge release of Debian? See the notes below on how to accomplish this.
+**Работает то, что в исходном порте не работало:**
 
-**Building instructions:**
-   - Suggested Environment - Ubuntu or related variants, version 24.04 or newer.  Windows Subsystem for Linux (WSL) is not supported upstream, but does work — chroot is fine there; what is missing is binfmt_misc. See [docs/BUILDING.md](docs/BUILDING.md). \
-     Because chroot is used in this process, heavy use of sudo is made.  To reduce the possibility of priviledge issues, \
-     it's best to be able to execute sudo without needing a password.  This can be done using one of the 2 methods below.
-      - Method 1: - Open a Terminal window and type `sudo visudo` \
-                    In the bottom of the file, add the following line: `$USER ALL=(ALL) NOPASSWD: ALL` \
-                    Where $USER is your username on your system. Save and close the sudoers file (if you haven't changed your \
-                    default terminal editor (you'll know if you have), press Ctl + x to exit nano and it'll prompt you to save).
-      - Method 2: - Clone this git repo then run `./FreeSudo.sh`.  If there were no errors, it should've completed this change for you. \
-                    You can verify this by checking if a `/etc/sudoers.d/$USER` file exists and contains `$USER ALL=(ALL) NOPASSWD: ALL` in it.
-     
-Now you should be able to just run make <device_name> to build for a supported device.  Example: `make rg353m`
+| | |
+|---|---|
+| Bluetooth | драйвер AIC8800 поставляется с выключенным BT по SDIO, и ветка не собиралась при его включении. Плюс звук по A2DP — служба ссылалась на исполняемый файл под старым именем |
+| USB host | разъём без вывода ID, роль определяет HUSB311 по линиям CC. Без описания контроллера в дереве устройств dwc3 навсегда остаётся периферией |
+| Заставка при загрузке | вместо чёрного экрана: сперва от загрузчика, затем от ядра |
+| Звук сразу | по умолчанию выбран встроенный динамик, а не наушники — раньше свежий образ казался немым |
+| Щелчок в динамике | усилитель переключался прямо на переходе ЦАП, без задержки |
 
-**Notes**
-- To build on a different release of Debian, change the DEBIAN_CODE_NAME export in the Makefile or add DEBIAN_CODE_NAME=<release> as a variable to `make`.  Other debian code names can be found at https://www.debian.org/releases/
-- By default, this will build with both a 64bit and 32bit userspace.  This is primarily to support some 32bit ports available through PortMaster.  There are also some 32bit retroarch emulators available but the performance seems to be similar to the 64bit retroarch emulators at this point.
- - To build without 32bit support, change the BUILD_ARMHF export in the Makefile to n or add BUILD_ARMHF=n as a variable to `make`.
-- For RK3566, you can add Kodi to your build.  Just change the BUILD_KODI export in the Makefile to y or add BUILD_KODI=y as a variavble to `make`.  Kodi is also available as a prepackaged build in the extra_packages/rk3566 subfolder.  Just copy it to your tools folder and launch from Options/Tools in the start menu.
- - Be aware that building Kodi will add a significant amount of time to your build.  Could be double or triple the build time.
-- Initial build time on an Intel I7-8700 65w unit with a 512GB NVME SSD and 32GB of DDR4 memory is a little over 19 hours.  Subsequent builds are about 3 hours thanks to ccache.
+**Свой загрузчик.** Вместо вендорского U-Boot 2017.09, работавшего с деревом
+отладочной платы `rk3562-evb` и потому неспособного ничего вывести на экран, —
+[mamaich/u-boot-rk3562-rg52mini](https://github.com/mamaich/u-boot-rk3562-rg52mini):
+выключение кнопкой, выход из режима зарядки, заставка, анимация зарядки,
+светодиод сразу после подачи питания, консоль на uart0.
 
-# Credits and Thanks
-[ChatGPT](https://chatgpt.com/) for guidance on how to build a Debian image \
-Jetup13 for many themes \
-dani7959 for the replica theme \
-pix33l for the pixui theme \
-TheGreatCrippler for testing and feedback \
-kloptops for testing and feedback \
-Fraxinus88 for testing and feedback \
-ImCoKeMaN for testing and feedback \
-[PortMaster](https://portmaster.games/) team for support in figuring out PM interface issues
+**Быстрее и экономнее:**
+
+- zram на 1.5 ГБ со сжатием `lzo-rle` и своп вторым уровнем на разделе eMMC —
+  при двух гигабайтах оперативной это заметно;
+- модули ядра обрезаны со 100 МБ до 6.3;
+- флаги компилятора приведены к Cortex-A53: исходный порт собирал под A55,
+  а один компонент — и вовсе под ARMv8.2, которого у этого процессора нет;
+- снята отладка ядра, не нужная на устройстве, которое запускает только
+  собственный образ.
+
+**Сборка перестала молча терять части образа.** Провалившийся компонент
+кэшировался наравне с успешным, и следующие сборки восстанавливали пустышку
+вместо повторной попытки — так пропадал Kodi. Теперь в кэш попадает только
+непустой результат, а в конце сборки печатается сводка: что не собралось, какие
+пакеты не поставились и какие записи кэша подозрительно малы.
+
+**Диагностика.** Детекторы зависаний и `pstore`: после зависания или паники
+`/sys/fs/pstore` сохранит лог прошлой загрузки, включая вывод загрузчика.
+
+## Релизы
+
+### [v09162026](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v09162026)
+
+Первый выпуск этого форка.
+
+- свой загрузчик со всем перечисленным выше;
+- заставка при загрузке — от загрузчика и от ядра;
+- Bluetooth, включая звук по A2DP, и USB host;
+- по умолчанию звук в динамик;
+- Kodi 21.3 Omega с 67 дополнениями;
+- zram и своп на eMMC, обрезанные модули ядра;
+- собраны заново Yabasanshiro (Saturn) и freej2me-plus (J2ME) — до этого они
+  молча не попадали в образ;
+- ядро: исправление, из-за которого молчащий мост RK628 гасил весь вывод;
+  детекторы зависаний; лог загрузчика через `pstore`.
+
+Не собираются три эмулятора — ECWolf, GameTank, Hypseus Singe — и недоступны
+семь библиотек совместимости PortMaster. Подробности в
+[docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
+
+## Подробности
+
+Рабочие записи по порту. Написаны так, чтобы их мог поднять «с нуля» человек
+или ИИ-ассистент: где что измерено на устройстве — сказано прямо, где вывод —
+тоже. **На английском.**
+
+| | |
+|---|---|
+| [docs/README.md](docs/README.md) | устройство, репозитории, что работает на сегодня |
+| [docs/HARDWARE.md](docs/HARDWARE.md) | правки ядра и что каждая починила; загрузчик, графический стек, консоль |
+| [docs/BUILDING.md](docs/BUILDING.md) | сборка, в том числе под WSL, и грабли, каждая из которых стоила часов |
+| [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | чего нет в образе и почему |
+| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | что реально ускоряет эмуляторы здесь, а что нет — включая проверенное и отвергнутое |
+| [docs/TODO.md](docs/TODO.md) | что дальше и что ждёт следующей сборки |
+
+Отдельно стоит заглянуть в PERFORMANCE.md перед тем, как предлагать
+оптимизации: там записаны отрицательные результаты, и они обошлись дороже
+положительных.
+
+## Сборка
+
+    git clone --recursive https://github.com/mamaich/dArkOS_rg52mini
+    cd dArkOS_rg52mini
+    make rg52mini                # без Kodi
+    make rg52mini BUILD_KODI=y   # с Kodi
+
+Занимает большую часть суток, с Kodi — заметно дольше, зато результат
+кэшируется и повторная сборка гораздо быстрее.
+
+Апстрим пишет, что под WSL собрать нельзя из-за chroot. Это неверно: chroot там
+работает, не работает `binfmt_misc`, и это чинится. Как именно — в
+[docs/BUILDING.md](docs/BUILDING.md).
+
+Собственные форки подмодулей приколочены по коммитам, поэтому свежий клон
+воспроизводит сборку без ручных шагов:
+
+    mamaich/dArkOS_rg52mini
+      kernel_rk3562      -> mamaich/kernel_rk3562        правки железа
+      rk3562_core_builds -> mamaich/rk3566_core_builds   флаги Cortex-A53
+      bootloader         -> bmdhacks/aislpc-bootloader-tool
+
+## Благодарности
+
+Список благодарностей апстрима — в [README.upstream.md](README.upstream.md).
+Поддержка RK3562 появилась благодаря bmdhacks; всё, что описано выше, сделано
+поверх его работы.
