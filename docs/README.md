@@ -45,22 +45,28 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-Verified on the device over SSH, 2026-09-16:
+The 2026-09-16 image is released and runs on the device. What was checked,
+on hardware:
 
 | | |
 |---|---|
 | Wi-Fi | works |
 | Bluetooth | works — `hci0 Type: Primary Bus: SDIO`, scanning finds devices |
 | USB host | works — a USB mouse enumerates, HID binds, input node appears |
-| Speaker | works once `Playback Path` is `SPK`; that is now the default |
+| Speaker | works, and `Playback Path` is `SPK` out of the box |
+| Kodi | builds and runs, 21.3-Omega with 67 addons |
 | Swap | zram 1.5 GB at priority 100, eMMC partition at 10, both active |
 | Kernel modules | 6.3 MB, stripped of debug info (was 100 MB) |
+| Bootloader | ours, with power-off, splash, charge animation and a console |
 
 Bluetooth and USB host are the two things the upstream port cannot do. Both
 come from the device tree and driver changes described in
 [HARDWARE.md](HARDWARE.md).
 
-Not yet verified: whether the speaker click on playback start/stop is gone
-(the GPIO behaves correctly, which is necessary but not sufficient), and
-whether the Amiga emulator runs — it was built with an instruction set its
-CPU does not have until recently, see KNOWN-ISSUES.
+Built but never launched: Yabasanshiro and freej2me-plus. They had been
+silently missing from earlier images and now exist — whether they run is
+another question.
+
+Not verified: whether the speaker click on playback start and stop is gone.
+The GPIO behaves correctly in silence, which is necessary and not sufficient;
+only an ear settles it.

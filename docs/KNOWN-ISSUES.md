@@ -55,23 +55,31 @@ aarch64 one, and `pi4.cmake` would build for armv7.
 It compiles, first try, with no errors on the step: a 3.9 MB stripped aarch64
 binary. Whether it runs on the device is untested.
 
-## Kodi
+## Kodi builds, and costs two days doing it
 
-Kodi did not build in the 2026-09-15 image:
+It did not build in the 2026-09-15 image:
 
     DRMAtomic.cpp  Hunk #1 FAILED
     There was an issue applying kodi-patch-001-rk3562-rga-rotation.patch
     tar: Arkbuild/opt/kodi: Cannot stat: No such file or directory
 
-Kodi itself is pinned at 21.3-Omega, so that is not the problem.
-`kodi-install` is cloned at master, and it has grown two patches that land on
-the same files as ours: `0017-kodi-patch-mali-egl-display` is literally our own
-EGL fix, which upstream adopted, and `0016-miniloong-internal-only-rotate270`
+Kodi itself is pinned at 21.3-Omega, so that was never the problem.
+`kodi-install` is cloned at master, and it had grown two patches landing on the
+same files as ours: `0017-kodi-patch-mali-egl-display` is literally our own EGL
+fix, which upstream adopted, and `0016-miniloong-internal-only-rotate270`
 rotates another device the other way through the same DRM paths our 90-degree
 RGA rotation uses.
 
-`build_kodi.sh` now removes both before staging ours. Untested — the next
-build with `BUILD_KODI=y` will say.
+`build_kodi.sh` removes both before staging ours, and with that every patch
+applies without a conflict. **The 2026-09-16 image carries Kodi 21.3-Omega,
+266 MB in `/opt/kodi`, with 67 addons, and it runs on the device.**
+
+Be ready for what it costs: about 32 of that build's 43 hours. Very little of
+that is compiling Kodi — most of it is one full cmake configure per addon,
+seventy-one of them, single-threaded under qemu, at ten to twenty-five minutes
+each. The result caches as `kodi_rg52mini.tar.gz`, 105 MB, so a later build
+unpacks it in a minute. That makes the cache worth guarding, which is what the
+guard described below is for.
 
 Kodi has a second, worse habit. Its dependency resolution removed the SDL2
 `-dev` packages and `libasound2-dev` along with them, which silently broke

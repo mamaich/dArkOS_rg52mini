@@ -2,27 +2,18 @@
 
 A working list, not a roadmap. Ordered by what a build would answer soonest.
 
-## Waiting on the next build
+## Shipped in v09162026
 
-Everything here is committed and unbuilt — the 2026-09-15 image predates it.
-`make rg52mini` is enough; `BUILD_KODI=y` is deliberately left off until the
-other changes have been on the device for a while.
+All of it is on the device and released, so it is history rather than a list to
+work through: the boot logo from both halves, `Playback Path = SPK` by default,
+zram on lzo-rle with the eMMC partition as a second tier, stripped modules,
+Cortex-A53 flags for everything that rebuilt, Kodi, Yabasanshiro, freej2me-plus,
+our own U-Boot, and the component audit that runs at the end of every build.
 
-* **Boot logo.** The kernel side, the command line and the artwork are all in
-  place. The screen should show the vendor picture instead of staying black.
-  See HARDWARE.md if it does not — the two non-obvious requirements are
-  `loglevel` above 4 and no `console=tty1`.
-* **Speaker by default.** `audio/asound.state.rk3562` now stores
-  `Playback Path = SPK`. Before this, a fresh image played to headphones that
-  were not plugged in and the device seemed mute.
-* **zram on lzo-rle by choice**, with `lz4` compiled in as an alternative.
-* **eMMC swap.** Second tier at priority 10 on the 256 MB `swap` partition.
-  Worth watching the first boot: the service waits for the partition by GPT
-  label and refuses to format anything it does not already recognise as swap.
-* **Stripped modules**, 100 MB → 6.3 MB.
-* **Cortex-A53 flags** in the core builds. The thing to check is whether the
-  Amiga emulator runs at all now — see KNOWN-ISSUES.
-* **The component audit** at the end of the build. Read what it prints.
+Nothing is queued behind it. The kernel changes that landed after the build
+finished — the RK628 bridge fix, the hang detectors, the bootloader log — were
+rebuilt and written into the released image by hand rather than left waiting,
+so the release and the tree say the same thing.
 
 ## Open questions on the device
 
@@ -54,11 +45,14 @@ other changes have been on the device for a while.
 ## Repairs, each its own small job
 
 * Three bit-rotted patches: ECWolf, Hypseus Singe, GameTank.
-* Yabasanshiro's upstream repository is gone and no mirror has the pinned tag.
 * Seven PortMaster compatibility libraries whose URLs 404.
-* Kodi's two patch conflicts — the workaround is committed but unbuilt.
 
-All four are described in KNOWN-ISSUES.md with what was already ruled out.
+Both are described in KNOWN-ISSUES.md with what was already ruled out.
+
+Done since this list was written: Yabasanshiro, whose upstream repository is
+gone, builds from a pinned commit of a surviving fork; freej2me-plus needed a
+java level a current JDK still accepts and a jar name that had been renamed
+under it; and Kodi's two patch conflicts are resolved and built.
 
 ## Worth sending upstream
 
