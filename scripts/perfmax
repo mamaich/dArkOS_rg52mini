@@ -16,6 +16,19 @@ else
   usr_dmc_speed="528000000"
 fi
 
+# The GPU node differs per SoC - ff400000 on RK3326, fde60000 on RK3566,
+# ff320000 on RK3562 - and every write below goes to
+# /sys/devices/platform/${gpu}.gpu/devfreq/${gpu}.gpu/. Hardcoding it meant
+# that on RK3562 each of those writes landed on a path that does not exist,
+# failed silently, and left the GPU on simple_ondemand for the whole game.
+# Ask the kernel instead, and keep the old value as a fallback.
+for _devfreq in /sys/class/devfreq/*.gpu; do
+  [ -e "${_devfreq}" ] || continue
+  _name="$(basename "${_devfreq}")"
+  gpu="${_name%.gpu}"
+  break
+done
+
 if [[ ! -z "$isitrk3326" ]] && [[ $(tty) != *"pts"* ]]; then
   rm /home/ark/.asoundrc
 fi
