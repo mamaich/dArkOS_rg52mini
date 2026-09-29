@@ -7,7 +7,11 @@ if [ "$CHIPSET" == "rk3562" ]; then
 else
   PPSSPP_TAG=$(curl -s https://raw.githubusercontent.com/christianhaitian/${CORE_BUILDS_CHIPSET}_core_builds/refs/heads/master/scripts/ppsspp.sh | grep -oP '(?<=TAG=").*?(?=")')
 fi
-if [ -f "Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.commit)" == "${PPSSPP_TAG}" ]; then
+# Same reasoning as build_fake08.sh: the upstream tag does not move when we
+# change compiler flags in the recipe, and this one carries the
+# -fno-stack-protector work.
+PPSSPP_RECIPE_SHA=$(sha1sum ${CHIPSET}_core_builds/scripts/ppsspp.sh 2>/dev/null | cut -c1-12)
+if [ -f "Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.commit)" == "${PPSSPP_TAG}-${PPSSPP_RECIPE_SHA}" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.tar.gz
 else
 	if [ "$CHIPSET" == "rk3562" ]; then
@@ -52,7 +56,7 @@ else
 	  sudo rm -f Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.commit
 	fi
 	sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.tar.gz Arkbuild/opt/ppsspp/
-	echo "${PPSSPP_TAG}" > Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.commit
+	echo "${PPSSPP_TAG}-${PPSSPP_RECIPE_SHA}" > Arkbuild_package_cache/${CHIPSET}/ppsspp_${UNIT}.commit
 fi
 sudo cp ppsspp/gamecontrollerdb.txt.${UNIT} Arkbuild/opt/ppsspp/assets/gamecontrollerdb.txt
 if [ -f "ppsspp/ppsspp.sh.${UNIT}" ]; then
