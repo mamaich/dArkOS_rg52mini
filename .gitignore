@@ -23,3 +23,8 @@ ArkOS_File_System.img
 mnt/
 prebuilts/
 *.orig
+
+# build_devenv.sh, если его кто-то запустит (christianhaitian 2ab72bb)
+Ark_devenv/
+Ark_devenv32/
+builddevenv.log

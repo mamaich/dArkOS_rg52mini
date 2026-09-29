@@ -189,7 +189,7 @@ call_chroot "ln -sfv /usr/lib/aarch64-linux-gnu/bin/sdl2-config /usr/bin/sdl2-co
 # Ensure sdl-image is symlinked properly
 call_chroot "rm /lib/libSDL_image-1.2.so.0"
 call_chroot "cd /lib && ln -sf $(find /lib/ -name libSDL_image-1.2.so.0.* | head -n 1) /lib/libSDL_image-1.2.so.0"
-call_chroot "ldconfig"
+call_chroot "ldconfig -X"
 
 # Re-create Mali symlinks for 32-bit armhf AFTER ldconfig, which regenerates versioned
 # symlinks from any Mesa .so files that were pulled in as apt dependencies.

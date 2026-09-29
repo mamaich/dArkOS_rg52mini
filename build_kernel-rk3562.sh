@@ -181,7 +181,7 @@ sudo cp ${BSP_PATH}/mali/libmali-hook.so.1.9.0 Arkbuild/usr/lib/aarch64-linux-gn
 )
 
 # Run ldconfig to update library cache
-sudo chroot Arkbuild/ ldconfig
+sudo chroot Arkbuild/ ldconfig -X
 
 # Create kernel config for initramfs-tools
 echo "Creating kernel config for initramfs-tools..."

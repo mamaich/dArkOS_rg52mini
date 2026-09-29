@@ -176,7 +176,7 @@ function setup_arkbuild32() {
         sudo ln -sfv libMali.so ${LIB}
       done
     )
-	sudo chroot Arkbuild32/ ldconfig
+	sudo chroot Arkbuild32/ ldconfig -X
   fi
 }
 
