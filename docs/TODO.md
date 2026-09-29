@@ -60,9 +60,12 @@ into it:
 ## Repairs, each its own small job
 
 * Three bit-rotted patches: ECWolf, Hypseus Singe, GameTank.
-* Seven PortMaster compatibility libraries whose URLs 404.
 
-Both are described in KNOWN-ISSUES.md with what was already ruled out.
+Described in KNOWN-ISSUES.md with what was already ruled out.
+
+The seven PortMaster compatibility libraries that used to 404 are fixed:
+upstream found them on snapshot.debian.org and this fork took the change. All
+twenty-one URLs answer now.
 
 Done since this list was written: Yabasanshiro, whose upstream repository is
 gone, builds from a pinned commit of a surviving fork; freej2me-plus needed a

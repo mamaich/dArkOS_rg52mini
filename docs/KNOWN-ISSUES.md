@@ -97,21 +97,31 @@ binary exists — enabling a unit whose binary is missing is how a build-time
 failure became "Failed to start bluealsa.service" on every boot with no clue
 why.
 
-## PortMaster compatibility libraries
+## PortMaster compatibility libraries — fixed upstream
 
-Seven of the twenty-one URLs in `fetch_compat_libs.sh` are dead, all of them
-pinning a bullseye version on `security.debian.org`, which drops superseded
-packages as a release ages: libavcodec58, libavformat58, libavutil56,
+Seven of the twenty-one URLs in `fetch_compat_libs.sh` used to be dead, all of
+them pinning a bullseye version on `security.debian.org`, which drops
+superseded packages as a release ages: libavcodec58, libavformat58, libavutil56,
 libswresample3, libswscale5, libvpx6, libaom0.
 
-Those versions are gone from `archive.debian.org` and from the snapshot API as
-well, so there is no URL to switch to — only different versions, which is a
-decision rather than a fix. The build warns and carries on now; it used to
-`exit 1` and take the whole run down with it, nine hours in.
+**This page used to state that those versions were gone from every archive and
+that no URL existed to switch to. That was wrong.** They are on
+`snapshot.debian.org` — the ffmpeg ones and libvpx6 and libaom0 under
+`archive/debian-security/<timestamp>/`, libjpeg8 under
+`archive/debian-ports/`. The mistake was looking in `archive.debian.org` and in
+snapshots of the main archive, and concluding from their absence there that
+they were unobtainable.
 
-PortMaster ports that need those libraries will not start. Everything else is
-unaffected: the custom rkmpp ffmpeg provides its own libav* and is what the
-system uses.
+Found and fixed by christianhaitian upstream (`1dac9ef`, reported by
+@Sundownersport), taken into this fork with one conflict — our copy still had
+the old libvpx6 URL, since the intermediate upstream commit that moved it was
+never pulled. All twenty-one now answer 200 and serve a real `.deb`; checked,
+not assumed.
+
+The build still treats a failed fetch as a warning rather than a fatal error,
+which is our change and independent of this: a dead mirror should not take down
+a run that is nine hours in. Upstream reached the same conclusion separately in
+`ffcfced`.
 
 ## Build flags targeted the wrong CPU
 
