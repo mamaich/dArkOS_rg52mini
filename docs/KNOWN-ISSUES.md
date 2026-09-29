@@ -184,6 +184,40 @@ components without editing each script. The bad entries were moved to
 If a component is mysteriously missing and the log says it came from the cache,
 look at the size of its tarball first.
 
+## The Bluetooth driver freed every failed packet twice — fixed
+
+`bt_sdio_recv()` in `drivers/net/wireless/aic8800/aic8800_fdrv/btsdio.c` called
+`kfree_skb()` whenever `hci_recv_frame()` returned an error. `hci_recv_frame()`
+owns the skb and frees it on each of its own error paths — `-ENXIO` when the
+hci device is neither `HCI_UP` nor `HCI_INIT`, `-EINVAL` on an unknown packet
+type — so every one of those was a double free.
+
+It fires on shutdown or reboot with Bluetooth on: the hci device goes down
+while frames are still arriving, and the log fills with `hci_recv_frame fail
+-6`, 150 to 200 per shutdown. The freelist is corrupted and the kernel dies a
+moment later somewhere else entirely — in `__skb_try_recv_from_queue()` from
+`netlink_recvmsg()`, or inside `kmem_cache_alloc()` reached from `skb_clone()`
+while `device_del()` broadcast a uevent. Nothing points back at Bluetooth,
+which is why it survived this long.
+
+Two details worth keeping:
+
+* `btsdio.o` is in `aic8800_fdrv.ko` unconditionally. `CONFIG_SDIO_BT=y` is
+  hardcoded in the driver's own `Makefile`, not taken from the kernel config,
+  so grepping `.config` for it finds nothing and proves nothing.
+* `alloc_skb()` failure was logged and then ignored, so the `memcpy(skb_put(…))`
+  below it dereferenced NULL. `GFP_ATOMIC` on 2 GB under a heavy game with a
+  gamepad connected can fail. Fixed in the same commit.
+
+Fixed in `kernel_rk3562` as *aic8800: stop freeing an skb that
+hci_recv_frame() already freed*. The bug was first tracked down in the Android
+kernel for this board (`mamaich/kernel_rk3562_rg52mini` 0c34dd591), where the
+panic handler overwrote the requested reboot mode and the device stopped
+rebooting into eMMC. The same code is in every copy of this vendor driver on
+GitHub — `radxa-pkg/aic8800`, `D-Robotics/x5-kernel`,
+`unifreq/linux-6.1.y-rockchip` — so it is worth carrying to any other tree
+that uses this chip.
+
 ## Smaller things
 
 * **No plymouth.** The command line carries `quiet splash` and

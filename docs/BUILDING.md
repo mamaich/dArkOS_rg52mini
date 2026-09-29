@@ -95,3 +95,34 @@ and the build moves on, leaving an empty `/opt/<name>` behind. `make rg52mini`
 now ends with an audit (`scripts/audit-components.sh`) that lists directories
 with no ELF in them, every step that gave up, and every package that would not
 install. Read it.
+
+**A defconfig is a request, not a result.** Appending `CONFIG_FOO=y` to
+`rg52mini_defconfig` does nothing at all if `FOO`'s dependencies are unmet —
+kconfig drops it without a word. That is how `CONFIG_LOGO` stayed out of three
+images. The reverse bites too: turning something *off* can take an unrelated
+option with it, because the thing you disabled was the only one `select`ing it.
+`CONFIG_BLK_DEV_IO_TRACE` was the only selector of `CONFIG_DEBUG_FS` in this
+tree, and `scripts/rk3562/ledctl.sh` drives the power LED through
+`/sys/kernel/debug/regulator/vcc-led/enable`, so switching off blktrace would
+have quietly taken out the LED.
+
+Resolve the defconfig and diff it, every time. It can be done without touching
+the working tree — useful while a build is running, since `make <unit>_defconfig`
+would overwrite the `.config` the build is using, and `make O=<dir>` refuses
+outright once the tree has object files in it:
+
+    cd kernel_rk3562
+    export ARCH=arm64 SRCARCH=arm64 srctree=. objtree=. \
+           CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc \
+           HOSTCC=gcc KERNELVERSION=$(make -s kernelversion)
+    export PATH=$PWD/../prebuilts/gcc/linux-x86/aarch64/gcc-linaro-6.3.1-2017.05-x86_64_aarch64-linux-gnu/bin:$PATH
+    export CC_VERSION_TEXT="$(aarch64-linux-gnu-gcc --version | head -n1)"
+    KCONFIG_CONFIG=/tmp/newcfg scripts/kconfig/conf \
+        --defconfig=arch/arm64/configs/rg52mini_defconfig Kconfig
+    diff <(grep ^CONFIG_ .config | sort) <(grep ^CONFIG_ /tmp/newcfg | sort)
+
+`scripts/kconfig/conf` is already built after any kernel build, and
+`KCONFIG_CONFIG` sends the output somewhere harmless. Export `CC_VERSION_TEXT`
+or every compiler probe fails: you get `CONFIG_GCC_VERSION=0`, `GCC_PLUGINS`
+disappears and `KASAN` appears, and the diff fills with noise that has nothing
+to do with your change. Read the whole diff, not just the symbols you edited.
