@@ -102,7 +102,7 @@ sudo mkdir -p Arkbuild/home/ark/.config/retroarch/cores
 while read RETROARCH_CORE; do
   if [[ ! "$RETROARCH_CORE" =~ ^# ]]; then
     echo -e "Adding ${RETROARCH_CORE} libretro core\n"
-    wget -t 5 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REPO"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
+    wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REPO"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
     if [ $? -eq 0 ]; then
       sudo unzip -o /dev/shm/"$RETROARCH_CORE"_libretro.so.zip -d Arkbuild/home/ark/.config/retroarch/cores/
       rm -f /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
@@ -110,7 +110,7 @@ while read RETROARCH_CORE; do
     else
       printf "\n  ${RETROARCH_CORE} libretro was not added!\n"
     fi
-    sudo wget -t 5 -T 30 --no-check-certificate https://github.com/libretro/libretro-core-info/raw/refs/heads/master/"$RETROARCH_CORE"_libretro.info -O Arkbuild/home/ark/.config/retroarch/cores/"$RETROARCH_CORE"_libretro.info
+    sudo wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/libretro/libretro-core-info/raw/refs/heads/master/"$RETROARCH_CORE"_libretro.info -O Arkbuild/home/ark/.config/retroarch/cores/"$RETROARCH_CORE"_libretro.info
     if [ $? -ne 0 ]; then
       if [ -f "core_info_files/${RETROARCH_CORE}_libretro.info" ]; then
 	    sudo cp core_info_files/"$RETROARCH_CORE"_libretro.info Arkbuild/home/ark/.config/retroarch/cores/"$RETROARCH_CORE"_libretro.info
@@ -355,7 +355,7 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 	while read RETROARCH_CORE32; do
 	  if [[ ! "$RETROARCH_CORE32" =~ ^# ]]; then
 		echo -e "Adding ${RETROARCH_CORE32} libretro core\n"
-		wget -t 5 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REPO"/"$ARCH"/"$RETROARCH_CORE32"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip
+		wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REPO"/"$ARCH"/"$RETROARCH_CORE32"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip
 		if [ $? -eq 0 ]; then
 		  sudo unzip -o /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip -d Arkbuild/home/ark/.config/retroarch32/cores/
 		  rm -f /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip
@@ -363,7 +363,7 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 		else
 		  printf "\n  ${RETROARCH_CORE32} libretro was not added!\n"
 		fi
-		sudo wget -t 5 -T 30 --no-check-certificate https://github.com/libretro/libretro-core-info/raw/refs/heads/master/"$RETROARCH_CORE32"_libretro.info -O Arkbuild/home/ark/.config/retroarch32/cores/"$RETROARCH_CORE32"_libretro.info
+		sudo wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/libretro/libretro-core-info/raw/refs/heads/master/"$RETROARCH_CORE32"_libretro.info -O Arkbuild/home/ark/.config/retroarch32/cores/"$RETROARCH_CORE32"_libretro.info
 		if [ $? -ne 0 ]; then
 		  if [ -f "core_info_files/${RETROARCH_CORE32}_libretro.info" ]; then
 			sudo cp core_info_files/"$RETROARCH_CORE32"_libretro.info Arkbuild/home/ark/.config/retroarch32/cores/"$RETROARCH_CORE32"_libretro.info
