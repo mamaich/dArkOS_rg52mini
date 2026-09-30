@@ -83,7 +83,37 @@ in a pull request to bmdhacks rather than only here:
 | `utils.sh` | `install_package`'s `updateapt` flag is global, so the 32-bit chroot never gets contrib/non-free and never runs `apt update` |
 | `setup_partition-rk3562.sh` | the result of `mount` was not checked — a failed mount let the build write past the image for hours |
 | `build_retroarch.sh` | `while true` with no attempt counter, which turns one broken patch into a build that spins overnight |
+| `utils.sh` | `protect_package` reports `"$${protectedlib} has been marked..."` — `$$` is the shell PID, so every line reads `531{protectedlib}` and never names the package |
 
 The other two — the absolute toolchain path and the 32-bit chroot cloning
 upstream's core builds instead of the local fork — only bite in this fork's
 layout.
+
+## The dependency stage costs two hours of emulation, not of work
+
+Measured while resuming the 2026-09-29 build, where every package was already
+installed and the stage still took the same order of time: about 34 seconds per
+entry in `needed_packages.txt`, against 41 seconds when they were being
+installed for real. Almost none of that is installing anything.
+
+Each entry of that list runs two separate commands inside the arm64 chroot, and
+every one of them is a full process start under qemu:
+
+* `install_package` -> `chroot Arkbuild dpkg -s <pkg>:arm64`, purely a question
+* `protect_package` -> `chroot Arkbuild apt-mark manual <pkg>`
+
+`needed_dev_packages.txt` runs at half that, near 17 seconds, because its
+`protect_package` call is commented out — which is the measurement that says
+where the time goes.
+
+Two ways out, both straightforward:
+
+* Batch. `apt-mark manual` and `dpkg -s` both take any number of package names,
+  so the whole list is one chroot invocation instead of 101 or 202.
+* Ask on the host. Whether a package is installed is a question about
+  `Arkbuild/var/lib/dpkg/status`, readable from outside without emulating
+  anything.
+
+Batching is the smaller change and gets nearly all of it. On 284 packages this
+is the difference between something over two hours and a few minutes, on every
+build, and it is upstream's code rather than ours.
