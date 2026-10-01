@@ -89,6 +89,35 @@ way is tied to a live `wsl.exe` client, and closing it is the same as a reboot.
 Nothing can be done about it afterwards: the running build has a controlling
 terminal and a live parent, and neither can be changed from outside.
 
+**`systemd-run` is necessary and not sufficient**, which cost three interrupted
+builds on 2026-09-30 before it was understood. Two different things kill a
+build, and the second one takes systemd with it:
+
+* The agent session's own supervisor can reap a long-running background shell
+  when the host is short of memory. A service is not a background shell, so
+  `systemd-run` answers this one. Redirecting output to a file does not: the
+  processes die with the invocation regardless of where their stdout points.
+* **WSL shuts the whole VM down about a minute after the last `wsl.exe` client
+  exits**, and that stops every systemd service with it. The default
+  `vmIdleTimeout` is 60000 ms. The first build survived three hours and forty
+  minutes only because a progress monitor happened to hold a client open the
+  whole time; when the monitor died too, the VM went down a minute later.
+
+So either keep a client alive for as long as the build runs, or raise the
+timeout in `%UserProfile%\.wslconfig` and stop depending on it:
+
+    [wsl2]
+    vmIdleTimeout=7200000
+
+It takes effect on the next VM start, so `wsl --shutdown` applies it — or
+simply the next reboot, which is how it landed here.
+
+Neither of those helps against the host rebooting for updates, which is what
+ended the fourth attempt. That one is only survivable by being able to resume:
+keep the image and rootfs files, re-attach and re-mount them, and restart from
+the step after the kernel. Verify the content rather than the mounts before
+continuing — a mounted filesystem proves nothing about what is in it.
+
 **Silent losses.** Most `build_<emu>sa.sh` scripts have no `verify_action`: a
 component that fails to patch or clone prints one line among tens of thousands
 and the build moves on, leaving an empty `/opt/<name>` behind. `make rg52mini`
