@@ -45,8 +45,8 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The 2026-09-16 image is released and runs on the device. What was checked,
-on hardware:
+The 2026-09-29 image is released and runs on the device; 2026-09-16 was the
+first release of this fork. What was checked, on hardware:
 
 | | |
 |---|---|
@@ -58,6 +58,8 @@ on hardware:
 | Swap | zram 1.5 GB at priority 100, eMMC partition at 10, both active |
 | Kernel modules | 6.3 MB, stripped of debug info (was 100 MB) |
 | Bootloader | ours, with power-off, splash, charge animation and a console |
+| Bluetooth gamepads | work — the HID gate had to be opened, see HARDWARE.md |
+| Kernel | `Image` 32.9 MB; no OP-TEE, no dead GPU drivers, no unread debugging |
 
 Bluetooth and USB host are the two things the upstream port cannot do. Both
 come from the device tree and driver changes described in

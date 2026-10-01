@@ -29,6 +29,17 @@ finds nothing.
 Fixing them means working out what changed upstream and rewriting the hunks —
 one job each, not a batch. They are all secondary emulators.
 
+**Two of the three now fail without even trying.** The audit at the end of the
+v09292026 build reported `/opt/ecwolf` empty and `/opt/gametank` and
+`/opt/hypseus-singe` holding files with no ELF among them, and named the cause:
+`Arkbuild_package_cache/rk3562/` carries `ecwolfsa.tar.gz` at 130 bytes and
+`gametank.tar.gz` at 128 bytes. Those are empty tarballs written when the build
+first failed, under cache keys that still match, so every later build restores
+the failure rather than retrying it. Delete the two `.tar.gz` files with their
+`.commit` partners before the next build or the patches above will never be
+reached. Their two missing packages, `libfuse2` and `libpcap0.8`, do not exist
+in trixie under those names either.
+
 Yabasanshiro used to be a fourth, for a different reason, and is now building
 again — see below.
 

@@ -14,21 +14,33 @@ The kernel changes that landed after the build finished — the RK628 bridge
 fix, the hang detectors, the bootloader log — were rebuilt and written into the
 released image by hand rather than left waiting.
 
-## Waiting on the next build
+## Shipped in v09292026
 
-Found after the image was released, committed, and deliberately not rebuilt
-into it:
+Everything the previous list was waiting on, plus what was found while building
+it. Confirmed on the device.
 
-* **flycast and fake-08 were compiled with no optimisation**, `-O0` and `-g`
-  respectively, for the reasons in PERFORMANCE.md. This is the one worth
-  rebuilding for: flycast's SH4 and MMU paths are the hot loop for every
-  demanding Dreamcast title.
-* **`perfmax` never set the GPU governor** on this SoC — it wrote to the RK3566
-  node — so the GPU ran the whole of every game on `simple_ondemand`. Fixed;
-  measured at 10% GPU load on a CPU-bound game, so expect it to matter where
-  the GPU is actually busy and nowhere else.
-* **BlueZ rejected HID from unbonded devices**, which is most legacy Bluetooth
-  gamepads. Fixed in the build and applied to the released image by hand.
+* **flycast and fake-08 are optimised now** — they had been built at `-O0` and
+  `-g`. PPSSPP's `flags.make` was read out of the running build to prove the
+  flags arrive, and the cache key change meant it rebuilt from source rather
+  than restoring the artifact made under the old flags.
+* **`perfmax` sets the GPU governor**, which it never did on this SoC — it was
+  writing to the RK3566 node, so every game ran on `simple_ondemand`.
+* **BlueZ accepts HID from unbonded devices**, which is most legacy Bluetooth
+  gamepads. It was in the released image by hand; now it is in the build.
+* **The Bluetooth driver no longer frees every failed packet twice.**
+  `bt_sdio_recv()` in aic8800 called `kfree_skb()` after `hci_recv_frame()`
+  had already freed it — 150 to 200 double frees per shutdown with Bluetooth
+  on, a corrupted slab, and a panic somewhere unrelated a moment later. See
+  KNOWN-ISSUES.
+* **The two GPU drivers that cannot bind here are gone**, and so is the
+  debugging the device never reads: `Image` is 6.0 MB smaller. See
+  PERFORMANCE and HARDWARE.
+* **OP-TEE is off on both sides** — driver and bootloader — which returns the
+  2 MiB SHM window. See HARDWARE.
+* **RetroArch gets its cores even when GitHub says 429.** 269 cores
+  downloaded, 8 of them only after a retry; plain `wget -t` counts network
+  failures and treats an HTTP error as a final answer, so those 8 used to go
+  missing silently.
 
 ## Open questions on the device
 

@@ -118,6 +118,32 @@ speed change, but it is 94 MB of an SD card and of every image download.
 Never plain `strip` on a module — it removes the symbols `MODVERSIONS` CRCs are
 computed against and the module stops loading.
 
+### The kernel itself, not just its modules
+
+`Image` went from 39,164,416 bytes in v09162026 to 32,965,120 in v09292026,
+6.0 MB smaller, in two steps and for two different reasons.
+
+The first, about 4.9 MB, was debugging the device never reads. `FUNCTION_TRACER`
+alone was 473,376 bytes of `__start_mcount_loc` — 59,172 trace points, each of
+which costs a 24-byte `dyn_ftrace` record at boot, about 1.4 MB of RAM, plus
+the `-pg` prologue padding left in `.text` for good. `DYNAMIC_DEBUG` was
+356,384 bytes of descriptors. Also off: `SLUB_DEBUG`, `SCHED_DEBUG`,
+`IKCONFIG`, and the debugging inside the drivers that do run — `ROCKCHIP_DEBUG`,
+`ROCKCHIP_DRM_DEBUG`, `ROCKCHIP_RGA_DEBUGGER`, `RK_DMABUF_DEBUG`,
+`SW_SYNC_DEBUG`, `BT_DEBUGFS`, `USB_GADGET_DEBUG_FILES`, `PM_DEBUG`,
+`DEBUG_DEVRES`, `BLK_DEV_IO_TRACE`, `RCU_TRACE`.
+
+The second, 1.1 MB, was the two GPU drivers that cannot bind on this hardware —
+see HARDWARE.md.
+
+Deliberately kept: `KALLSYMS`, because panic reports now go to pstore and are
+worth reading by name (`KALLSYMS_ALL` was already off); the hang detectors; and
+`DEBUG_FS`, which turned out to need asking for explicitly — `BLK_DEV_IO_TRACE`
+was the only thing selecting it, and `scripts/rk3562/ledctl.sh` drives the power
+LED through `/sys/kernel/debug/regulator/vcc-led/enable`. Switching off
+blktrace would have taken the LED with it. See BUILDING.md for how to catch
+that class of mistake before it reaches an image.
+
 ### Cortex-A53 build flags
 
 See KNOWN-ISSUES: sixteen core-build scripts targeted Cortex-A55, and the Amiga
@@ -167,8 +193,17 @@ project ships — miyoomini, funkey-s, gcw0, bittboy — uses `-Ofast`.
 Both fixed in `mamaich/rk3566_core_builds` (`ae544e5`, `6aaaa37`), which also
 applies the `-march=armv8-a+crc -mtune=cortex-a53` correction from `7290d75`.
 
-**Neither is in the released v09162026 image**, which was built before the
-finding, and there is no rebuild planned for it. They land with the next build.
+**Both are in v09292026**, and it was verified rather than assumed: with the
+build running, `flags.make` under the PPSSPP build directory read
+
+    -Ofast -fno-tree-slp-vectorize -D_NDEBUG -march=armv8-a+crc
+    -mtune=cortex-a53 -ftree-vectorize -funsafe-math-optimizations
+    -fno-stack-protector -U_FORTIFY_SOURCE -O3 -DNDEBUG
+
+— the `-Ofast`, the correct `-mtune`, and the `-O3` that the build type carries
+once nothing replaces it. The cache did not undo it either: with the key now
+including the recipe hash, PPSSPP rebuilt from source instead of restoring the
+artifact built under the old flags.
 
 How to check this for any component, since nothing reports it:
 

@@ -177,14 +177,27 @@ the Mesa ICDs so only the Mali one is left.
 not implement it — no `glBegin`, no GLX. Mesa is installed and provides
 `libGL.so.1`, `libGLX_mesa` and a `dri` directory that includes
 `panfrost_dri.so`, but panfrost cannot attach to this kernel: the GPU is driven
-by ARM's own kbase (`CONFIG_MALI_MIDGARD=y`, the tree that also covers Bifrost)
-and `CONFIG_DRM_PANFROST` is not set. So anything that asks for desktop GL gets
+by ARM's own kbase — `CONFIG_MALI_BIFROST`, from `drivers/gpu/arm/bifrost`,
+because the GPU node in `rk3562.dtsi` says
+`compatible = "arm,mali-bifrost"` — and `CONFIG_DRM_PANFROST` is not set. So anything that asks for desktop GL gets
 llvmpipe, which will report a respectable OpenGL 4.5 and rasterise it on four
 Cortex-A53 cores.
 
 The practical rule: an emulator that speaks GLES or Vulkan runs on the GPU, and
 one that needs desktop GL will start and be unplayable. That is why the recipes
 here pass `USE_EGL=ON` and `USING_FBDEV=ON`.
+
+**Two other Mali drivers used to be compiled and could never bind.** This
+kernel carries three trees under `drivers/gpu/arm`: `bifrost`, `midgard` and
+`mali400` (Utgard, for Mali-400/450). Only bifrost can probe here, yet
+`CONFIG_MALI_MIDGARD` and `CONFIG_MALI400` were both `y` — 438 and 113 symbols
+of dead driver in `System.map`. Both are off as of v09292026.
+
+`MALI_DT`, `MALI_DEVFREQ` and `MALI_SHARED_INTERRUPTS` sit beside them in the
+defconfig and read as if they were shared, but they are declared in
+`drivers/gpu/arm/mali400/mali/Kconfig` and belong to Utgard alone. Bifrost has
+its own `MALI_BIFROST_DEVFREQ`, which stays on. Checked before switching
+anything off: nothing outside `drivers/gpu/arm` depends on either driver.
 
 The 32-bit armhf side is GLES 3.2 as well, but from the older `g13p0` blob.
 `build_deps.sh` picks it deliberately: the 32-bit build of g29p1 segfaults
@@ -236,10 +249,14 @@ this device runs only what its own image contains. `HARDENED_USERCOPY` and
 
 ## The bootloader
 
-The image ships `mamaich/u-boot-rk3562-rg52mini`, branch `next-dev`, release
-`rg52mini-20260918`, written to the `uboot` partition at sector 16384 by
-`build_kernel-rk3562.sh` from `BSP/uboot-rg52mini.img`. The vendor's own
-U-Boot is kept beside it as `.vendor`.
+The image ships `mamaich/u-boot-rk3562-rg52mini`, branch `next-dev`, written
+to the `uboot` partition at sector 16384 by `build_kernel-rk3562.sh` from
+`BSP/uboot-rg52mini.img`. The vendor's own U-Boot is kept beside it as
+`.vendor`.
+
+v09292026 ships the build made from `uboot-bl32-v102.img`
+(`next-dev-g66a8e67e16`): BL32 v1.02 in the FIT instead of v1.03, and the SHM
+patch described below.
 
 It replaces a stock `U-Boot 2017.09` that ran with `rk3562-evb`, the Rockchip
 evaluation-board device tree: twelve kilobytes with no dsi, panel, vop or
@@ -269,6 +286,30 @@ reaches the display. `build_kernel-rk3562.sh` deletes it defensively.
 
 The resource partition is empty on this device, so everything the vendor would
 normally keep there is read off the boot partition as ordinary files.
+
+### OP-TEE is not used, and its memory is given back
+
+Nothing in this image talks to the secure world. No `/dev/tee*` consumer
+ships, `tee-supplicant` is not installed, and vendor storage goes through
+`CONFIG_ROCKCHIP_VENDOR_STORAGE` rather than OP-TEE, so the MAC address and
+serial number do not depend on it.
+
+Two halves, and they have to match:
+
+* The bootloader carries **BL32 v1.02**, which declares an 8 MiB OP-TEE region
+  where v1.03 declares 10 MiB, and `param_parse_optee_mem()` in
+  `arch/arm/mach-rockchip/param.c` hands the 2 MiB SHM window at the tail of
+  that region back to Linux.
+* The kernel is built with **`CONFIG_TEE` and `CONFIG_OPTEE` off**. Had the
+  driver come up it would have negotiated that same window as shared memory
+  and both sides would be writing the same pages.
+
+The `firmware/optee` node in `rk3562-linux.dtsi` stays. Without the driver it
+does nothing, and that file is shared with the Android work on this board,
+where the node is what stops a vendor self-check from rebooting in a loop.
+
+None of this touches the vendor firmware, which boots from eMMC through a
+different chain of bootloaders.
 
 ### The console
 
