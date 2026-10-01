@@ -114,6 +114,41 @@ Two ways out, both straightforward:
   `Arkbuild/var/lib/dpkg/status`, readable from outside without emulating
   anything.
 
-Batching is the smaller change and gets nearly all of it. On 284 packages this
-is the difference between something over two hours and a few minutes, on every
-build, and it is upstream's code rather than ours.
+Batching is the smaller change and gets nearly all of it, and it is upstream's
+code rather than ours.
+
+The saving is twice what the paragraph above assumed, because the lists are
+walked a second time. After `cleanup_filesystem.sh` purges the build
+dependencies it reinstalls what the finished system needs by reading the same
+files again: `needed_packages32.txt` (27), `needed_packages.txt` (101) and
+`bluetooth_needed_packages.txt` (17) — 145 entries, each with the same
+`dpkg -s` plus `apt-mark manual` pair inside the chroot. Measured on the
+2026-10-01 build, that one step ran from 00:12 to roughly 02:00 with nothing
+to install: every package was already present. `kodi_needed_dev_packages.txt`
+is skipped there, but only by accident of a chipset test that reads `*3566*`
+and so never matches this board.
+
+So the whole build pays the per-package emulation cost twice, in `build_deps.sh`
+and again in `cleanup_filesystem.sh`. Batching both would return roughly two
+and a half hours per build.
+
+## Delete two cached failures before the next build
+
+`make rg52mini` ends with an audit, and on 2026-10-01 it reported:
+
+    EMPTY       /opt/ecwolf
+    NO BINARY   /opt/gametank  (files present, no ELF among them)
+    NO BINARY   /opt/hypseus-singe  (files present, no ELF among them)
+    with binaries: 33   empty: 1   no executable: 2
+
+Two of those are self-perpetuating. `Arkbuild_package_cache/rk3562/` holds
+`ecwolfsa.tar.gz` at 130 bytes and `gametank.tar.gz` at 128 bytes — empty
+tarballs written when the build failed, under keys that still match. Every
+later build restores the failure instead of retrying it, which is why they are
+missing from the 2026-09-29 image as well. Delete those two `.tar.gz` files
+with their `.commit` partners and the next build will try again.
+
+What it would then have to get past: `ecwolf-patch-002-add-exit-menu.patch`,
+`gametank-patch-001-disable-joystick.patch` and
+`hypseussinge-patch-0001-buildfix.patch` all failed to apply, and `libfuse2`
+and `libpcap0.8` do not exist in trixie under those names.
