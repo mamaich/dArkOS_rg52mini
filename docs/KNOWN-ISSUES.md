@@ -229,6 +229,58 @@ GitHub — `radxa-pkg/aic8800`, `D-Robotics/x5-kernel`,
 `unifreq/linux-6.1.y-rockchip` — so it is worth carrying to any other tree
 that uses this chip.
 
+## HDMI output does nothing
+
+Reported from the device on 2026-10-01: plugging a cable produces no reaction
+at all. Not being worked on yet; recorded so the next session does not start
+from scratch — or from the wrong guess, which is what happened here first.
+
+**The kernel is not the problem, and this was checked rather than assumed.**
+HDMI on this board does not come from the SoC. The panel is DSI, and HDMI comes
+off an **RK628 RGB-to-HDMI bridge** — `rk628@50` on i2c4 (`i2c@ffa30000`),
+`rk628-rgb-in` and `rk628-hdmi-out`, reached through the `route-rgb` display
+route rather than an HDMI one.
+
+The same bridge, the same device tree node and the same kernel config drive
+HDMI successfully in the Android image for this board, which settles it:
+
+* `rk628@50` is byte-for-byte identical between our built DTB and the vendor's
+  `BSP/rk3562-rg52mini.dtb` — same bus, address `0x50`, enable/reset/interrupt
+  GPIOs, and `soc_24M` at 24 MHz.
+* Every RK628 and display symbol is identical between this defconfig and
+  `mamaich/kernel_rk3562_rg52mini`, where HDMI works: `RK628_MISC`,
+  `RK628_MISC_HDMITX`, `VIDEO_RK628_CSI`, `VIDEO_RK628_BT1120`,
+  `ROCKCHIP_RGB`, `DRM_ROCKCHIP`, `ROCKCHIP_DW_HDMI`, `ROCKCHIP_INNO_HDMI`.
+* The `rockchip_rgb` deferred-probe fix is in both trees.
+
+So the gap is on the dArkOS side, and the first guess — that the bridge fix had
+traded HDMI away — is wrong. HARDWARE.md's line "Only HDMI through that bridge
+is lost" describes what happens when the bridge is silent, not what happens
+here.
+
+**What is on the dArkOS side is `scripts/rk3562/hdmi-test.sh`,** which writes
+`/var/run/drmConn` and `/var/run/drmMode` for EmulationStation and RetroArch.
+It cannot work as written, for three independent reasons:
+
+    HDMI_STATUS=$(cat /sys/class/drm/card0-HDMI-A-1/status 2>/dev/null)
+    if [ "$HDMI_STATUS" == "connected" ]; then
+        echo 1 | sudo tee /var/run/drmConn
+    fi
+
+1. It reads `card0-HDMI-A-1`. The output here is the RGB route through the
+   RK628, so the DRM connector is most likely not called that — and `2>/dev/null`
+   makes a missing path indistinguishable from a disconnected display.
+2. It runs once, from `@reboot` in crontab. Nothing re-runs it on hotplug. The
+   udev rule that does fire on DRM events (`99-hdmi-audio.rules`) calls
+   `audio-switch.sh`, which handles audio only.
+3. `drmConn=1` assumes the HDMI connector is index 1, which is a guess rather
+   than something read from the card.
+
+The kernel command line carries `video=HDMI-A-1:1280x720@60` and names the same
+possibly non-existent connector.
+
+Where to start is in TODO.
+
 ## Smaller things
 
 * **No plymouth.** The command line carries `quiet splash` and

@@ -42,6 +42,43 @@ it. Confirmed on the device.
   failures and treats an HTTP error as a final answer, so those 8 used to go
   missing silently.
 
+## HDMI: find the real connector name, then make detection follow the cable
+
+HDMI does nothing on the device. KNOWN-ISSUES has the evidence that the kernel
+side matches the Android image where HDMI works, so this is dArkOS-side work.
+In order, and the first step is one command:
+
+1. **Ask the card what its connectors are called.** On the device:
+
+       ls /sys/class/drm/
+       for c in /sys/class/drm/card0-*/status; do echo "$c $(cat $c)"; done
+
+   HDMI arrives through `route-rgb` and the RK628, so expect something other
+   than `HDMI-A-1`. Whatever the name is, it has to replace the hardcoded one
+   in `scripts/rk3562/hdmi-test.sh` and in `KCMD_VIDEO` in
+   `finishing_touches-rk3562.sh`, which currently says
+   `video=HDMI-A-1:1280x720@60`.
+
+2. **Read the connector index rather than assuming it.** The script writes
+   `drmConn=1` for HDMI and `0` for the panel. The index EmulationStation and
+   RetroArch expect is a position on the card, so derive it from the same
+   enumeration as step 1 instead of hardcoding.
+
+3. **Make it run on hotplug, not only at boot.** It is on `@reboot` in crontab
+   today. There is already a udev rule firing on DRM events —
+   `audio/99-hdmi-audio.rules`, `SUBSYSTEM=="drm"` — which calls
+   `audio-switch.sh`. Call the display side from the same place so plugging a
+   cable does something.
+
+4. **Drop the `2>/dev/null` while debugging.** It is what turned "that path
+   does not exist" into "no display connected", which is why this looked like a
+   hardware problem for a while.
+
+Worth knowing before touching the kernel: `rockchip_rgb` binds without the RGB
+output if the bridge has not answered by the time initcalls finish, so if the
+connector is genuinely absent from `/sys/class/drm`, check `dmesg` for the rgb
+and rk628 probe order before concluding anything about the hardware.
+
 ## Open questions on the device
 
 * **Is the speaker click gone?** `spk-mute-delay-ms = <100>` is in the device
