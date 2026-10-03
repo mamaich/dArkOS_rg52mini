@@ -1,11 +1,10 @@
 [Unit]
-Description=Revision A: one suspend/resume cycle so the panel comes up
-After=wifi-driver-load.service emulationstation.service
+Description=Revision A: power-cycle the panel before EmulationStation takes the display
+Before=emulationstation.service
 
 [Service]
-# simple, not oneshot: a oneshot wanted by multi-user.target would hold the
-# target back for the whole sleep and suspend
-Type=simple
+# oneshot so EmulationStation waits for it; it takes about a second
+Type=oneshot
 ExecStart=/usr/local/bin/panel-kick.sh
 
 [Install]

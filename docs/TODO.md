@@ -42,23 +42,22 @@ it. Confirmed on the device.
   failures and treats an HTTP error as a final answer, so those 8 used to go
   missing silently.
 
-## Revision A black screen: find the cause, then drop panel-kick
+## Revision A black screen: find what cycles the display, then drop panel-kick
 
-`panel-kick` repeats a suspend/resume cycle that is known to fix the symptom;
-it says nothing about the cause. In order:
+What breaks the panel is known (KNOWN-ISSUES): the display switched off and on
+again faster than the DSI host and its PHY runtime-suspend. What is not known is
+what does that to revision A at boot — revision B never goes through such a
+cycle. `panel-kick` repairs the result; the cause should be found and removed.
 
-1. Does **v09162026** go black on the same unit? If not, it is a regression,
-   and the next test is v09292026 with the v09162026 `Image`, `uInitrd`, DTB
-   and modules — the only boot-partition files that differ.
-2. A log from the unit, no soldering needed: `dmesg` over ssh after the screen
-   comes up, and `sudo sh -c 'cat /sys/fs/pstore/*'` after a warm reboot for
-   the boot that went black. Not `sudo cat /sys/fs/pstore/*` — the directory is
-   0750 and the unprivileged shell expands the glob before sudo runs.
-3. A working theory to test against the log: the release turned off ftrace,
-   `SLUB_DEBUG` and the rest, so the kernel reaches the panel sooner. A panel
-   that is marginal on power-up timing would fail the first enable and pass
-   the one after resume. If so, the fix is the panel's delays in the device
-   tree, and `panel-kick` can go.
+1. Ask a revision A owner for `dmesg` over ssh. Look for a
+   `vop2_crtc_atomic_disable` followed shortly by `vop2_crtc_atomic_enable`
+   after the first enable, and for what logs just before it.
+2. The proper kernel fix is in `dw-mipi-dsi-rockchip`: an enable that follows a
+   disable should bring the PHY and the host up from scratch whether or not
+   runtime PM got as far as suspending them. With that, neither revision would
+   care how fast a cycle comes, and `panel-kick` can go.
+3. Does v09162026 also go black on revision A? Still unasked, and it says
+   whether something between the releases introduced the cycle.
 
 ## HDMI: find the real connector name, then make detection follow the cable
 

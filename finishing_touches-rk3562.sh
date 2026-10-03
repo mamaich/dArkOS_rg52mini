@@ -402,8 +402,8 @@ sudo cp scripts/wifi-driver-load.service Arkbuild/etc/systemd/system/wifi-driver
 sudo chroot Arkbuild/ bash -c "systemctl enable wifi-driver-load"
 
 # Revision A workaround: the panel stays black after the kernel takes over the
-# display until one suspend/resume cycle. panel-kick does that cycle by itself
-# once EmulationStation is up, and exits at once on revision B.
+# display. panel-kick re-initialises the display before EmulationStation starts
+# and exits at once on revision B. See docs/KNOWN-ISSUES.md.
 sudo install -m 755 scripts/rk3562/panel-kick.sh Arkbuild/usr/local/bin/panel-kick.sh
 sudo install -m 644 scripts/rk3562/panel-kick.service Arkbuild/etc/systemd/system/panel-kick.service
 sudo chroot Arkbuild/ bash -c "systemctl enable panel-kick"

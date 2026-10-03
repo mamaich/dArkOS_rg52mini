@@ -251,12 +251,39 @@ DTB, and the DTB only by the added `firmware/optee` node. So the kernel is the
 remaining suspect — unless v09162026 also goes black on that unit, which has
 not been asked yet and would make this no regression at all.
 
-Worked around by `panel-kick` (`scripts/rk3562/panel-kick.sh`), shipped in the
-v09292026 assets from 2026-10-03: on revision A — SDIO vendor `0x0296` or
-`rk915` loaded — it waits for EmulationStation, sets the RTC to wake in 5 s and
-runs `systemctl suspend`, the same path ogage takes. Revision B exits at once.
-If the RTC does not wake a revision A unit, one press of the button does.
-`journalctl -t panel-kick` says what it did.
+**What the black screen is**, found on a revision B unit, where it can be
+produced on purpose by blanking and unblanking fb0 before EmulationStation:
+
+| | gap between off and on | DSI, PHY, VOP runtime-suspended | screen |
+|---|---|---|---|
+| blank, fbcon restores the mode | 38 ms | no | black, backlight on |
+| same, panel supply held off 500 ms (`off-on-delay-us`) | 43 ms for the DSI host | no | black |
+| blank 3 s with fbcon unbound | 3 s | yes, within 0.5 s | **works** |
+| suspend/resume | 1.8 s | yes | works |
+
+Re-enabled before the DSI host, its PHY and the VOP have runtime-suspended, the
+DSI link is left stale and the panel ignores its init sequence: backlight on,
+no picture. Once they have powered down and come back from scratch the panel
+initialises normally — which is what suspend/resume did for it. The panel's own
+supply (`vcc3v3_lcd_n`, a GPIO-switched fixed regulator) is not the issue. The
+RK628 bridge is not either: its fb notifier does react to blank events, but
+with the bridge made silent (moved to an address nobody answers) the result
+was the same.
+
+Worked around by `panel-kick` (`scripts/rk3562/panel-kick.sh`), in the
+v09292026 assets from 2026-10-03: on revision A — no HUSB311 bound, the Type-C
+controller only revision B has — and before EmulationStation takes the display,
+it unbinds fbcon from fb0, blanks it, waits until the DSI host reports
+`suspended`, unblanks and rebinds fbcon. Only the display is touched; the panel
+goes dark for about 0.3 s. Revision B exits at once. On a revision B unit, with
+the panel deliberately left in the broken state, the same steps brought it
+back. `journalctl -t panel-kick` says what it did; an empty
+`/boot/panel-kick-force` runs it on any revision, for testing.
+
+An earlier version of the same day did one full suspend/resume instead, which
+worked but put the whole device to sleep for it. A fbdev blank without unbinding
+fbcon does not work at all: fbcon switches the output back 38 ms later and
+produces the very black screen it was meant to cure.
 
 ## HDMI output does nothing
 
