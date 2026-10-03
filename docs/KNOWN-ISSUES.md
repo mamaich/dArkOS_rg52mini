@@ -229,6 +229,35 @@ GitHub — `radxa-pkg/aic8800`, `D-Robotics/x5-kernel`,
 `unifreq/linux-6.1.y-rockchip` — so it is worth carrying to any other tree
 that uses this chip.
 
+## Revision A: black screen after the splash — worked around, not fixed
+
+Reported from a revision A unit (RK915 Wi-Fi) running v09292026: the
+bootloader splash appears, then the screen stays black until the power button
+is pressed twice. The system is running all along; two presses are one
+suspend/resume cycle through ogage, and after it the picture is there.
+
+What has been ruled out, by test rather than argument:
+
+* **The image.** The published v09292026 and the one confirmed working on a
+  revision B unit are byte-identical (sha256 `2e50bda0…2f2150`).
+* **The bootloader.** v09292026 with the v09162026 `uboot` partition — old
+  U-Boot and old OP-TEE, everything else new — still goes black. Between the
+  two releases only U-Boot and OP-TEE differ inside the FIT; ATF, the
+  bootloader's DTB and the idbloader are identical.
+* **`logo_kernel.bmp`.** Not on the boot partition.
+
+Between the releases the boot partition differs in `Image`, `uInitrd` and the
+DTB, and the DTB only by the added `firmware/optee` node. So the kernel is the
+remaining suspect — unless v09162026 also goes black on that unit, which has
+not been asked yet and would make this no regression at all.
+
+Worked around by `panel-kick` (`scripts/rk3562/panel-kick.sh`), shipped in the
+v09292026 assets from 2026-10-03: on revision A — SDIO vendor `0x0296` or
+`rk915` loaded — it waits for EmulationStation, sets the RTC to wake in 5 s and
+runs `systemctl suspend`, the same path ogage takes. Revision B exits at once.
+If the RTC does not wake a revision A unit, one press of the button does.
+`journalctl -t panel-kick` says what it did.
+
 ## HDMI output does nothing
 
 Reported from the device on 2026-10-01: plugging a cable produces no reaction

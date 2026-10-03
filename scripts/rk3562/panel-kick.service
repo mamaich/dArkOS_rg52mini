@@ -1,0 +1,12 @@
+[Unit]
+Description=Revision A: one suspend/resume cycle so the panel comes up
+After=wifi-driver-load.service emulationstation.service
+
+[Service]
+# simple, not oneshot: a oneshot wanted by multi-user.target would hold the
+# target back for the whole sleep and suspend
+Type=simple
+ExecStart=/usr/local/bin/panel-kick.sh
+
+[Install]
+WantedBy=multi-user.target

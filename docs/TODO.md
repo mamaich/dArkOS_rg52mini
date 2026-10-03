@@ -42,6 +42,24 @@ it. Confirmed on the device.
   failures and treats an HTTP error as a final answer, so those 8 used to go
   missing silently.
 
+## Revision A black screen: find the cause, then drop panel-kick
+
+`panel-kick` repeats a suspend/resume cycle that is known to fix the symptom;
+it says nothing about the cause. In order:
+
+1. Does **v09162026** go black on the same unit? If not, it is a regression,
+   and the next test is v09292026 with the v09162026 `Image`, `uInitrd`, DTB
+   and modules — the only boot-partition files that differ.
+2. A log from the unit, no soldering needed: `dmesg` over ssh after the screen
+   comes up, and `sudo sh -c 'cat /sys/fs/pstore/*'` after a warm reboot for
+   the boot that went black. Not `sudo cat /sys/fs/pstore/*` — the directory is
+   0750 and the unprivileged shell expands the glob before sudo runs.
+3. A working theory to test against the log: the release turned off ftrace,
+   `SLUB_DEBUG` and the rest, so the kernel reaches the panel sooner. A panel
+   that is marginal on power-up timing would fail the first enable and pass
+   the one after resume. If so, the fix is the panel's delays in the device
+   tree, and `panel-kick` can go.
+
 ## HDMI: find the real connector name, then make detection follow the cable
 
 HDMI does nothing on the device. KNOWN-ISSUES has the evidence that the kernel
