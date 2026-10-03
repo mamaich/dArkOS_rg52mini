@@ -280,6 +280,9 @@ the panel deliberately left in the broken state, the same steps brought it
 back. `journalctl -t panel-kick` says what it did; an empty
 `/boot/panel-kick-force` runs it on any revision, for testing.
 
+**Confirmed on revision A**: the v09292026 assets with this `panel-kick` were
+tested on a revision A unit by its owner, and the workaround works there.
+
 An earlier version of the same day did one full suspend/resume instead, which
 worked but put the whole device to sleep for it. A fbdev blank without unbinding
 fbcon does not work at all: fbcon switches the output back 38 ms later and

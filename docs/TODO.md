@@ -44,8 +44,8 @@ it. Confirmed on the device.
 * **A workaround for the revision A black screen**, added to the assets on
   2026-10-03: `panel-kick` re-initialises the display before EmulationStation,
   letting the DSI host and its PHY runtime-suspend first. The mechanism was
-  found and tested on revision B; confirmation from a revision A unit is still
-  pending. KNOWN-ISSUES has the evidence.
+  found on revision B; confirmed working on a revision A unit by its owner.
+  KNOWN-ISSUES has the evidence.
 
 ## Revision A black screen: find what cycles the display, then drop panel-kick
 
