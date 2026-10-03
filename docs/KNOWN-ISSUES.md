@@ -229,7 +229,7 @@ GitHub — `radxa-pkg/aic8800`, `D-Robotics/x5-kernel`,
 `unifreq/linux-6.1.y-rockchip` — so it is worth carrying to any other tree
 that uses this chip.
 
-## Revision A: black screen after the splash — worked around, not fixed
+## Revision A: black screen after the splash — cause found, fix in testing
 
 Reported from a revision A unit (RK915 Wi-Fi) running v09292026: the
 bootloader splash appears, then the screen stays black until the power button
@@ -261,21 +261,54 @@ produced on purpose by blanking and unblanking fb0 before EmulationStation:
 | blank 3 s with fbcon unbound | 3 s | yes, within 0.5 s | **works** |
 | suspend/resume | 1.8 s | yes | works |
 
-Re-enabled before the DSI host, its PHY and the VOP have runtime-suspended, the
-DSI link is left stale and the panel ignores its init sequence: backlight on,
-no picture. Once they have powered down and come back from scratch the panel
-initialises normally — which is what suspend/resume did for it. The panel's own
-supply (`vcc3v3_lcd_n`, a GPIO-switched fixed regulator) is not the issue. The
-RK628 bridge is not either: its fb notifier does react to blank events, but
-with the bridge made silent (moved to an address nobody answers) the result
-was the same.
+**The runtime-PM explanation first given here was wrong.** The DSI host and
+the D-PHY are in no power domain (`rk3562.dtsi`; only the VOP is, in PD_VO),
+and the "DSI host suspended" that panel-kick waited for was reached on the
+very first check. What cured the panel was the time it stayed off — about
+0.24 s in panel-kick. Measured in the GammaOS Next port on revision B, with the
+VOP still cycled in 41 ms: 120 ms off → black, 150 ms → picture.
+
+**And why a short off breaks it is in the device tree.** Every stock tree —
+`flash-v10.dtb`, `flash-v14.dtb`, `live.dtb` from eMMC, the vendor
+`rk3562-ro520c-lp3x-v10/v14-linux.dtb` — powers the panel down with
+
+    05 80 01 28   display off, then 128 ms
+    05 1e 01 10   sleep in, then 30 ms
+
+This tree, inherited from the SyachOS-derived one, had both delays at zero, so
+panel-simple asserted reset and cut the supply straight after the commands.
+With the stock delays a 41 ms off/on gives a picture 3 times out of 3; without
+them, black 4 out of 4 (also measured in the Android port).
+
+The panel's own supply (`vcc3v3_lcd_n`) is not the issue, and the RK628 bridge
+is not either: its fb notifier does react to blank events, but with the bridge
+made silent (moved to an address nobody answers) the result was the same.
+
+**Fix, in a test release, not yet confirmed on revision A** (`kernel_rk3562`):
+
+* `23506d78f` — the stock `panel-exit-sequence` delays in `rk3562-darkos.dtsi`;
+* `7483a4f83` — from the Android port: a minimum DSI off time,
+  `dw_mipi_dsi.rg52_min_off_ms`, 500 ms by default. A re-enable sooner than
+  that after a power-off waits out the rest and logs `link off N ms, waiting
+  M ms more` — so a revision A log will say whether a fast cycle happened.
+  Boottime, so suspend counts as off time. It also moves the DSI host reset
+  after `pm_runtime_get_sync()`, where the APB clock is actually running.
+
+What makes revision A go through a fast cycle at boot is still not proven.
+Candidates: an extra off/on (closed by the fix above), a failed warm takeover
+of the U-Boot link on the first enable (which the off-time wait cannot touch,
+since nothing was switched off before), or rk915 power-cycling the Wi-Fi rail
+around the time the display first comes up.
 
 Worked around by `panel-kick` (`scripts/rk3562/panel-kick.sh`), in the
 v09292026 assets from 2026-10-03: on revision A — no HUSB311 bound, the Type-C
 controller only revision B has — and before EmulationStation takes the display,
-it unbinds fbcon from fb0, blanks it, waits until the DSI host reports
-`suspended`, unblanks and rebinds fbcon. Only the display is touched; the panel
-goes dark for about 0.3 s. Revision B exits at once. On a revision B unit, with
+it unbinds fbcon from fb0, blanks it, and unblanks it about 0.24 s later
+(the wait for `suspended` in that version returned at once — the time was what
+counted), then rebinds fbcon. Only the display is touched. In the test release
+it also waits for `wifi-driver-load` to finish first, on revision A only, keeps
+the display off 0.6 s, and `/boot/panel-kick-off` disables it so the kernel and
+DT fix can be tried on its own. Revision B exits at once. On a revision B unit, with
 the panel deliberately left in the broken state, the same steps brought it
 back. `journalctl -t panel-kick` says what it did; an empty
 `/boot/panel-kick-force` runs it on any revision, for testing.

@@ -47,22 +47,25 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
-## Revision A black screen: find what cycles the display, then drop panel-kick
+## Revision A black screen: confirm the fix, then drop panel-kick
 
-What breaks the panel is known (KNOWN-ISSUES): the display switched off and on
-again faster than the DSI host and its PHY runtime-suspend. What is not known is
-what does that to revision A at boot — revision B never goes through such a
-cycle. `panel-kick` repairs the result; the cause should be found and removed.
+What breaks the panel is known (KNOWN-ISSUES): switched off and on again too
+quickly, with no delays in its exit sequence, it stays black. Fixed in the
+kernel by the stock exit-sequence delays (`23506d78f`) and a 500 ms minimum
+DSI off time (`7483a4f83`, from the Android port). panel-kick, which cured
+revision A by keeping the display off for about 0.24 s, stays until that is
+confirmed. In order:
 
-1. Ask a revision A owner for `dmesg` over ssh. Look for a
-   `vop2_crtc_atomic_disable` followed shortly by `vop2_crtc_atomic_enable`
-   after the first enable, and for what logs just before it.
-2. The proper kernel fix is in `dw-mipi-dsi-rockchip`: an enable that follows a
-   disable should bring the PHY and the host up from scratch whether or not
-   runtime PM got as far as suspending them. With that, neither revision would
-   care how fast a cycle comes, and `panel-kick` can go.
+1. Test the release with the fix on revision A with `/boot/panel-kick-off`:
+   if the picture comes up by itself, panel-kick can go. `link off … waiting`
+   in `dmesg` tells whether a fast cycle happened.
+2. If it still goes black with `panel-kick-off`, the cycle is not the cause.
+   The other candidates: a failed warm takeover of the U-Boot link on the
+   first enable, where nothing was switched off before and the off-time wait
+   cannot act; or rk915 power-cycling the Wi-Fi rail around the time the
+   display first comes up. A `dmesg` from the unit decides between them.
 3. Does v09162026 also go black on revision A? Still unasked, and it says
-   whether something between the releases introduced the cycle.
+   whether something between the releases introduced it.
 
 ## HDMI: find the real connector name, then make detection follow the cable
 
