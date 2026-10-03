@@ -41,6 +41,11 @@ it. Confirmed on the device.
   downloaded, 8 of them only after a retry; plain `wget -t` counts network
   failures and treats an HTTP error as a final answer, so those 8 used to go
   missing silently.
+* **A workaround for the revision A black screen**, added to the assets on
+  2026-10-03: `panel-kick` re-initialises the display before EmulationStation,
+  letting the DSI host and its PHY runtime-suspend first. The mechanism was
+  found and tested on revision B; confirmation from a revision A unit is still
+  pending. KNOWN-ISSUES has the evidence.
 
 ## Revision A black screen: find what cycles the display, then drop panel-kick
 
