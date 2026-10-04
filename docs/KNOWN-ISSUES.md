@@ -229,7 +229,7 @@ GitHub — `radxa-pkg/aic8800`, `D-Robotics/x5-kernel`,
 `unifreq/linux-6.1.y-rockchip` — so it is worth carrying to any other tree
 that uses this chip.
 
-## Revision A: black screen after the splash — cause found, fix in testing
+## Revision A: black screen after the splash — fixed
 
 Reported from a revision A unit (RK915 Wi-Fi) running v09292026: the
 bootloader splash appears, then the screen stays black until the power button
@@ -284,7 +284,9 @@ The panel's own supply (`vcc3v3_lcd_n`) is not the issue, and the RK628 bridge
 is not either: its fb notifier does react to blank events, but with the bridge
 made silent (moved to an address nobody answers) the result was the same.
 
-**Fix, in a test release, not yet confirmed on revision A** (`kernel_rk3562`):
+**Fix** (`kernel_rk3562`), first published as the pre-release v10032026-test,
+confirmed working on a revision A unit by its owner, and in the v09292026
+assets since 2026-10-04:
 
 * `23506d78f` — the stock `panel-exit-sequence` delays in `rk3562-darkos.dtsi`;
 * `7483a4f83` — from the Android port: a minimum DSI off time,

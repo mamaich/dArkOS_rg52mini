@@ -47,7 +47,7 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
-## Revision A black screen: confirm the fix, then drop panel-kick
+## Revision A black screen: fixed — decide whether panel-kick can go
 
 What breaks the panel is known (KNOWN-ISSUES): switched off and on again too
 quickly, with no delays in its exit sequence, it stays black. Fixed in the
@@ -56,7 +56,10 @@ DSI off time (`7483a4f83`, from the Android port). panel-kick, which cured
 revision A by keeping the display off for about 0.24 s, stays until that is
 confirmed. In order:
 
-1. Test the release with the fix on revision A with `/boot/panel-kick-off`:
+The fix was confirmed on a revision A unit (v10032026-test, 2026-10-04) and
+is in the v09292026 assets. What is left is whether panel-kick is still needed:
+
+1. Test on revision A with `/boot/panel-kick-off`:
    if the picture comes up by itself, panel-kick can go. `link off … waiting`
    in `dmesg` tells whether a fast cycle happened.
 2. If it still goes black with `panel-kick-off`, the cycle is not the cause.
