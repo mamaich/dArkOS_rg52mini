@@ -401,6 +401,11 @@ sudo chmod 755 Arkbuild/usr/local/bin/wifi-driver-load.sh
 sudo cp scripts/wifi-driver-load.service Arkbuild/etc/systemd/system/wifi-driver-load.service
 sudo chroot Arkbuild/ bash -c "systemctl enable wifi-driver-load"
 
+# Import wifikeyfile.txt from the Tools folder at boot (upstream wifi_importer,
+# reordered so it never holds EmulationStation back - see the unit).
+sudo install -m 644 scripts/rk3562/wifi_importer.service Arkbuild/etc/systemd/system/wifi_importer.service
+sudo chroot Arkbuild/ bash -c "systemctl enable wifi_importer"
+
 # Revision A workaround: the panel stays black after the kernel takes over the
 # display. panel-kick re-initialises the display before EmulationStation starts
 # and exits at once on revision B. See docs/KNOWN-ISSUES.md.
@@ -637,8 +642,8 @@ sudo rm -rf Arkbuild/etc/emulationstation/themes/
 sudo chroot Arkbuild/ bash -c "ln -sfv /roms/themes/ /etc/emulationstation/themes"
 
 # Link music folder to /roms/bgmusic
-sudo rm -rf Arkbuild/etc/emulationstation/music/
-sudo chroot Arkbuild/ bash -c "ln -sfv /roms/bgmusic/ /etc/emulationstation/music"
+sudo rm -rf Arkbuild/home/ark/.emulationstation/music
+sudo chroot Arkbuild/ bash -c "ln -sfv /roms/bgmusic/ /home/ark/.emulationstation/music"
 
 # Set launchimage to PIC mode
 sudo chroot Arkbuild/ touch /home/ark/.config/.GameLoadingIModePIC
@@ -765,6 +770,10 @@ done
 # without having to launch a game first to trigger the launcher's mkdir -p.
 sudo mkdir -p ${fat32_mountpoint}/ps2/bios
 sudo mkdir -p ${fat32_mountpoint}/ps2/memcards
+
+# Default shutdown image, shown by finish.sh and pause.sh (upstream 2da67a0);
+# game_systems.txt has already created the folder.
+sudo cp shutdownimages/bye.gif ${fat32_mountpoint}/shutdownimages/
 sudo mkdir -p ${fat32_mountpoint}/ps2/savestates
 
 # Add latest version of PortMaster install to roms/tools folder

@@ -78,7 +78,7 @@ status=$?
   unlink /home/ark/.config/ppsspp
   ln -sf /roms/psp/ppsspp/ /home/ark/.config/ppsspp
   sudo cp /usr/local/bin/Switch\ to\ SD2\ for\ Roms.sh /opt/system/Advanced/.
-  sudo rm /opt/system/Advanced/Switch\ to\ main\ SD\ for\ Roms.sh
+  sudo rm /opt/system/Advanced/Switch\ to\ Main\ SD\ for\ Roms.sh
   sudo cp -f /etc/samba/smb.conf.orig /etc/samba/smb.conf
   sudo umount /roms2
   sudo pkill filebrowser
