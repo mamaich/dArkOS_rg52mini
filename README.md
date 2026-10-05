@@ -65,6 +65,22 @@ EmulationStation-fcamod, RetroArch и около тридцати отдельн
 
 ## Релизы
 
+### [v10052026](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v10052026)
+
+- **порты PortMaster снова запускаются.** PortMaster не знает джойстик RG52 Mini
+  и кладёт в `SDL_GAMECONTROLLERCONFIG` всю базу геймпадов (~470 КБ) — больше
+  предела ядра в 128 КБ, и любой запуск программы в порте давал «Argument list
+  too long». Служба `portmaster-e2big` добавляет в `mod_dArkOS.txt` защиту,
+  которую PortMaster уже несёт для EmuELEC, и возвращает её после каждого
+  обновления PortMaster;
+- **резервная копия настроек из BaRT** снова работает: меню вызывало скрипты
+  под старыми именами `… ArkOS Settings.sh`;
+- **загрузчик со стоковым OP-TEE v1.07** вместо v1.02
+  (`uboot-oc-stocktee-shmkept.img`, `next-dev-g6eeb07c058`). Его OP-TEE
+  резервирует на 2 МБ больше. В BL31 этой сборки добавлены частоты разгона, но
+  ядро образа их не запрашивает — таблица CPU кончается на 2016 МГц;
+- исправление чёрного экрана на ревизии A — в ядре, как в обновлённом v09292026.
+
 ### [v09292026](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v09292026)
 
 Ядро, загрузчик и флаги оптимизации. Проверено на устройстве.

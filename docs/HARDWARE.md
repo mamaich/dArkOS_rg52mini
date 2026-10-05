@@ -254,7 +254,15 @@ to the `uboot` partition at sector 16384 by `build_kernel-rk3562.sh` from
 `BSP/uboot-rg52mini.img`. The vendor's own U-Boot is kept beside it as
 `.vendor`.
 
-v09292026 ships the build made from `uboot-bl32-v102.img`
+v10052026 ships `uboot-oc-stocktee-shmkept.img`
+(`next-dev-g6eeb07c058-dirty`, md5 `0e743c774c9892195715251dd2262ade`): the
+stock BL32 v1.07 (`3.13.0-891-g9f2aca7d1`, 473472 bytes in the FIT) and a BL31
+whose frequency tables carry the overclocking entries from `05-разгон.md` in
+the U-Boot fork. Those entries only matter if the kernel asks for those rates,
+and this kernel does not: its CPU table ends at 2016 MHz. The name says the
+SHM patch below is kept.
+
+v09292026 shipped the build made from `uboot-bl32-v102.img`
 (`next-dev-g66a8e67e16`): BL32 v1.02 in the FIT instead of v1.03, and the SHM
 patch described below.
 
@@ -296,8 +304,9 @@ serial number do not depend on it.
 
 Two halves, and they have to match:
 
-* The bootloader carries **BL32 v1.02**, which declares an 8 MiB OP-TEE region
-  where v1.03 declares 10 MiB, and `param_parse_optee_mem()` in
+* Up to v09292026 the bootloader carried **BL32 v1.02**, which declares an
+  8 MiB OP-TEE region where later blobs declare 10 MiB; v10052026 is back on
+  the stock v1.07 and gives those 2 MiB up again. `param_parse_optee_mem()` in
   `arch/arm/mach-rockchip/param.c` hands the 2 MiB SHM window at the tail of
   that region back to Linux.
 * The kernel is built with **`CONFIG_TEE` and `CONFIG_OPTEE` off**. Had the

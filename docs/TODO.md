@@ -36,7 +36,8 @@ it. Confirmed on the device.
   debugging the device never reads: `Image` is 6.0 MB smaller. See
   PERFORMANCE and HARDWARE.
 * **OP-TEE is off on both sides** — driver and bootloader — which returns the
-  2 MiB SHM window. See HARDWARE.
+  2 MiB SHM window. See HARDWARE. (v10052026 went back to the stock BL32
+  v1.07, whose region is 2 MiB larger.)
 * **RetroArch gets its cores even when GitHub says 429.** 269 cores
   downloaded, 8 of them only after a retry; plain `wget -t` counts network
   failures and treats an HTTP error as a final answer, so those 8 used to go
