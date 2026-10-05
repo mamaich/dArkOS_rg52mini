@@ -134,6 +134,45 @@ which is our change and independent of this: a dead mirror should not take down
 a run that is nine hours in. Upstream reached the same conclusion separately in
 `ffcfced`.
 
+## PortMaster ports failed with "Argument list too long" — fixed
+
+Reported by users: every PortMaster port failed at launch with "Argument list
+too long" (reported as "command line too long"). Reproduced off-device on
+2026-10-05 with PortMaster 2026.10.03 and the `es_input.cfg` from the image.
+
+`get_controls()` in PortMaster's `control.txt` recognises a device by its
+joystick node in `/dev/input/by-path/` (`odroidgo2-joypad`, `singleadc-joypad`
+and a few others). Ours is `play_joystick`, which it does not know, so `DEVICE`
+stays empty and the whole `gamecontrollerdb.txt` — 472 KB — ends up in
+`sdl_controllerconfig`. Every port then does
+
+    export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+
+and a single environment string may not exceed `MAX_ARG_STRLEN`, 131072 bytes.
+From that line on, every `execve()` in the port script fails with `E2BIG`. The
+other dArkOS devices are not affected: their joypad drivers are on the list.
+
+PortMaster already carries a guard for exactly this in `mod_EmuELEC.txt`: wrap
+`get_controls` and drop `sdl_controllerconfig` when it is over 100000 bytes.
+SDL still gets the mappings, including the entry `mapper.py` appends for our
+joystick from `~/.config/emulationstation/es_input.cfg`, through
+`SDL_GAMECONTROLLERCONFIG_FILE=/tmp/gamecontrollerdb.txt`.
+
+**Fix:** `scripts/rk3562/portmaster-e2big.sh` appends the same guard to
+`mod_dArkOS.txt`, which ports source after `control.txt`. PortMaster is
+installed by the user and rewrites its own files on every update, so the guard
+cannot simply be shipped: `portmaster-e2big.service` adds it at boot and
+`portmaster-e2big.path` adds it again whenever `mod_dArkOS.txt` changes. Both
+were tested under systemd in WSL, including an overwrite of the file.
+
+The limit of the fix: SDL reads `SDL_GAMECONTROLLERCONFIG_FILE` from 2.0.22 on.
+A port that bundles an older SDL gets no mapping for the built-in pad and sees
+it as a plain joystick. The complete fix belongs in PortMaster: a
+`get_controls()` branch for `platform-play_joystick-event-joystick` with
+`DEVICE=1900a4dd726b333536322d6a6f797300` cuts the string to 356 bytes and works
+with any SDL. Not yet verified on the device which `by-path` name the joystick
+actually gets.
+
 ## Build flags targeted the wrong CPU
 
 `rk3562_core_builds` came from `rk3566_core_builds`, and the RK3566 is

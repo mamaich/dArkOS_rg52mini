@@ -408,6 +408,16 @@ sudo install -m 755 scripts/rk3562/panel-kick.sh Arkbuild/usr/local/bin/panel-ki
 sudo install -m 644 scripts/rk3562/panel-kick.service Arkbuild/etc/systemd/system/panel-kick.service
 sudo chroot Arkbuild/ bash -c "systemctl enable panel-kick"
 
+# PortMaster does not know this joystick, so its get_controls() exports the
+# whole gamecontrollerdb.txt (~470 KB) as SDL_GAMECONTROLLERCONFIG, past the
+# kernel's 128 KB limit, and every port fails with "Argument list too long".
+# portmaster-e2big appends PortMaster's own EmuELEC guard to mod_dArkOS.txt,
+# at boot and again whenever a PortMaster update rewrites it.
+sudo install -m 755 scripts/rk3562/portmaster-e2big.sh Arkbuild/usr/local/bin/portmaster-e2big.sh
+sudo install -m 644 scripts/rk3562/portmaster-e2big.service Arkbuild/etc/systemd/system/portmaster-e2big.service
+sudo install -m 644 scripts/rk3562/portmaster-e2big.path Arkbuild/etc/systemd/system/portmaster-e2big.path
+sudo chroot Arkbuild/ bash -c "systemctl enable portmaster-e2big.service portmaster-e2big.path"
+
 # Block udev SDIO-vendor auto-modprobe of aic8800 -- it races the rk915
 # retry loop's rockchip_wifi_power() cycles and stomps aic8800's firmware
 # download. wifi-driver-load.sh loads aic8800 explicitly when needed.
