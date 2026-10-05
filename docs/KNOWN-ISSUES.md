@@ -137,8 +137,9 @@ a run that is nine hours in. Upstream reached the same conclusion separately in
 ## PortMaster ports failed with "Argument list too long" — fixed
 
 Reported by users: every PortMaster port failed at launch with "Argument list
-too long" (reported as "command line too long"). Reproduced off-device on
-2026-10-05 with PortMaster 2026.10.03 and the `es_input.cfg` from the image.
+too long" (reported as "command line too long"). Reproduced on 2026-10-05,
+first in WSL and then on the device, with PortMaster 2026.10.03 and a minimal
+port built from PortMaster's standard header.
 
 `get_controls()` in PortMaster's `control.txt` recognises a device by its
 joystick node in `/dev/input/by-path/` (`odroidgo2-joypad`, `singleadc-joypad`
@@ -162,16 +163,23 @@ joystick from `~/.config/emulationstation/es_input.cfg`, through
 `mod_dArkOS.txt`, which ports source after `control.txt`. PortMaster is
 installed by the user and rewrites its own files on every update, so the guard
 cannot simply be shipped: `portmaster-e2big.service` adds it at boot and
-`portmaster-e2big.path` adds it again whenever `mod_dArkOS.txt` changes. Both
-were tested under systemd in WSL, including an overwrite of the file.
+`portmaster-e2big.path` adds it again whenever `mod_dArkOS.txt` changes. Tested
+on the device: the test port fails without the guard and runs with it; after
+the file is overwritten, as a PortMaster update does, the path unit restores
+the guard within a few seconds; after a reboot with the file restored, the
+service adds it again (`/roms` is mounted by then).
 
 The limit of the fix: SDL reads `SDL_GAMECONTROLLERCONFIG_FILE` from 2.0.22 on.
 A port that bundles an older SDL gets no mapping for the built-in pad and sees
 it as a plain joystick. The complete fix belongs in PortMaster: a
 `get_controls()` branch for `platform-play_joystick-event-joystick` with
 `DEVICE=1900a4dd726b333536322d6a6f797300` cuts the string to 356 bytes and works
-with any SDL. Not yet verified on the device which `by-path` name the joystick
-actually gets.
+with any SDL. On the device the node is indeed
+`/dev/input/by-path/platform-play_joystick-event-joystick`.
+
+A side effect seen during the test, not caused by the fix: on the first port
+run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
+`libMali.so`. They already point there in the image, so nothing changes.
 
 ## Build flags targeted the wrong CPU
 
