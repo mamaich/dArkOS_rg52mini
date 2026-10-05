@@ -48,6 +48,35 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
+## Check on the device what the upstream sync of 2026-10-05 brought
+
+The sync with christianhaitian/dArkOS and rk3566_core_builds (see the commits
+of that date) was done by reading, not by running. Each of these needs a look
+on the device after the next build:
+
+1. **DSperate** (new NDS emulator; ES lets you pick it per system or per game,
+   DraStic stays the default). Unknowns, in order of risk:
+   * **Rotation.** It draws through KMS page flips, not SDL, so our SDL rotation
+     patch does not reach it. Its README says rotated panels fall back to its
+     scanline scaler; whether it recognises our 720x1280 panel as rotated, and
+     how fast the CPU path is on four A53 cores, is untested. If the picture is
+     sideways, it needs a patch in rk3562_core_builds like the ppsspp, flycast
+     and dolphin ones.
+   * **Input.** nds.sh has an RG52 branch with our pad's SDL mapping. The
+     hotkeys in dsperate.ini.rk3562 are the rk3566 ones (quit start+back,
+     pause on guide, layouts on the triggers); check they suit our buttons.
+   * **BIOS.** Without nds_bios7/9 and nds_firmware in /roms/bios it should use
+     its FreeBIOS; check it starts.
+2. **Dolphin hotkeys** — the one recompiled emulator (patch 012).
+3. **PPSSPP-2021** now keeps its config and saves in /roms/psp/ppsspp-2021.
+   Saves made with it before are still in /roms/psp/ppsspp and are not moved.
+4. **Shutdown image** (bye.gif through ffplay in finish.sh / pause.sh): does
+   it show the right way up through our SDL rotation?
+5. **wifi_importer**: a wifikeyfile.txt in Tools is imported at boot.
+6. Not taken, to be decided on the device: libOpenCL.so symlink (upstream
+   says it breaks video previews), Dolphin Stretch option, batteryplus,
+   headphone auto-switch (needs kernel work), bluealsa conf path.
+
 ## Revision A black screen: fixed — decide whether panel-kick can go
 
 What breaks the panel is known (KNOWN-ISSUES): switched off and on again too
