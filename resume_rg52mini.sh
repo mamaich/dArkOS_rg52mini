@@ -2,6 +2,9 @@
 #
 # Resume the 2026-09-29 build from build_deps.sh onward.
 #
+# Written for the 2026-09-29 build; RESUME_BUILD_DATE=MMDDYYYY resumes another
+# one (used for 10052026).
+#
 # The build died at 3h40m: the background shell that owned its stdout was killed
 # for system memory pressure, the pipe lost its reader, and the next write took
 # make with it. WSL was then restarted, so every mount and loop device is gone -
@@ -40,7 +43,7 @@ export DEBIAN_CODE_NAME=trixie
 # State the skipped steps would have set. Pinned, not recomputed: utils.sh
 # derives BUILD_DATE from today, which would name a second image rather than
 # finish this one.
-export BUILD_DATE=09292026
+export BUILD_DATE=${RESUME_BUILD_DATE:-09292026}
 ROOT_FILESYSTEM_FORMAT="btrfs"
 ROOT_FILESYSTEM_MOUNT_OPTIONS="defaults,noatime,compress=zstd:1"
 SECTOR_SIZE=512
@@ -105,7 +108,7 @@ echo "  Image на месте: $(stat -c%s "$mountpoint/Image") байт"
 echo "  модулей в rootfs: $(sudo find Arkbuild/lib/modules -name '*.ko' 2>/dev/null | wc -l)"
 
 source ./utils.sh
-export BUILD_DATE=09292026   # utils.sh overwrites it
+export BUILD_DATE=${RESUME_BUILD_DATE:-09292026}   # utils.sh overwrites it
 source ./prepare.sh
 
 echo "=== продолжаю сборку: $DISK на $LOOP_DEV ==="

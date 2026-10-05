@@ -112,6 +112,28 @@ timeout in `%UserProfile%\.wslconfig` and stop depending on it:
 It takes effect on the next VM start, so `wsl --shutdown` applies it — or
 simply the next reboot, which is how it landed here.
 
+**WSL 3 also stops the distro itself.** On 2026-10-05, with
+`vmIdleTimeout=7200000` in place, a build died 45 seconds in: the journal shows
+`systemd-logind: The system will power off now!` about 20 seconds after the
+last `wsl.exe` client exited, while the VM stayed up (`uptime` unchanged). The
+distro instance has an idle timeout of its own. Keep a client open for the
+whole build — `wsl -e bash -c 'exec sleep infinity'` in a terminal that stays
+open — or set `instanceIdleTimeout=-1` under `[general]` in `.wslconfig`.
+
+**A build run as root misses every cache.** `systemd-run` without `--uid` runs
+the build as root, while the clones under `Arkbuild/home/ark/` belong to uid
+1000. git then refuses them (`fatal: detected dubious ownership`), `git rev-parse
+HEAD` prints nothing, every cache key built from it is wrong, and each emulator
+is compiled from source under qemu — PCSX2 alone takes hours. The build does
+not stop or warn; the only trace is that line in the log. Allow the build tree
+for root before starting:
+
+    sudo git config --system --add safe.directory '*'
+
+It is read on every git call, so adding it fixes a build that is already
+running from its next component on. A key already written empty (it is one
+byte long) has to be corrected by hand, or the next build misses that cache too.
+
 Neither of those helps against the host rebooting for updates, which is what
 ended the fourth attempt. That one is only survivable by being able to resume:
 keep the image and rootfs files, re-attach and re-mount them, and restart from
