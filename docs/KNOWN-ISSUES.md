@@ -181,6 +181,35 @@ A side effect seen during the test, not caused by the fix: on the first port
 run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
 `libMali.so`. They already point there in the image, so nothing changes.
 
+## v10052026: the power button rebooted revision A boards — fixed in the kernel
+
+The bootloader v10052026 ships (`uboot-oc-stocktee-shmkept.img`) has the BL31
+with the overclocking frequency table, built by `tools/rg52mini/bl31_oc.py`
+in the U-Boot fork with `--drop-lowest gpu`. BL31 accepts a clock rate only if
+it is in its SCMI list, and that option drops the GPU's 200 MHz step to make
+room for 1000 MHz: the GPU list is 300…1000 (checked in the image: the list
+`300, 400, … 900, 1000+63` is in the FIT, the stock `200 … 900+63` is not).
+
+The Mali driver parks the GPU at `POWER_DOWN_FREQ` before every runtime
+power-off, and that was 200 MHz
+(`drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c`). The call
+failed every time — `mali ff320000.gpu: failed to set power down rate`, 34 times
+in one boot on GammaOS — and the GPU powered off at the rate it was running,
+up to 900–1000 MHz. On revision A (RK915) that made the power button reboot
+the device in any mode; revision B only logs the error. Found and confirmed on
+revision A in the GammaOS port (its kernel commit 225c0ee0e).
+
+**Fix:** `POWER_DOWN_FREQ` is 300 MHz (`kernel_rk3562` fa0452d3b), the lowest
+step in both the stock and the overclocking list. Check after a build:
+`dmesg | grep -c "failed to set power down rate"` gives 0, and at idle
+`grep scmi_clk_gpu /sys/kernel/debug/clk/clk_summary` shows 300000000.
+
+The rest of the table was checked against this kernel: the CPU list loses
+1896 MHz for 2208, and the kernel has no 1896 OPP (1800, then 2016); the GPU
+OPP table starts at 300; the NPU list is untouched. `drivers/rknpu/` also parks
+at 200 MHz — fine with this BL31, but needs the same check if a future table
+drops the NPU's lowest step.
+
 ## Build flags targeted the wrong CPU
 
 `rk3562_core_builds` came from `rk3566_core_builds`, and the RK3566 is
