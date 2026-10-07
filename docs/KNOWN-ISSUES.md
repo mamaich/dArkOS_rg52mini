@@ -224,6 +224,10 @@ Quest Monsters Joker 2 demo at 48. Under `performance` (CPU 2016 MHz, GPU
 or of the game, to `performance` when using DSperate. DraStic, the default NDS
 emulator, is lighter and does not need it. The image is left as it is.
 
+The image's DSperate is built with Vulkan and draws 3D on the GPU
+(`gpu3d = true` in its default config); that does not replace the governor
+setting.
+
 ## SDL2 under KMSDRM re-raises every SIGSEGV: programs that handle their own crash
 
 Found with the native Halo: Combat Evolved port (kirklandsig's

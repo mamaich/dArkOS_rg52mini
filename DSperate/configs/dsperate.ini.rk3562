@@ -45,6 +45,9 @@
 # card = true                   # false boots the firmware with the slot empty
 
 [video]
+gpu3d = true                    # RG52 Mini: 3D on the Mali-G52 through Vulkan. Set false (or
+                                # use the GPU 3D menu row) for the software rasteriser, the
+                                # exact reference, if a game draws wrong.
 # scale = 2                     # window size, in DS pixels
 # fullscreen = false
 # layout = vertical             # vertical | horizontal | single | pip | dominant_v | dominant_h

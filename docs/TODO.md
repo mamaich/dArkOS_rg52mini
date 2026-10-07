@@ -80,13 +80,16 @@ on the device after the next build:
      ondemand, 59-60 under performance. Nothing in the image changes this
      (decided 2026-10-07); KNOWN-ISSUES tells users to pick the performance
      governor for NDS in ES.
-   * **Built without Vulkan.** The image's DSperate logs "gpu3d: unavailable
-     (built without Vulkan)": the Vulkan presenter and GPU 3D raster need
-     `vulkan/vulkan.h` at build time, and the chroot has no libvulkan-dev.
-     A build with it (tested on the device only, not in the image) enables
-     `gpu3d`, but it changed nothing measurable here: 41-47 under ondemand,
-     60 under performance, as on the CPU rasteriser. Worth adding
-     libvulkan-dev to the DSperate build only if a heavier 3D game needs it.
+   * **Vulkan, in the image since 2026-10-07.** The first 10062026 build had
+     DSperate without Vulkan ("gpu3d: unavailable (built without Vulkan)"):
+     the presenter and GPU 3D raster need `vulkan/vulkan.h` at build time and
+     the chroot had no libvulkan-dev. build_dsperate.sh now installs it (cache
+     key suffix `_vk`), the v10062026 image carries that build, and
+     dsperate.ini.rk3562 sets `gpu3d = true`. On the device it logs
+     "gpu3d: on". In the two demos it made no measurable difference to the
+     frame rate - the governor is what matters there - but it moves 3D off the
+     CPU for heavier games. Existing cards keep their /roms/nds/dsperate/
+     dsperate.ini; nds.sh copies the new default only where there is none.
    * Not yet checked: the stylus on the stick, savestates, a heavier 3D game.
 2. **Dolphin hotkeys** — the one recompiled emulator (patch 012).
 3. **PPSSPP-2021** now keeps its config and saves in /roms/psp/ppsspp-2021.
