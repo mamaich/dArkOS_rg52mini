@@ -228,7 +228,7 @@ The image's DSperate is built with Vulkan and draws 3D on the GPU
 (`gpu3d = true` in its default config); that does not replace the governor
 setting.
 
-## SDL2 under KMSDRM re-raises every SIGSEGV: programs that handle their own crash
+## SDL2 under KMSDRM re-raised every SIGSEGV (fixed in our SDL after v10062026)
 
 Found with the native Halo: Combat Evolved port (kirklandsig's
 halo-ce-anbernic-rg35xx, built for Knulli and aurknix), which crashed on
@@ -264,7 +264,41 @@ muting the keyboard at all.
 
 The same applies to anything else that relies on its own SIGSEGV handler under
 SDL on KMSDRM: emulators with fastmem or JIT fault tricks, box64, Mono.
-Nothing in the image sets the variable globally; the image is unchanged.
+
+**Fix, in our SDL from the image after v10062026:**
+`rk3562_core_builds/patches/sdl2-patch-0007-evdev-kbd-chain-signals.patch`.
+The handler no longer re-raises. When the program has a handler of its own, SDL
+calls it directly with the original siginfo and ucontext, so a handler that
+fixes the fault and returns resumes the program, as it would without SDL. For
+the time it runs, the console keyboard is given back, because the handler may
+end the process. It is muted again only if the program goes on: SDL's handler
+is still installed and the signal is not pending. A handler that decides on a
+crash usually puts SIG_DFL back and raises; the raised signal stays pending
+until the handler returns, and then kills the process with the keyboard
+restored. Without a handler of the program's, a hardware fault returns and
+repeats under the default action, so the core dump has the real address.
+Signals sent with kill() are re-raised, as before.
+
+Tested on the device with a small program and with Halo:
+- the program installs its SIGSEGV handler before SDL_Init and runs three
+  cases: a write-watch page, a crash with its own handler, and a crash with
+  no handler;
+- old SDL: the write-watch case dies, and the handler sees `si_code` -6;
+- patched SDL: 1000 write-watch faults are handled with the right address;
+- with both, the two crash cases end the process with signal 11, and the
+  console is K_UNICODE afterwards;
+- Halo, run without the variable, reaches the campaign, and SIGTERM now quits
+  it cleanly (exit 0). `SDL_NO_SIGNAL_HANDLERS` had also turned off SDL's
+  SIGTERM-to-quit handling, so it used to be killed (143);
+- EmulationStation and DSperate (Vulkan) run on the patched library.
+
+The console stays in K_OFF after a game exits. This is the same with the old
+library and with the new one, and the same after EmulationStation is stopped,
+so it does not come from this patch.
+
+Programs that bundle their own libSDL2 still need the variable, and so do
+images up to v10062026. Upstream SDL2 (release-2.32.x) and SDL3 (main) still
+have the re-raising handler.
 
 ## Build flags targeted the wrong CPU
 
