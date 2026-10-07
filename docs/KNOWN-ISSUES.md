@@ -224,6 +224,44 @@ Quest Monsters Joker 2 demo at 48. Under `performance` (CPU 2016 MHz, GPU
 or of the game, to `performance` when using DSperate. DraStic, the default NDS
 emulator, is lighter and does not need it. The image is left as it is.
 
+## SDL2 under KMSDRM re-raises every SIGSEGV: programs that handle their own crash
+
+Found with the native Halo: Combat Evolved port (kirklandsig's
+halo-ce-anbernic-rg35xx, built for Knulli and aurknix), which crashed on
+dArkOS at "starting main menu music" and runs with the workaround below.
+
+**What happens.** When SDL2 reads the keyboard through evdev on a console — the
+KMSDRM case, a program run as root or with access to the VT — it mutes the
+console keyboard (`KDSKBMODE K_OFF`) and, so that a crash cannot leave the
+console dead, installs `kbd_cleanup_signal_action` for the fatal signals,
+SIGSEGV and SIGBUS among them (SDL 2.32, `src/core/linux/SDL_evdev_kbd.c`).
+That handler does not look at the fault: it puts the previous handler back,
+restores the keyboard and calls `raise()`. A program that expects SIGSEGV as
+part of normal work therefore never sees the real fault. Its own handler gets
+the re-raised signal instead — `si_code` SI_TKILL, the PID where the fault
+address should be — cannot recognise it, and treats it as a crash.
+
+Halo protects some of its guest pages read-only to notice writes (texture
+write-watch, `port/android/host/host_memory.c` upstream); the first write
+faults, and the game's handler is meant to unprotect the page and carry on.
+Under gdb on the device: `host_memory_watch_protect` makes 0x8605d000
+read-only, the guest writes to it, and `tgkill(SIGSEGV)` then comes from
+`libSDL2` inside the signal handler. Under Wayland SDL does not touch the
+console keyboard and installs nothing, which is why the port worked there and
+why its author found that it "only works with SDL2 on Wayland". The bundled
+libmali and the SDL build make no difference; both were swapped and tested.
+
+**Workaround:** `SDL_NO_SIGNAL_HANDLERS=1` in the program's environment. SDL
+then skips `kbd_register_emerg_cleanup`; the cost is that a crash can leave the
+console keyboard muted until the next reboot (EmulationStation does not use
+it). For Halo that is one line in `Halo.sh`, which its author can carry for
+every KMSDRM system. `SDL_INPUT_LINUX_KEEP_KBD=1` avoids it as well, by not
+muting the keyboard at all.
+
+The same applies to anything else that relies on its own SIGSEGV handler under
+SDL on KMSDRM: emulators with fastmem or JIT fault tricks, box64, Mono.
+Nothing in the image sets the variable globally; the image is unchanged.
+
 ## Build flags targeted the wrong CPU
 
 `rk3562_core_builds` came from `rk3566_core_builds`, and the RK3566 is
