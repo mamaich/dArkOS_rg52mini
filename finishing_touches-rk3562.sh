@@ -291,7 +291,12 @@ sudo tee Arkbuild/etc/systemd/system/zram-swap.service > /dev/null <<'ZRAMUNITEO
 [Unit]
 Description=Compressed swap in RAM (zram)
 DefaultDependencies=no
-After=local-fs.target
+# Not After=local-fs.target: tmp.mount, like every tmpfs mount, is After
+# swap.target, and local-fs.target After tmp.mount, so that made a cycle that
+# systemd broke at boot by dropping either this job (no zram swap) or
+# tmp.mount (no tmpfs /tmp), depending on the boot. The script needs only the
+# root filesystem and /sys.
+After=systemd-modules-load.service systemd-remount-fs.service
 Before=swap.target
 
 [Service]
