@@ -16,6 +16,8 @@ ROM="$2"
 
 # Per-device speaker/codec quirks — restore on exit (matches ppsspp.sh)
 DEVICE="$(cat /home/ark/.config/.DEVICE 2>/dev/null)"
+# the codec's playback path before the emulator starts, put back after it
+playback_path=$(amixer sget 'Playback Path' 2>/dev/null | sed -n "s/.*Item0: '\(.*\)'/\1/p")
 
 # Derive the ROMs partition mount point from the ROM path (matches PPSSPP
 # convention: ROMs partition holds all writeable per-system data).  For a ROM
@@ -75,7 +77,16 @@ sudo systemctl stop killer_daemon.service
 
 # Restore RK817 codec state after emulator exit (RK3562 devices) —
 # pcsx2-sdl (like PPSSPP) can leave the audio path in a bad state.
+# Put back the path it had before, not a fixed one: the RG52 Mini's speaker
+# amplifier is driven by the codec only on SPK, so the HP set here silenced
+# it after every game, while the RG56Pro and RG43H run the speaker from HP.
+# Those are the fallbacks if the path could not be read.
+if [ "$DEVICE" = "RG52MINI" ]; then
+    default_path=SPK
+else
+    default_path=HP
+fi
 if [ "$DEVICE" = "RG56PRO" ] || [ "$DEVICE" = "RG52MINI" ] || [ "$DEVICE" = "RG43H" ]; then
-    amixer -q sset 'Playback Path' HP 2>/dev/null
+    amixer -q sset 'Playback Path' "${playback_path:-$default_path}" 2>/dev/null
     amixer -q sset 'Resume Path' ON 2>/dev/null
 fi
