@@ -228,6 +228,33 @@ The image's DSperate is built with Vulkan and draws 3D on the GPU
 (`gpu3d = true` in its default config); that does not replace the governor
 setting.
 
+## RetroArch on the Vulkan driver shows the picture sideways
+
+With `video_driver = "vulkan"` RetroArch draws the game and the menu turned by
+90 degrees. The vendor's firmware does the same. The image keeps
+`video_driver = "gl"`, which is correct; use GL.
+
+**What happens.** On GL, RetroArch renders a landscape 1280x720 frame and our
+`retroarch-patch-0000-rk3562-rotation-90` in the `drm_go2` context turns it onto
+the portrait panel through libgo2/RGA. The Vulkan driver presents straight to
+the panel through `VK_KHR_display`, at the panel's own 720x1280 ("[Vulkan] Using
+resolution 720x1280" in a verbose log), and nothing rotates it:
+- RetroArch creates the display surface with `VK_SURFACE_TRANSFORM_IDENTITY`;
+- the VOP2 planes cannot turn by 90 degrees;
+- `screen_orientation` 1 and 3 made no difference on the device.
+
+**Why it looks tied to the bilinear filter.** Choosing Vulkan in the menu takes
+effect only when the video driver is restarted. Changing "Bilinear Filtering"
+(`video_smooth`) restarts it, so the picture turns at that moment. The filter
+itself has nothing to do with it.
+
+**A fix, if ever needed:** a RetroArch patch for the Vulkan driver.
+1. Render the whole frame, menu included, into an offscreen landscape image.
+2. On the last pass, draw it turned by 90 degrees into the portrait swapchain.
+
+RetroArch's HDR output already renders through such an intermediate image. No
+core in the image needs Vulkan, so this is left undone.
+
 ## The "overclock" governor (after v10062026)
 
 EmulationStation's governor list for emulators (per system, per game, and the
