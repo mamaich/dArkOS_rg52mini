@@ -55,6 +55,9 @@ if [ "$UNIT" == "rg52mini" ]; then
     "
   sudo cp sdl2-patch-0004-odroidgoa-kmsdrm.patch ${CHROOT_DIR}/home/ark/${CHIPSET}_core_builds/patches/sdl2-patch-0005-kmsdrm-rotation.patch
   sudo cp sdl2-patch-0005-odroidgoa-rotate-cursor.patch ${CHROOT_DIR}/home/ark/${CHIPSET}_core_builds/patches/sdl2-patch-0006-rotate-cursor.patch
+  # Scaled fullscreen modes (960x540 ... 640x360), scaled onto the panel by
+  # the same RGA pass that rotates; needs the rotation patch above.
+  sudo cp sdl2-patch-0008-kmsdrm-scaled-modes.patch ${CHROOT_DIR}/home/ark/${CHIPSET}_core_builds/patches/sdl2-patch-0008-kmsdrm-scaled-modes.patch
 fi
 
 # Build and install SDL2
