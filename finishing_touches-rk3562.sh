@@ -528,6 +528,14 @@ sudo chroot Arkbuild/ bash -c "(crontab -l 2>/dev/null; echo \"@reboot /usr/loca
 echo -e "Generating 99-dma-heap.rules udev for Mali GPU access"
 echo 'SUBSYSTEM=="dma_heap", MODE="0666"' | sudo tee Arkbuild/etc/udev/rules.d/99-dma-heap.rules
 
+# The GPU's 1000 MHz step is the overclock one (perfoc, the "overclock"
+# governor in ES), but devfreq has no turbo flag and allows its top step from
+# the start: cap it at 900 MHz as soon as the device appears, so that a chip
+# that does not take 1000 MHz is never sent there outside that mode, not even
+# under the boot animation. The CPU's 2208 MHz step is turbo-mode and stays
+# off until perfoc turns boost on.
+echo 'ACTION=="add", SUBSYSTEM=="devfreq", KERNEL=="*.gpu", ATTR{max_freq}="900000000"' | sudo tee Arkbuild/etc/udev/rules.d/99-gpu-oc-cap.rules
+
 # Joystick button swap persistence -- restore swap state on boot if flag file exists
 echo 'ACTION=="add", SUBSYSTEM=="platform", DRIVER=="rk3562-joystick", RUN+="/bin/sh -c '\''test -f /home/ark/.config/.SWAP_START_HOME && echo 1 > /sys%p/swap_start_home'\''"' | sudo tee Arkbuild/etc/udev/rules.d/99-joystick-swap.rules
 

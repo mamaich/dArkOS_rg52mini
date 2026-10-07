@@ -64,6 +64,9 @@ else
   clear > /dev/tty1
 fi
 
+# out of the "overclock" mode, if the game ran in it (RG52 Mini)
+[ -x /usr/local/bin/perfoc ] && /usr/local/bin/perfoc off
+
 echo simple_ondemand > /sys/devices/platform/${gpu}.gpu/devfreq/${gpu}.gpu/governor
 echo ondemand > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
 echo dmc_ondemand > /sys/devices/platform/dmc/devfreq/dmc/governor

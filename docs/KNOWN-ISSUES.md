@@ -228,6 +228,73 @@ The image's DSperate is built with Vulkan and draws 3D on the GPU
 (`gpu3d = true` in its default config); that does not replace the governor
 setting.
 
+## The "overclock" governor (after v10062026)
+
+EmulationStation's governor list for emulators (per system, per game, and the
+default) is now: performance, **overclock**, ondemand, powersave. The mode is
+taken over from GammaOS Next, where it proved stable.
+
+| | performance | overclock |
+|---|---|---|
+| CPU label (real on bin L3) | 2016 (~2007 MHz) | 2208 (~2135-2165 MHz) |
+| GPU label (real) | 900 | 1000 (~960 MHz) |
+| memory | performance | performance |
+| soc-thermal trips | 75/85 C | 83/93 C |
+
+**Parts:**
+- **The BL31 table with the 2208/1000 labels.** It is already in
+  `BSP/uboot-rg52mini.img` (uboot-oc-stocktee-shmkept). BL31 only takes
+  rates it has, and the kernel clamps to its SCMI list.
+- **The OPPs, cherry-picked from the GammaOS kernel** (kernel_rk3562
+  `cc3acb8c3`, `76814b747`, `8311d0e31`):
+  - CPU 2208 MHz at 1.15 V, `turbo-mode`, so the kernel never picks it
+    while cpufreq `boost` is 0;
+  - GPU 1000 MHz at 0.975 V;
+  - the 2016 MHz step on bin L3 at 1.125 V instead of 1.100 V. At 1.100 V
+    it really ran at ~1950 MHz (~1910 when hot); this is in every mode.
+- **The Mali `POWER_DOWN_FREQ` of 300 MHz.** It is already in the kernel and
+  is required: the overclock table has no GPU 200 MHz (see above).
+- **`/etc/udev/rules.d/99-gpu-oc-cap.rules`.** Devfreq has no turbo flag and
+  allows the top step from the start, so the GPU is capped at 900 MHz as
+  soon as it appears, before the boot animation.
+- **`scripts/perfoc on|off|status`.**
+  - `on` sets boost, the CPU, GPU and memory governors and ceilings, and
+    raises the trips;
+  - `off` undoes the boost, the GPU ceiling and the trips, and leaves the
+    governors to perfmax and perfnorm;
+  - `perfmax overclock` calls `on`, and falls back to performance where the
+    OPPs or the table are missing;
+  - every other governor, `perfnorm` (game exit and boot) call `off`, so
+    overclock never outlives a game or a reboot.
+- **ES:** `build_emulationstation-rk3562.sh` adds "overclock" to the fixed
+  list in `es-app/src/SystemData.h`. The cache key gets `_oc`.
+
+**Thermal trips.** In overclock they are 83/93 C, not off:
+- above 95 C, `rockchip,high-temp` drops the CPU to 1800 MHz until the chip
+  cools below 90 C;
+- the GPU has no such limit, so power_allocator stays on;
+- the 10 C window stays as it is, because the kernel computes the
+  regulator's coefficients from the boot-time trips.
+
+**Tested on the device**, with the new DTB swapped into /boot:
+- **After boot:** `boost` is 0, 2208000 is only a boost frequency,
+  `cpuinfo_max` is 2016000, the GPU `max_freq` is 900000000 with 1000000000
+  listed, and there is no "failed to set power down rate".
+- **CPU speed:** the same Python loop pinned to one core took 4.26 s in
+  performance and 3.97 s in overclock (+7.4 %, matching ~2007 -> ~2150 MHz
+  real). So BL31 does take the label.
+- **In a game:** DSperate (Pokemon demo) was started through
+  `perfmax overclock` and ran for 3 min at CPU 2208 and GPU 1000 with boost
+  1. It reached 60 C, far from the trips.
+- **After the game:** perfnorm brought back boost 0, the GPU on
+  simple_ondemand with a 900 MHz ceiling, and the GPU idle at 300 MHz.
+
+**Not yet checked:**
+- the ES menu entry itself, which needs the next image's ES build;
+- a long session in a heavy game;
+- other boards: GammaOS measured bin L3, and a chip that does not take
+  2208/1000 shows it only in this mode.
+
 ## SDL2 under KMSDRM re-raised every SIGSEGV (fixed in our SDL after v10062026)
 
 Found with the native Halo: Combat Evolved port (kirklandsig's
