@@ -2,6 +2,10 @@
 
 directory=$(dirname "$2" | cut -d "/" -f2)
 
+# The codec's playback path before the emulator starts, put back after it
+# exits (see the end of this script).
+playback_path=$(amixer sget 'Playback Path' 2>/dev/null | sed -n "s/.*Item0: '\(.*\)'/\1/p")
+
 # PPSSPP and PPSSPP-2021 keep separate configs (upstream 596c142): both used to
 # write the same ppsspp.ini, and each rewrote it in its own format.
 opt_config_directory_std="/opt/ppsspp/backupforromsfolder/ppsspp"
@@ -79,7 +83,11 @@ else
 fi
 
 # Restore RK817 codec state after emulator exit — PPSSPP can leave the
-# audio path in a bad state.  Playback Path=HP is required for the external
-# speaker amplifier, Resume Path=ON ensures the codec restores after sleep.
-amixer -q sset 'Playback Path' HP 2>/dev/null
+# audio path in a bad state. Put back the path it had before, not a fixed one:
+# on the RG52 Mini the speaker amplifier is spk-ctl-gpios on the codec, which
+# the codec drives only on the SPK path, so the HP that used to be set here
+# silenced the speaker after every PSP game until a sleep or a reboot. SPK if
+# the path could not be read. Resume Path=ON ensures the codec restores after
+# sleep.
+amixer -q sset 'Playback Path' "${playback_path:-SPK}" 2>/dev/null
 amixer -q sset 'Resume Path' ON 2>/dev/null
