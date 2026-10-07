@@ -7,7 +7,14 @@ if [ "$CHIPSET" == "rk3562" ]; then
 else
   RETROARCH_TAG=$(curl -s https://raw.githubusercontent.com/christianhaitian/${CORE_BUILDS_CHIPSET}_core_builds/refs/heads/master/scripts/retroarch.sh | grep -oP '(?<=tag=").*?(?=")')
 fi
-if [ -f "Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.commit)" == "${RETROARCH_TAG}" ]; then
+# The cache key: the tag, and on rk3562 a hash of every RetroArch patch the
+# build applies as well, so that a new or changed patch rebuilds RetroArch
+# instead of restoring a binary built without it.
+RETROARCH_KEY="${RETROARCH_TAG}"
+if [ "$CHIPSET" == "rk3562" ]; then
+  RETROARCH_KEY="${RETROARCH_TAG}_$(cat rk3562_core_builds/patches/retroarch-patch-* retroarch-patches/retroarch-patch-* 2>/dev/null | sha1sum | cut -c1-12)"
+fi
+if [ -f "Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.commit)" == "${RETROARCH_KEY}" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.tar.gz
 else
 	RA_TRIES=0
@@ -25,6 +32,7 @@ else
 	  if [ "$CHIPSET" == "rk3562" ] && [ "$UNIT" != "rg52mini" ]; then
 	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0000-rk3562-rotation-90.patch
 	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0008-norotation-rga.patch
+	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0016-rk3562-oga-rotation-90.patch
 	  fi
 	  call_chroot "cd /home/ark &&
 		cd ${CHIPSET}_core_builds &&
@@ -73,7 +81,7 @@ else
 	  sudo rm -f Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.commit
 	fi
 	sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.tar.gz Arkbuild/opt/retroarch/bin/retroarch Arkbuild/home/ark/.config/retroarch/
-	echo "${RETROARCH_TAG}" > Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.commit
+	echo "${RETROARCH_KEY}" > Arkbuild_package_cache/${CHIPSET}/retroarch_${UNIT}.commit
 fi
 sudo rm -rf Arkbuild/home/ark/${CHIPSET}_core_builds/retroarch/
 sudo cp retroarch/configs/retroarch.cfg.${UNIT} Arkbuild/home/ark/.config/retroarch/retroarch.cfg
@@ -239,7 +247,7 @@ else
 fi
 
 if [[ "${BUILD_ARMHF}" == "y" ]]; then
-	if [ -f "Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.commit)" == "${RETROARCH_TAG}" ]; then
+	if [ -f "Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.commit)" == "${RETROARCH_KEY}" ]; then
       sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.tar.gz
 	else
 		setup_arkbuild32
@@ -275,6 +283,7 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 		  if [ "$CHIPSET" == "rk3562" ] && [ "$UNIT" != "rg52mini" ]; then
 		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0000-rk3562-rotation-90.patch
 		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0008-norotation-rga.patch
+		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0016-rk3562-oga-rotation-90.patch
 		  fi
 		  # 32-bit uses the same GO2_ROTATION_DEGREES_90 as 64-bit.
 		  # (Previously reverted to 270 based on incorrect GBM buffer orientation theory.)
@@ -330,7 +339,7 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 		  MALI_LIB="${whichmali}"
 		fi
 		sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.tar.gz Arkbuild/opt/retroarch/bin/retroarch32 Arkbuild/home/ark/.config/retroarch32/ Arkbuild/usr/lib/arm-linux-gnueabihf/libSDL2-2.0.so.0.${extension} Arkbuild/usr/lib/arm-linux-gnueabihf/librga.so* Arkbuild/usr/lib/arm-linux-gnueabihf/libgo2.so* Arkbuild/usr/lib/arm-linux-gnueabihf/${MALI_LIB} Arkbuild/usr/lib/arm-linux-gnueabihf/{libEGL.so,libEGL.so.1,libEGL.so.1.1.0,libGLES_CM.so,libGLES_CM.so.1,libGLESv1_CM.so,libGLESv1_CM.so.1,libGLESv1_CM.so.1.1.0,libGLESv2.so,libGLESv2.so.2,libGLESv2.so.2.0.0,libGLESv2.so.2.1.0,libGLESv3.so,libGLESv3.so.3,libgbm.so,libgbm.so.1,libgbm.so.1.0.0,libmali.so,libmali.so.1,libMaliOpenCL.so,libOpenCL.so,libwayland-egl.so,libwayland-egl.so.1,libwayland-egl.so.1.0.0,libMali.so}
-		echo "${RETROARCH_TAG}" > Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.commit
+		echo "${RETROARCH_KEY}" > Arkbuild_package_cache/${CHIPSET}/retroarch32_${UNIT}.commit
 	fi
 	sudo cp retroarch32/configs/retroarch.cfg.${UNIT} Arkbuild/home/ark/.config/retroarch32/retroarch.cfg
 	sudo cp retroarch32/configs/retroarch.cfg.spectate Arkbuild/home/ark/.config/retroarch32/retroarch.cfg.spectate
