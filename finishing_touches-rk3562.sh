@@ -513,6 +513,10 @@ sudo chmod -R 777 Arkbuild/opt/system/
 # Copy performance scripts
 sudo cp scripts/perf* Arkbuild/usr/local/bin/
 
+# Ports: PortMaster ports as ark, scripts written for root-only systems as
+# root (see the script)
+sudo install -m 755 scripts/rk3562/runport.sh Arkbuild/usr/local/bin/runport.sh
+
 # Add preservation of SDL_VIDEO_EGL_DRIVER to sudoers
 cat <<EOF | sudo tee Arkbuild/etc/sudoers.d/ark_preserve_sdl_video_egl_driver
 Defaults        env_keep += "SDL_VIDEO_EGL_DRIVER"
