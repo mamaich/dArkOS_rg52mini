@@ -210,6 +210,20 @@ OPP table starts at 300; the NPU list is untouched. `drivers/rknpu/` also parks
 at 200 MHz — fine with this BL31, but needs the same check if a future table
 drops the NPU's lowest step.
 
+## DSperate (NDS) is slow unless the governor is performance
+
+DSperate, the second NDS emulator since v10062026, keeps about one CPU core
+busy. Under the default `ondemand` governor that reads as light load, and the
+CPU spends a third of its time at 1.4 GHz or below: the Pokemon Diamond &
+Pearl demo runs at 41-47 fps with crackling sound, the 3D field of the Dragon
+Quest Monsters Joker 2 demo at 48. Under `performance` (CPU 2016 MHz, GPU
+900 MHz) both run at 59-60 fps with clean sound. Measured on the device on
+2026-10-07; the figures are in TODO.
+
+**Workaround:** in EmulationStation set the CPU governor of the NDS system,
+or of the game, to `performance` when using DSperate. DraStic, the default NDS
+emulator, is lighter and does not need it. The image is left as it is.
+
 ## Build flags targeted the wrong CPU
 
 `rk3562_core_builds` came from `rk3566_core_builds`, and the RK3566 is

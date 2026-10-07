@@ -65,10 +65,28 @@ on the device after the next build:
      SDL's a/b and x/y are swapped against the kernel's button positions and
      corrects it itself. Start+Select quits.
    * **Sound** through ALSA at 48 kHz; one underrun at start.
-   * **Speed:** 2D menus at 59-60 fps. The 3D field of Joker 2: 48 fps under
-     `ondemand` (the CPU sat at 1.6-1.8 GHz), 59-60 fps under `performance`
-     (2016 MHz); about 1 to 1.3 cores busy. So the NDS system wants the
-     performance governor in ES; whether that should be its default is open.
+   * **Speed is the CPU governor, not the build.** Pokemon DP demo, first
+     field, walking; clocks sampled twice a second for 10 s:
+
+     | | ondemand (CPU) / simple_ondemand (GPU) / dmc_ondemand | performance |
+     |---|---|---|
+     | fps | 41-47, audio underruns | 60, none |
+     | CPU | 816-2016 MHz, under 1.5 GHz a third of the time | 2016 MHz |
+     | GPU | 300 MHz | 900 MHz |
+     | DMC | 928 MHz | 928 MHz |
+
+     DSperate keeps about one core busy, which ondemand reads as light load.
+     The 3D field of the Joker 2 demo behaves the same way: 48 fps under
+     ondemand, 59-60 under performance. Nothing in the image changes this
+     (decided 2026-10-07); KNOWN-ISSUES tells users to pick the performance
+     governor for NDS in ES.
+   * **Built without Vulkan.** The image's DSperate logs "gpu3d: unavailable
+     (built without Vulkan)": the Vulkan presenter and GPU 3D raster need
+     `vulkan/vulkan.h` at build time, and the chroot has no libvulkan-dev.
+     A build with it (tested on the device only, not in the image) enables
+     `gpu3d`, but it changed nothing measurable here: 41-47 under ondemand,
+     60 under performance, as on the CPU rasteriser. Worth adding
+     libvulkan-dev to the DSperate build only if a heavier 3D game needs it.
    * Not yet checked: the stylus on the stick, savestates, a heavier 3D game.
 2. **Dolphin hotkeys** — the one recompiled emulator (patch 012).
 3. **PPSSPP-2021** now keeps its config and saves in /roms/psp/ppsspp-2021.
