@@ -57,6 +57,15 @@ if [ ! -d "$MNT/media/0" ]; then
     umount "$MNT"
     exit 0
 fi
+# GammaOS's setup wizard lays out ROMs itself: it unpacks its own archive over
+# the folder and deletes every *state.auto and *state.auto.png in it, so
+# nothing written there before it has run would survive. It leaves
+# setupcompleted at the top of userdata (/data/setupcompleted) when done.
+if [ ! -e "$MNT/setupcompleted" ]; then
+    log "GammaOS setup has not been completed yet: finish it in GammaOS first"
+    umount "$MNT"
+    exit 0
+fi
 
 R="$MNT/media/0/ROMs"
 [ -d "$R" ] || sudo -u ark mkdir "$R"
