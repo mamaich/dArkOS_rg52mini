@@ -91,11 +91,10 @@ if [ ! -f /roms/.darkos ]; then
     sudo -u ark touch /roms/.darkos
 fi
 
-# Files that came in through Android have no execute bit, which ports and the
-# PortMaster tools need. Only those lacking it; u+x,g+x keeps the group bits.
-for d in /roms/ports /roms/tools; do
-    [ -d "$d" ] && find "$d" -type f ! -perm -u=x -exec chmod u+x,g+x {} + 2>/dev/null
-done
+# Files that came in through Android have no execute bit, which the PortMaster
+# tools need. Only those lacking it; u+x,g+x keeps the group bits. Ports get
+# theirs from runport.sh, when a new one is started.
+[ -d /roms/tools ] && find /roms/tools -type f ! -perm -u=x -exec chmod u+x,g+x {} + 2>/dev/null
 
 mkdir -p /opt/system/Tools
 if [ -d /roms/tools ] && ! mountpoint -q /opt/system/Tools; then

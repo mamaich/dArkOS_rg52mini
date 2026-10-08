@@ -713,6 +713,13 @@ cat <<EOF | sudo tee -a Arkbuild/etc/samba/smb.conf
    map hidden = no
    guest ok = yes
    read list = guest
+   # On a dual-boot card /roms is Android's ext4: create what comes in over
+   # the network rwx for user and group, so that ports run (no execute bit
+   # otherwise) and Android keeps group write. FAT/exFAT ignore modes.
+   create mask = 0777
+   force create mode = 0770
+   directory mask = 0777
+   force directory mode = 0770
 
 [opt]
    comment = OPT
