@@ -4,7 +4,8 @@
 # On the combined "dArkOS + GammaOS" SD card there is no ROMS partition: the
 # games live in Android's shared storage, /storage/emulated/0/ROMs, which on
 # disk is media/0/ROMs inside the userdata partition (ext4 with casefold). This
-# mounts userdata, by its GPT partition label, at /mnt/androiddata and binds
+# mounts userdata (by its GPT partition label, on the card dArkOS runs from)
+# at /mnt/androiddata and binds
 # the ROMs folder to /roms and its tools folder to /opt/system/Tools, before
 # EmulationStation starts. /boot/dualboot marks such a card; without it this
 # does nothing.
@@ -18,7 +19,6 @@
 # Until Android has started once, userdata is not formatted: then /roms stays
 # an empty local folder, the boot goes on, and the next boot picks it up.
 
-DEV=/dev/disk/by-partlabel/userdata
 MNT=/mnt/androiddata
 log() { echo "darkos-androidroms: $*"; }
 
@@ -29,10 +29,17 @@ id -nG ark | grep -qw media_rw || usermod -aG media_rw ark
 
 mountpoint -q /roms && exit 0
 
+# userdata on the card dArkOS runs from - not by /dev/disk/by-partlabel,
+# which may well point at the Android userdata in the internal eMMC
+ROOTDISK=/dev/$(lsblk -n -o PKNAME "$(findmnt -n -o SOURCE /)" 2>/dev/null)
+DEV=""
 i=0
-while [ ! -b "$DEV" ] && [ $i -lt 10 ]; do sleep 1; i=$((i + 1)); done
-if [ ! -b "$DEV" ]; then
-    log "no partition labelled userdata"
+while [ -z "$DEV" ] && [ $i -lt 10 ]; do
+    DEV=$(lsblk -lnp -o NAME,PARTLABEL "$ROOTDISK" 2>/dev/null | awk '$2 == "userdata" {print $1; exit}')
+    [ -n "$DEV" ] || { sleep 1; i=$((i + 1)); }
+done
+if [ -z "$DEV" ]; then
+    log "no partition labelled userdata on $ROOTDISK"
     exit 0
 fi
 TYPE=$(blkid -o value -s TYPE "$DEV" 2>/dev/null)

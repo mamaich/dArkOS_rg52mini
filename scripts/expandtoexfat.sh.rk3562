@@ -92,9 +92,11 @@ fi
 # ROMs come from Android's userdata (darkos-androidroms.service). Nothing here
 # may touch the partition table. Recognised by /boot/dualboot, which the
 # combined image's builder puts there, and as a safeguard by an Android
-# userdata partition or by more than five partitions on the card.
+# userdata partition or by more than five partitions on this card (not
+# /dev/disk/by-partlabel: the internal eMMC holds an Android userdata too).
 dualboot=""
-if [ -f /boot/dualboot ] || [ -e /dev/disk/by-partlabel/userdata ] || \
+if [ -f /boot/dualboot ] || \
+   lsblk -ln -o PARTLABEL /dev/${primary_block} 2>/dev/null | grep -qx userdata || \
    [ "$(lsblk -n -o NAME /dev/${primary_block} 2>/dev/null | wc -l)" -gt 6 ]; then
   dualboot=1
 fi
