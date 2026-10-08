@@ -117,6 +117,7 @@ source ./build_sdljoytest.sh
 source ./build_controllertester.sh
 source ./build_drastic.sh
 source ./build_dsperate.sh
+source ./build_vkrotate.sh
 if [[ "${BUILD_RKMPP_FFMPEG}" == "y" ]]; then
   source ./build_ffmpeg.sh
 fi

@@ -228,32 +228,69 @@ The image's DSperate is built with Vulkan and draws 3D on the GPU
 (`gpu3d = true` in its default config); that does not replace the governor
 setting.
 
-## RetroArch on the Vulkan driver shows the picture sideways
+## Vulkan programs on the portrait panel: VK_LAYER_DARKOS_rotate (after v10072026)
 
-With `video_driver = "vulkan"` RetroArch draws the game and the menu turned by
-90 degrees. The vendor's firmware does the same. The image keeps
-`video_driver = "gl"`, which is correct; use GL.
+**The problem (up to v10072026).** Vulkan programs that present through
+`VK_KHR_display` drew a stretched, sideways picture. That covers RetroArch on the
+Vulkan driver, and PortMaster ports on SDL's KMSDRM Vulkan path, Mina the
+Hollower for one. The vendor's firmware does the same.
+- GL programs get a landscape picture: SDL and RetroArch's `drm_go2` context turn
+  every frame onto the 720x1280 panel with the RGA.
+- `VK_KHR_display` hands a Vulkan program the panel as it is: display, mode,
+  surface and swapchain are all 720x1280.
+- The VOP2 planes cannot turn by 90 degrees, and RetroArch's
+  `screen_orientation` made no difference.
 
-**What happens.** On GL, RetroArch renders a landscape 1280x720 frame and our
-`retroarch-patch-0000-rk3562-rotation-90` in the `drm_go2` context turns it onto
-the portrait panel through libgo2/RGA. The Vulkan driver presents straight to
-the panel through `VK_KHR_display`, at the panel's own 720x1280 ("[Vulkan] Using
-resolution 720x1280" in a verbose log), and nothing rotates it:
-- RetroArch creates the display surface with `VK_SURFACE_TRANSFORM_IDENTITY`;
-- the VOP2 planes cannot turn by 90 degrees;
-- `screen_orientation` 1 and 3 made no difference on the device.
+In RetroArch it seemed tied to "Bilinear Filtering" only because changing the
+filter restarts the video driver, which is when a menu switch to Vulkan takes
+effect.
 
-**Why it looks tied to the bilinear filter.** Choosing Vulkan in the menu takes
-effect only when the video driver is restarted. Changing "Bilinear Filtering"
-(`video_smooth`) restarts it, so the picture turns at that moment. The filter
-itself has nothing to do with it.
+**The fix.** `vk-rotate-layer/` holds an implicit Vulkan layer. It is built by
+`build_vkrotate.sh`, installed as `/usr/lib/aarch64-linux-gnu/libVkLayer_DARKOS_rotate.so`
+with `/usr/share/vulkan/implicit_layer.d/VkLayer_DARKOS_rotate.json`, and the
+Khronos loader loads it into every Vulkan program.
+1. **Landscape to the program.** For a display whose physical resolution is
+   portrait, the layer reports width and height swapped. That covers display
+   properties, display modes (their handles are remembered), display plane
+   capabilities on those modes, and the capabilities of a surface made on them.
+2. **Portrait underneath.** A display mode or display plane surface asked for
+   with a landscape extent is created portrait underneath (SDL asks for one the
+   size of its 1280x720 window).
+3. **The swapchain.** A swapchain on such a surface is created 720x1280. The
+   program gets landscape images of the layer's own, with its usage plus
+   sampling.
+4. **The turn.** In `vkQueuePresentKHR` the layer submits a prerecorded pass
+   that waits on the program's semaphores. A full-screen triangle samples the
+   program's image turned by 90 degrees into the swapchain image (nearest, 1:1).
+   The program's image goes back to PRESENT_SRC, and the real present waits on
+   the pass.
+5. **Landscape displays are left alone**, so the layer does nothing on other
+   devices.
 
-**A fix, if ever needed:** a RetroArch patch for the Vulkan driver.
-1. Render the whole frame, menu included, into an offscreen landscape image.
-2. On the last pass, draw it turned by 90 degrees into the portrait swapchain.
+Controls:
+- `DARKOS_VK_ROTATE_DISABLE=1` turns the layer off (the loader reads it from the
+  manifest);
+- `DARKOS_VK_ROTATE=270` turns the other way;
+- `DARKOS_VK_ROTATE_DEBUG=1` logs to stderr.
 
-RetroArch's HDR output already renders through such an intermediate image. No
-core in the image needs Vulkan, so this is left undone.
+Tested on the device:
+- **RetroArch on Vulkan** (Genesis Plus GX): "[Vulkan] Using resolution
+  1280x720". The layer logs "swapchain: program 1280x720, panel 720x1280, 3
+  images", and the picture is right way up and full screen.
+- **Mina the Hollower**: its log shows display, mode, surface and swapchain at
+  1280x720 (720x1280 before), and the picture is right way up.
+- **DSperate** (Vulkan 3D, presenting through SDL's GL path): unchanged.
+
+Not done:
+- the 32-bit side (`retroarch32`), which needs an armhf build of the layer;
+- a program that presents several swapchains in one call gets only the first
+  one turned.
+
+**Mina the Hollower, port side.** The port's launcher sets
+`GOTHIC_BACKEND=gles` for `DEVICE_NAME = RG52MINI`, so that the game uses GLES,
+which SDL turns. But it starts the game with `$ESUDO env ...`. On dArkOS
+`$ESUDO` is `sudo`, which drops exported variables, so the game ran on Vulkan
+anyway. It now presents right through the layer.
 
 ## The "overclock" governor (after v10062026)
 
