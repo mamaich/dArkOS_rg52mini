@@ -12,8 +12,16 @@
 
 port="$1"
 
-# A script without the execute bit - one copied in through Android onto the
-# ext4 of a dual-boot card - still runs, through bash.
+# On a dual-boot card the ports live on Android's ext4, and whatever arrives
+# there through Android or over the network has no execute bit; the boot-time
+# pass of darkos-androidroms misses what was added since. Set it on what lacks
+# it before every start (as root: Android's files are not ark's). u+x,g+x keeps
+# the group bits Android needs.
+if [ -f /boot/dualboot ] && [ -d /roms/ports ]; then
+	sudo find /roms/ports -type f ! -perm -u=x -exec chmod u+x,g+x {} + 2>/dev/null
+fi
+
+# A script without the execute bit still runs, through bash.
 
 if grep -q "control\.txt" "$port" 2>/dev/null || [ "$(id -u)" -eq 0 ]; then
 	[ -x "$port" ] && exec "$port"
