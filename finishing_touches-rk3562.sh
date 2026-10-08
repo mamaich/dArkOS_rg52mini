@@ -368,6 +368,21 @@ cat <<EOF | sudo tee ${mountpoint}/fstab.exfat
 /roms/tools /opt/system/Tools none nofail,x-systemd.device-timeout=7,bind${SWAP_LINE}
 EOF
 
+# The same for a dual-boot "dArkOS + GammaOS" card, where partition 5 is
+# GammaOS's boot FAT and the ROMs come from the Android storage instead
+# (darkos-androidroms.service mounts them and binds /opt/system/Tools).
+cat <<EOF | sudo tee ${mountpoint}/fstab.dualboot
+/dev/mmcblk1p4  /  ${ROOT_FILESYSTEM_FORMAT} ${ROOT_FILESYSTEM_MOUNT_OPTIONS} 0 0
+
+/dev/mmcblk1p3 /boot vfat defaults,noatime 0 0${SWAP_LINE}
+EOF
+
+# Dual-boot card: ROMs from Android's userdata. Does nothing without
+# /boot/dualboot, which the combined image's builder puts there.
+sudo install -m 755 scripts/rk3562/darkos-androidroms.sh Arkbuild/usr/local/sbin/darkos-androidroms
+sudo install -m 644 scripts/rk3562/darkos-androidroms.service Arkbuild/etc/systemd/system/darkos-androidroms.service
+sudo chroot Arkbuild/ bash -c "systemctl enable darkos-androidroms"
+
 # Disable getty on tty0 and tty1
 sudo chroot Arkbuild/ bash -c "systemctl disable getty@tty0.service getty@tty1.service"
 

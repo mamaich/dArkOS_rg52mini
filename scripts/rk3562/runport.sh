@@ -12,7 +12,12 @@
 
 port="$1"
 
+# A script without the execute bit - one copied in through Android onto the
+# ext4 of a dual-boot card - still runs, through bash.
+
 if grep -q "control\.txt" "$port" 2>/dev/null || [ "$(id -u)" -eq 0 ]; then
-	exec "$port"
+	[ -x "$port" ] && exec "$port"
+	exec bash "$port"
 fi
-exec sudo "$port"
+[ -x "$port" ] && exec sudo "$port"
+exec sudo bash "$port"
