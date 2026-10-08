@@ -79,6 +79,7 @@ log "/roms is $R"
 if [ ! -f /roms/.darkos ]; then
     log "laying out the ROMs folder"
     T=$(mktemp -d)
+    chmod 755 "$T"   # cp below runs as ark
     if [ -f /roms.tar ] && tar -C "$T" -xf /roms.tar; then
         sudo -u ark sh -c "umask 007; cp -rn --no-preserve=mode,ownership,timestamps '$T/roms/.' /roms/"
     fi
