@@ -281,10 +281,25 @@ Tested on the device:
   1280x720 (720x1280 before), and the picture is right way up.
 - **DSperate** (Vulkan 3D, presenting through SDL's GL path): unchanged.
 
-Not done:
-- the 32-bit side (`retroarch32`), which needs an armhf build of the layer;
-- a program that presents several swapchains in one call gets only the first
-  one turned.
+Not done: a program that presents several swapchains in one call gets only
+the first one turned.
+
+**No Vulkan for 32-bit programs.** On this device only 64-bit programs can use
+Vulkan, so the layer is built for aarch64 only.
+- **The Mali driver.** Rockchip ships Vulkan for the Mali-G52 only in its 64-bit
+  libmali. None of the armhf builds exports `vk_icdGetInstanceProcAddr`: g13p0,
+  which the image uses because the 32-bit g29p1 crashes in GL setup
+  (build_deps.sh); g24p0, the newest armhf build in Rockchip's libmali mirror
+  (JeffyCN/mirrors); and g2p0 in `BSP/mali32`. So the armhf Vulkan loader has no
+  driver.
+- **The manifest.** `rk_vk.json` names the aarch64 libmali by absolute path,
+  which fits.
+- **Mesa.** panvk drives this GPU only on the panfrost kernel driver, not on
+  Rockchip's Mali kbase.
+- **RetroArch.** `retroarch32` is built without a Vulkan driver: with
+  `video_driver = "vulkan"` it logs "Couldn't find any video driver named
+  \"vulkan\"", and its menu does not offer one. Cores that want Vulkan run in
+  the 64-bit `retroarch`, which the layer turns.
 
 **Mina the Hollower, port side.** The port's launcher sets
 `GOTHIC_BACKEND=gles` for `DEVICE_NAME = RG52MINI`, so that the game uses GLES,
