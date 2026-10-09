@@ -220,6 +220,23 @@ The other two — the absolute toolchain path and the 32-bit chroot cloning
 upstream's core builds instead of the local fork — only bite in this fork's
 layout.
 
+### gl4es: render targets left with a mipmap filter
+
+The report is drafted in `gl4es-fix/UPSTREAM.md`, for an issue at
+ptitSeb/gl4es. It is not posted yet: the owner decides when. It covers two
+things:
+- render-target textures keep `GL_NEAREST_MIPMAP_LINEAR` on the GLES side;
+- `SAMPLER[n]` sized by nested macros comes out too small.
+
+Before posting:
+- check another gl4es port with the 1.1 image, so that the report can say
+  whether more than Don't Starve is affected;
+- if possible, build gl4es with one of the two suspected spots changed, and
+  name the cause instead of a suspicion.
+
+Once gl4es is fixed upstream and ports carry the new build, `gl4es-fix/` and
+its line in `portmaster-e2big.sh` can go.
+
 ## The dependency stage costs two hours of emulation, not of work
 
 Measured while resuming the 2026-09-29 build, where every package was already
