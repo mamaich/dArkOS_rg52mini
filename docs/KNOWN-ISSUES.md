@@ -307,6 +307,58 @@ which SDL turns. But it starts the game with `$ESUDO env ...`. On dArkOS
 `$ESUDO` is `sudo`, which drops exported variables, so the game ran on Vulkan
 anyway. It now presents right through the layer.
 
+## gl4es ports rendered black into their own textures: gl4es-fix (after 1.0)
+
+**The problem (1.0 and earlier).** In Don't Starve the HUD showed, but the
+world was black. It is a PortMaster port on box64 and gl4es, which turns the
+game's OpenGL 2.1 into GLES2 for libmali. Vulkan and the rotate layer play no
+part in it.
+
+**The cause.** The game renders into textures of its own (FBOs), the light
+map among them, and asks for `GL_LINEAR` on them. A trace of the GLES calls
+gl4es makes showed the following.
+- gl4es creates each such texture with `glTexImage2D` of level 0 without data.
+- gl4es never passes the minifying filter down to the driver.
+- All 13 render-target textures of the game stayed at the GLES default,
+  `GL_NEAREST_MIPMAP_LINEAR`.
+- They have no mipmaps, so they are incomplete, and sampling an incomplete
+  texture returns black.
+
+Don't Starve multiplies the world by the light map, so the world was black.
+The postprocess pass also reads the scene through such a texture.
+
+The trace: every FBO was complete (`GL_FRAMEBUFFER_COMPLETE`). The light map
+was cleared to daylight (1.0, 0.9, 0.62). Forcing full light in the world
+shaders brought the world back, and so did giving the textures `GL_LINEAR`
+underneath gl4es, with lighting and shadows intact.
+
+gl4es keeps its own copy of each texture's sampler state and calls
+`glTexParameteri` only when its copy differs from what it last sent; for
+these textures the copy and the driver disagree. The upstream report is
+drafted in `gl4es-fix/UPSTREAM.md`.
+
+**The fix.** `gl4es-fix/` builds a `libGLESv2.so.2`
+(`/usr/lib/aarch64-linux-gnu/gl4es-fix/`):
+- it forwards every `gl*` of the image's libMali; the forwarders are generated
+  from its symbol table at build time;
+- after a `glTexImage2D` of level 0 without data, it sets `GL_LINEAR` if the
+  texture is left with a mipmap filter.
+
+That turns a texture that could only read black into a working one. A program
+that allocates level 0 empty, builds mipmaps itself and never sets the filter
+again would lose mipmap filtering on it: a softer picture, not a broken one.
+
+gl4es loads its GLES library from `LIBGL_GLES`, and nothing else reads that
+variable. `portmaster-e2big.sh` adds to `mod_dArkOS.txt` an export of it,
+unless the port set its own. So only ports on gl4es get the fix. EmulationStation,
+RetroArch, SDL and native ports keep linking libmali directly.
+
+**Don't Starve, port side.** The postprocess shaders also failed to compile
+under gl4es ("S0020: Array subscript too big"): `SAMPLER[SAMPLERCOUNT]`, with
+`SAMPLERCOUNT` a sum of nested macros, came out as 2. Writing the number into
+each `postprocess*.ksh` fixes them. That is a change to the game's data on the
+card, not to the image.
+
 ## The "overclock" governor (after v10062026)
 
 EmulationStation's governor list for emulators (per system, per game, and the
