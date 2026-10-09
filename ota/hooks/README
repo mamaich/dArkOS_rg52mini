@@ -1,0 +1,5 @@
+Hooks of a release: ota/hooks/<version>.sh or <version>-<name>.sh go into the
+package that updates to <version> and run as root after its files are in
+place (OTA_FROM, OTA_TO, OTA_DUALBOOT=0|1 in the environment). For what a file
+copy cannot do: a group to add, a service to enable, a setting to change in a
+file the user may have edited. A hook must be safe to run twice.

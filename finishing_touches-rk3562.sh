@@ -537,6 +537,16 @@ sudo cp scripts/perf* Arkbuild/usr/local/bin/
 # root (see the script)
 sudo install -m 755 scripts/rk3562/runport.sh Arkbuild/usr/local/bin/runport.sh
 
+# Over-the-air updates (docs/OTA.md): darkos-ota and Options -> Update in place
+# of the generic Update.sh, which fetches upstream updates built for other
+# chipsets
+if [ "$UNIT" == "rg52mini" ]; then
+  sudo install -m 755 scripts/rk3562/darkos-ota Arkbuild/usr/local/sbin/darkos-ota
+  sudo install -m 644 scripts/rk3562/darkos-ota-boot.service Arkbuild/etc/systemd/system/darkos-ota-boot.service
+  sudo chroot Arkbuild/ bash -c "systemctl enable darkos-ota-boot"
+  sudo install -m 755 dArkOS_Tools/rk3562/Update.sh Arkbuild/opt/system/Update.sh
+fi
+
 # Add preservation of SDL_VIDEO_EGL_DRIVER to sudoers
 cat <<EOF | sudo tee Arkbuild/etc/sudoers.d/ark_preserve_sdl_video_egl_driver
 Defaults        env_keep += "SDL_VIDEO_EGL_DRIVER"
@@ -752,6 +762,13 @@ DARKOS_VERSION=${DARKOS_VERSION:-$(cat VERSION 2>/dev/null)}
 if [ "$UNIT" == "rg52mini" ] && [ -n "$DARKOS_VERSION" ]; then
   DARKOS_TITLE="dArkOS ${DARKOS_VERSION} (${BUILD_DATE})"
   echo "${DARKOS_VERSION}" | sudo tee Arkbuild/home/ark/.config/.DARKOS_RELEASE
+  # what darkos-ota updates from: a package applies to one BUILD_ID only
+  cat <<EOF | sudo tee Arkbuild/etc/darkos-release
+DEVICE=rg52mini
+VERSION=${DARKOS_VERSION}
+BUILD_ID=${DARKOS_BUILD_ID:-$(date -u +%Y%m%d%H%M%S)}
+BUILD_DATE=${BUILD_DATE}
+EOF
 else
   DARKOS_TITLE="dArkOS (${BUILD_DATE})"
 fi

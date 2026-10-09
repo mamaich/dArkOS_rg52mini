@@ -85,6 +85,7 @@ EmulationStation-fcamod, RetroArch и около тридцати отдельн
 | [docs/HARDWARE.md](docs/HARDWARE.md) | правки ядра и что каждая починила; загрузчик, графический стек, консоль |
 | [docs/BUILDING.md](docs/BUILDING.md) | сборка, в том числе под WSL, и грабли, каждая из которых стоила часов |
 | [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | чего нет в образе и почему |
+| [docs/OTA.md](docs/OTA.md) | обновление по воздуху с 1.1: формат пакета, общая карта с GammaOS, как выпускать |
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | что реально ускоряет эмуляторы здесь, а что нет — включая проверенное и отвергнутое |
 | [docs/TODO.md](docs/TODO.md) | что дальше и что ждёт следующей сборки |
 
