@@ -748,9 +748,18 @@ sudo chroot Arkbuild/ bash -c "systemctl disable nmbd" 2>/dev/null || true
 
 # Set distro identification and version
 sudo mkdir -p Arkbuild/usr/share/plymouth/themes/
+DARKOS_VERSION=${DARKOS_VERSION:-$(cat VERSION 2>/dev/null)}
+if [ "$UNIT" == "rg52mini" ] && [ -n "$DARKOS_VERSION" ]; then
+  DARKOS_TITLE="dArkOS ${DARKOS_VERSION} (${BUILD_DATE})"
+  echo "${DARKOS_VERSION}" | sudo tee Arkbuild/home/ark/.config/.DARKOS_RELEASE
+else
+  DARKOS_TITLE="dArkOS (${BUILD_DATE})"
+fi
 cat <<EOF | sudo tee Arkbuild/usr/share/plymouth/themes/text.plymouth
-title=dArkOS (${BUILD_DATE})
+title=${DARKOS_TITLE}
 EOF
+# the date, as ArkOS tools have always compared it; the release is in
+# .DARKOS_RELEASE
 echo "${BUILD_DATE}" | sudo tee Arkbuild/home/ark/.config/.VERSION
 
 # Set boot up welcome text

@@ -47,7 +47,12 @@ export BUILD_DATE=${RESUME_BUILD_DATE:-09292026}
 ROOT_FILESYSTEM_FORMAT="btrfs"
 ROOT_FILESYSTEM_MOUNT_OPTIONS="defaults,noatime,compress=zstd:1"
 SECTOR_SIZE=512
-DISK="dArkOS_${UNIT}_${DEBIAN_CODE_NAME}_${BUILD_DATE}.img"
+DARKOS_VERSION=${DARKOS_VERSION:-$(cat VERSION 2>/dev/null)}
+if [ -n "$DARKOS_VERSION" ]; then
+  DISK="dArkOS_${UNIT}_${DARKOS_VERSION}.img"
+else
+  DISK="dArkOS_${UNIT}_${DEBIAN_CODE_NAME}_${BUILD_DATE}.img"
+fi
 FILESYSTEM="ArkOS_File_System.img"
 mountpoint=mnt/boot
 

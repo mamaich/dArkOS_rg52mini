@@ -37,8 +37,14 @@ elif [[ "$ROOT_FILESYSTEM_FORMAT" == *"ext"* ]]; then
   ROOT_FILESYSTEM_MOUNT_OPTIONS="defaults,noatime"
 fi
 
-# Image naming
-DISK="dArkOS_${UNIT}_${DEBIAN_CODE_NAME}_${BUILD_DATE}.img"
+# Image naming. The RG52 Mini's releases are numbered (VERSION in the tree:
+# 1.0 was the 10082026 build), and so is its image; other units keep the date.
+DARKOS_VERSION=${DARKOS_VERSION:-$(cat VERSION 2>/dev/null)}
+if [ "$UNIT" == "rg52mini" ] && [ -n "$DARKOS_VERSION" ]; then
+  DISK="dArkOS_${UNIT}_${DARKOS_VERSION}.img"
+else
+  DISK="dArkOS_${UNIT}_${DEBIAN_CODE_NAME}_${BUILD_DATE}.img"
+fi
 IMAGE_SIZE=12G
 SECTOR_SIZE=512
 BUILD_SIZE=52000     # Initial file system size in MB during build
