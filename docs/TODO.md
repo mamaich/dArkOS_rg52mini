@@ -1589,6 +1589,21 @@ and rk628 probe order before concluding anything about the hardware.
   AFBC copy was checked on Mario only): red and blue swapped, broken
   textures, GPU faults in dmesg. `MALISX2_V7_AFBC_FMT=1` keeps only
   B8G8R8A8 compressed, `0` neither; findings go to the malisx2 session.
+  Done 2026-10-29, both built by this recipe (the 1.3.1 rootfs in an
+  overlay, the profile applied: .text 6.09 and 6.11 MB), on ARMSX2 1.4's
+  build (a7ad453 with patches 0001-0005), two rounds of 75 s, 1c45a6e against
+  d398141 with `=1`: God of War on the ship 22.57 / 22.46 against 25.51 /
+  23.13 over 100-1500 (+7.8%), from the owner's save 24.90 / 25.17 against
+  26.08 / 26.70 (+5.4%); Jak's intro 35.98 / 35.61 against 35.57 / 35.34
+  (-0.9%); Jak in game 1248 / 1244 frames in 75 s against 1262 / 1262
+  (+1.3%). The pictures are right on both. PPSSPP (Final Fantasy
+  Anniversary, Street Fighter Alpha 3 Max), flycast (Crazy Taxi, the 240p
+  Test Suite) and Atomiswave (kov7sprt) with DARKOS_VULKAN on each build:
+  the same fps (60, kov7 29.2 and 29.9), no crash, the colours right (Crazy
+  Taxi's yellow, the 240p menu's blue frame and red text), the textures
+  whole, no GPU fault in dmesg (both builds log two or three "Stride 72
+  passed to job_submit isn't supported by the kernel" lines at each start).
+  The pin and `=1` for ARMSX2 wait for the owner's word.
 
 ## Repairs, each its own small job
 
