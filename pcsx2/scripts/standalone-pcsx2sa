@@ -97,6 +97,11 @@ export SDL3SHIM_SDL2_LIB=/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0
 export SDL_VIDEODRIVER=kmsdrm
 export SDL_AUDIODRIVER=alsa
 
+# malisx2 (the RG52 Mini's driver for PS2 since 1.4): fragment shader arithmetic in FP16 where
+# the shader's operations allow it. God of War +5-8%, Jak level (docs/TODO.md, "malisx2 for
+# 1.4"); the owner's call of 2026-10-29. Only ARMSX2 gets it, and libmali does not read it.
+export MALISX2_V7_FP16=1
+
 # No gamecontrollerdb is installed for PCSX2, and after the compass-correct
 # kernel, bare SDL2 auto-map would put SDL-A on the South button.  This
 # SDL2-order mapping (East=SDL-A) keeps PCSX2.ini's Circle=SDL-0/A on the

@@ -554,7 +554,10 @@ libmali stays the default, except for ARMSX2 since 1.4: malisx2 1c45a6e (IDVS,
 index ranges on the GPU) draws God of War and Jak and Daxter in game 10-12%
 faster than libmali there, its pictures the same, and vulkan.conf names it for
 `armsx2-sdl` (an OTA hook adds the line to a user's own copy that names no
-driver for it; MALI in a PS2 game's EMULATOR SETTINGS still takes Arm's).
+driver for it; MALI in a PS2 game's EMULATOR SETTINGS still takes Arm's). 1.4
+ships d398141, and ARMSX2's launcher sets `MALISX2_V7_FP16=1` (fragment shader
+arithmetic in FP16 where nothing needs 32 bits): God of War another 5-8%, Jak
+level (TODO.md, "malisx2 for 1.4").
 Azahar and Dolphin stay on libmali: Castlevania 13-20% slower on malisx2, the
 ND Demo 41.4 fps against 45.7.
 

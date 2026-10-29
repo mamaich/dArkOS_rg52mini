@@ -20,7 +20,11 @@
 # f56aa78-ca3352b: those draws' index ranges scanned by the GPU, compute jobs
 # batched per pass as libmali does, not by the CPU through uncached memory,
 # MALISX2_V7_GPU_INDEX_RANGE=0 for the CPU scan; 796ca04:
-# MALISX2_NO_PIPELINE_CACHE=1, for shader dumps), and the work on the driver
+# MALISX2_NO_PIPELINE_CACHE=1, for shader dumps; ce57011-2c219dc: fragment
+# shader arithmetic in FP16 where nothing needs 32 bits, MALISX2_V7_FP16=1
+# deciding by an estimate of the paired operations, set for ARMSX2 by its
+# launcher; 7e4a41d, af9083f: B8G8R8A8 and RGB565 images AFBC-compressed by
+# default, MALISX2_V7_AFBC_FMT=0 for neither), and the work on the driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
@@ -46,7 +50,7 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="1c45a6e6b7a6ac17d3b7738d088c8287d69c5d21"
+MALISX2_COMMIT="d39814144b58994b65d2c020188b6d01708e1bd0"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained on 796ca04 on an

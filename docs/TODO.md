@@ -1529,6 +1529,71 @@ and rk628 probe order before concluding anything about the hardware.
     "charging") is lit again after the wake.
   Not yet tried: during a game.
 
+## malisx2 for 1.4: d398141, and FP16 for ARMSX2 (2026-10-29)
+
+malisx2 ce57011 (on 1c45a6e, not yet in the fork) computes fragment shader
+arithmetic in FP16 where nothing needs 32 bits, with `MALISX2_V7_FP16=1`
+in the program's environment (off by default; its first run compiles the
+fragment shaders again). ARMSX2 stays at a7ad453 (2026-10-29), and on it
+(the image's own, 7732b3a, four rounds, two in each order; off / 1 / 3):
+God of War from the owner's save 24.87 / 25.57 / 25.96 fps over 100-1500
+(+2.8%, +4.4%), on the ship 22.62 / 22.71 / 23.13 (+0.4%, +2.3%; over
+800-1500 -1.0% and +1.5%), Jak's intro 35.62 / 35.44 / 35.83 (-0.5%,
++0.6%). `=3` (both builds compiled, the better kept) is nowhere behind `=1`
+and ahead on God of War; it compiles 78% longer (Castlevania's preload 16.9 s
+against 9.5 s without FP16, 10.3 s with `=1`), and ARMSX2 compiles while a
+game plays, the first time each shader is met. The malisx2 session is looking
+for a count that chooses as `=3` does. The 2.9 numbers that follow came first. Measured here with ARMSX2 2.9 and its 2026-10-28
+profile, as ES starts it, after a warm-up, off against on: God of War on
+the ship 22.48 against 22.80 fps over frames 100-1500 (+1.4%, five rounds,
+on ahead in four), 28.29 against 29.10 over 100-800 (+2.9%, ahead in all
+five), 18.64 against 18.74 over 800-1500; Jak and Daxter's intro 35.98
+against 35.89 (five rounds), Jak in game from the owner's save 16.47
+against 16.41 (two). The pictures are the same. The malisx2 session saw
++4.1% on God of War with 1.3.1's ARMSX2.
+7732b3a (e09815b on ce57011) picks FP16 by counting the shader's
+operations instead of compiling it twice (Castlevania's preload 10.3 s
+against 16.9; 9.5 without FP16; `MALISX2_V7_FP16=3` is the old choice).
+Measured the same way, four rounds, two in each order: God of War on the
+ship 22.97 against 22.82 over 100-1500 (-0.7%), 28.03 against 29.08 over
+100-800 (+3.7%, ahead in all four) but 19.46 against 18.77 over 800-1500
+(-3.5%, behind in all four); from the owner's save (left by pressing
+Cross 12 s in, as the malisx2 session's drv-ab.sh does) 24.98 against 25.53
+(+2.2%, ahead in all four); Jak's intro 36.01 against 35.63 (-1.1%, behind
+in all four, in both orders). So the count takes FP16 for shaders the two
+compiles kept at 32 bits, and loses where ce57011 did not; told to the
+malisx2 session. To take either: the commit pushed to the fork,
+`MALISX2_COMMIT` moved, and the variable exported for ARMSX2 only (its
+launcher); Azahar and Dolphin are on libmali.
+The fork's main is d398141 since 2026-10-29 (pushed by the malisx2 session
+with the owner's leave): `=1` is the new rule (2c219dc; its four rounds
+against off: God of War +2.0-3.6%, Jak 0, level with `=3`; Castlevania's
+preload 10.5 s), and `MALISX2_V7_AFBC_FMT` is 3 by default (af9083f):
+B8G8R8A8 and RGB565 images are AFBC-compressed (Mario -10% GPU a quad,
+Castlevania +1.5%). Before 1.4 takes it, here: ARMSX2 with `=1` and the
+AFBC default against 1c45a6e, and, the owner's request, PPSSPP and flycast
+on malisx2, which may upload many RGB565 and BGRA8 textures (the RGB565 to
+AFBC copy was checked on Mario only): red and blue swapped, broken
+textures, GPU faults in dmesg. `MALISX2_V7_AFBC_FMT=1` keeps only
+B8G8R8A8 compressed, `0` neither; findings go to the malisx2 session.
+Done 2026-10-29, both built by this recipe (the 1.3.1 rootfs in an
+overlay, the profile applied: .text 6.09 and 6.11 MB), on ARMSX2 1.4's
+build (a7ad453 with patches 0001-0005), two rounds of 75 s, 1c45a6e against
+d398141 with `=1`: God of War on the ship 22.57 / 22.46 against 25.51 /
+23.13 over 100-1500 (+7.8%), from the owner's save 24.90 / 25.17 against
+26.08 / 26.70 (+5.4%); Jak's intro 35.98 / 35.61 against 35.57 / 35.34
+(-0.9%); Jak in game 1248 / 1244 frames in 75 s against 1262 / 1262
+(+1.3%). The pictures are right on both. PPSSPP (Final Fantasy
+Anniversary, Street Fighter Alpha 3 Max), flycast (Crazy Taxi, the 240p
+Test Suite) and Atomiswave (kov7sprt) with DARKOS_VULKAN on each build:
+the same fps (60, kov7 29.2 and 29.9), no crash, the colours right (Crazy
+Taxi's yellow, the 240p menu's blue frame and red text), the textures
+whole, no GPU fault in dmesg (both builds log two or three "Stride 72
+passed to job_submit isn't supported by the kernel" lines at each start).
+Taken (the owner, 2026-10-29): `MALISX2_COMMIT` is d398141, and ARMSX2's launcher
+(`pcsx2/scripts/standalone-pcsx2sa`) exports `MALISX2_V7_FP16=1`; Azahar and
+Dolphin are on libmali, and other programs on malisx2 run without it.
+
 ## Decisions nobody has made yet
 
 * **Charging parameters.** The device tree carries the numbers from the
@@ -1543,68 +1608,6 @@ and rk628 probe order before concluding anything about the hardware.
   would change the answer.
 * **`CONFIG_ZRAM_WRITEBACK`.** Compiled in, unused. It is the other way to
   spend the eMMC partition — see PERFORMANCE.md.
-* **malisx2's FP16 for ARMSX2** (2026-10-29, the owner's call). malisx2
-  ce57011 (on 1c45a6e, not yet in the fork) computes fragment shader
-  arithmetic in FP16 where nothing needs 32 bits, with `MALISX2_V7_FP16=1`
-  in the program's environment (off by default; its first run compiles the
-  fragment shaders again). ARMSX2 stays at a7ad453 (2026-10-29), and on it
-  (the image's own, 7732b3a, four rounds, two in each order; off / 1 / 3):
-  God of War from the owner's save 24.87 / 25.57 / 25.96 fps over 100-1500
-  (+2.8%, +4.4%), on the ship 22.62 / 22.71 / 23.13 (+0.4%, +2.3%; over
-  800-1500 -1.0% and +1.5%), Jak's intro 35.62 / 35.44 / 35.83 (-0.5%,
-  +0.6%). `=3` (both builds compiled, the better kept) is nowhere behind `=1`
-  and ahead on God of War; it compiles 78% longer (Castlevania's preload 16.9 s
-  against 9.5 s without FP16, 10.3 s with `=1`), and ARMSX2 compiles while a
-  game plays, the first time each shader is met. The malisx2 session is looking
-  for a count that chooses as `=3` does. The 2.9 numbers that follow came first. Measured here with ARMSX2 2.9 and its 2026-10-28
-  profile, as ES starts it, after a warm-up, off against on: God of War on
-  the ship 22.48 against 22.80 fps over frames 100-1500 (+1.4%, five rounds,
-  on ahead in four), 28.29 against 29.10 over 100-800 (+2.9%, ahead in all
-  five), 18.64 against 18.74 over 800-1500; Jak and Daxter's intro 35.98
-  against 35.89 (five rounds), Jak in game from the owner's save 16.47
-  against 16.41 (two). The pictures are the same. The malisx2 session saw
-  +4.1% on God of War with 1.3.1's ARMSX2.
-  7732b3a (e09815b on ce57011) picks FP16 by counting the shader's
-  operations instead of compiling it twice (Castlevania's preload 10.3 s
-  against 16.9; 9.5 without FP16; `MALISX2_V7_FP16=3` is the old choice).
-  Measured the same way, four rounds, two in each order: God of War on the
-  ship 22.97 against 22.82 over 100-1500 (-0.7%), 28.03 against 29.08 over
-  100-800 (+3.7%, ahead in all four) but 19.46 against 18.77 over 800-1500
-  (-3.5%, behind in all four); from the owner's save (left by pressing
-  Cross 12 s in, as the malisx2 session's drv-ab.sh does) 24.98 against 25.53
-  (+2.2%, ahead in all four); Jak's intro 36.01 against 35.63 (-1.1%, behind
-  in all four, in both orders). So the count takes FP16 for shaders the two
-  compiles kept at 32 bits, and loses where ce57011 did not; told to the
-  malisx2 session. To take either: the commit pushed to the fork,
-  `MALISX2_COMMIT` moved, and the variable exported for ARMSX2 only (its
-  launcher); Azahar and Dolphin are on libmali.
-  The fork's main is d398141 since 2026-10-29 (pushed by the malisx2 session
-  with the owner's leave): `=1` is the new rule (2c219dc; its four rounds
-  against off: God of War +2.0-3.6%, Jak 0, level with `=3`; Castlevania's
-  preload 10.5 s), and `MALISX2_V7_AFBC_FMT` is 3 by default (af9083f):
-  B8G8R8A8 and RGB565 images are AFBC-compressed (Mario -10% GPU a quad,
-  Castlevania +1.5%). Before 1.4 takes it, here: ARMSX2 with `=1` and the
-  AFBC default against 1c45a6e, and, the owner's request, PPSSPP and flycast
-  on malisx2, which may upload many RGB565 and BGRA8 textures (the RGB565 to
-  AFBC copy was checked on Mario only): red and blue swapped, broken
-  textures, GPU faults in dmesg. `MALISX2_V7_AFBC_FMT=1` keeps only
-  B8G8R8A8 compressed, `0` neither; findings go to the malisx2 session.
-  Done 2026-10-29, both built by this recipe (the 1.3.1 rootfs in an
-  overlay, the profile applied: .text 6.09 and 6.11 MB), on ARMSX2 1.4's
-  build (a7ad453 with patches 0001-0005), two rounds of 75 s, 1c45a6e against
-  d398141 with `=1`: God of War on the ship 22.57 / 22.46 against 25.51 /
-  23.13 over 100-1500 (+7.8%), from the owner's save 24.90 / 25.17 against
-  26.08 / 26.70 (+5.4%); Jak's intro 35.98 / 35.61 against 35.57 / 35.34
-  (-0.9%); Jak in game 1248 / 1244 frames in 75 s against 1262 / 1262
-  (+1.3%). The pictures are right on both. PPSSPP (Final Fantasy
-  Anniversary, Street Fighter Alpha 3 Max), flycast (Crazy Taxi, the 240p
-  Test Suite) and Atomiswave (kov7sprt) with DARKOS_VULKAN on each build:
-  the same fps (60, kov7 29.2 and 29.9), no crash, the colours right (Crazy
-  Taxi's yellow, the 240p menu's blue frame and red text), the textures
-  whole, no GPU fault in dmesg (both builds log two or three "Stride 72
-  passed to job_submit isn't supported by the kernel" lines at each start).
-  The pin and `=1` for ARMSX2 wait for the owner's word.
-
 ## Repairs, each its own small job
 
 None open. The three bit-rotted patches are fixed — KNOWN-ISSUES.md says how.
