@@ -1454,6 +1454,23 @@ With `BufferMS = 100` (150 tried too) God of War sounds right to the owner
 (2026-10-26). The template sets it, and the launcher adds it once to an ini
 made from the old one (TODO.md, "PS2: sound in heavy games").
 
+## PS2: "cycle rate is not at default" at start, and rates below 50% — new in 1.4
+
+ARMSX2 warns at every start that the EE cycle rate is not at its default and
+may cause slowdown. That is our setting: `PCSX2.ini.rg52mini` underclocks the
+emulated EE (`EECycleRate = -3`, "50% Speed" in the menu, and
+`EECycleSkip = 1`), which is a large part of why heavy games run here at all.
+The warning stays (the owner, 2026-10-29).
+
+1.4 adds 36%, 31% and 27% Speed (-4, -5, -6) below 50% in ARMSX2's Settings >
+Emulation Settings > EE Cycle Rate, for all games or for one
+(`pcsx2/patches/pcsx2-0005`). They are offered, not set (the owner,
+2026-10-29): at -5 God of War's own time runs about a third faster at the
+same frames a second, and Jak and Daxter's intro draws about a fifth more
+frames, but no game has been played through at them, and a game that needs
+the EE's time may break: cutscenes out of step, sound, a hang. Back to 50% if
+so. Measured in TODO.md, "PS2: EE cycle rate below -3".
+
 ## PS2: the system list showed its name as plain text — fixed in 1.3
 
 nes-box, the default theme, has no ps2 folder, so ES wrote "PlayStation 2" in

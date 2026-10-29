@@ -469,7 +469,7 @@ nominal rate). What it would do:
 It would be an option (`[SPU2/Output] RealtimeAudio`), time stretching
 staying for the jitter.
 
-## PS2: EE cycle rate below -3 (2026-10-29, measured, not decided)
+## PS2: EE cycle rate below -3 (2026-10-29: in the menu for 1.4, the default unchanged)
 
 ARMSX2 says at start that the cycle rate is not at its default and may cause
 slowdown: our `PCSX2.ini` sets `EECycleRate = -3`, `EECycleSkip = 1` (from
@@ -508,9 +508,32 @@ frames, 14% less speed than -3). Jak gains both: at -5 23% more frames and
 
 Not checked: whether games break with the EE this slow (their logic, cutscene
 and sound timing, games that count on CPU time); only two games, 75 s each,
-sound off. Below -3 also needs the EE Cycle Rate list of FullscreenUI
-(`FullscreenUI_Settings.cpp`, its base is -3) extended. a7ad453's
-`DynamicEECycleRate` (off) lowers the rate by up to two steps on its own.
+sound off. a7ad453's `DynamicEECycleRate` (off; AutoTune can turn it on, and
+it needs `EECycleSkip = 0`) lowers the rate by up to two steps on its own.
+
+**Taken (the owner, 2026-10-29): -4, -5 and -6 in the menu, the default
+stays -3, the user chooses.** `pcsx2/patches/pcsx2-0005`: both limits at -6,
+FullscreenUI's list from "27% Speed", the governor's floor kept at -3 (or it
+would have taken our -3 down to -5 when AutoTune turns it on), and VU0's
+micro programs charged at -4..-6 as the EE's blocks are, (5 - 2*(rate+1))/4,
+where the switch in `mVUtestCycles` and `VU0microInterp.cpp` left them at
+100% for a rate it did not know. The numbers above are from the scratch
+patch, with VU0 at 100% below -3. With `pcsx2-0005` itself, the same way
+(two rounds, opposite orders):
+
+| rate/skip | -3/1 (ours) | -4/1 | -5/1 | -6/1 |
+|---|---|---|---|---|
+| God of War, ship, fps 100-1500 | 22.49 | 22.46 | 22.62 | 23.94 |
+| speed | 26.3 | 29.5 | 33.5 | 38.8 |
+| God of War, owner's save, fps | 24.64 | 24.54 | 25.16 | 25.06 |
+| speed | 25.9 | 29.4 | 33.7 | 37.5 |
+| Jak's intro, fps 300-1850 | 35.47 | 38.36 | 44.20 | 46.36 |
+| speed | 34.5 | 35.8 | 40.0 | 41.5 |
+
+-6 runs God of War's time 43-48% faster than -3 at the same frames, and Jak's
+intro draws 31% more frames. The screens at the end of the runs are whole. The
+menu checked on the console: the list reads 27%, 31%, 36%, 50% ... 300%, the
+-5 set in the ini shows as 31%, and choosing 27% wrote `EECycleRate = -6`.
 
 ## PS2: the GPU gets the heat; what else was tried (2026-10-22)
 
@@ -1555,11 +1578,17 @@ and rk628 probe order before concluding anything about the hardware.
   malisx2 session. To take either: the commit pushed to the fork,
   `MALISX2_COMMIT` moved, and the variable exported for ARMSX2 only (its
   launcher); Azahar and Dolphin are on libmali.
-* **ARMSX2's EE cycle rate below -3** (2026-10-29, the owner's call). See
-  "PS2: EE cycle rate below -3": -5 runs God of War's time 34-39% faster at
-  the same frames, Jak 17% faster with 23% more frames; untested for breakage.
-  Ways: keep -3; the limit patch and -4 or -5 for all; or -5 only in the
-  per-game settings of games played through.
+  The fork's main is d398141 since 2026-10-29 (pushed by the malisx2 session
+  with the owner's leave): `=1` is the new rule (2c219dc; its four rounds
+  against off: God of War +2.0-3.6%, Jak 0, level with `=3`; Castlevania's
+  preload 10.5 s), and `MALISX2_V7_AFBC_FMT` is 3 by default (af9083f):
+  B8G8R8A8 and RGB565 images are AFBC-compressed (Mario -10% GPU a quad,
+  Castlevania +1.5%). Before 1.4 takes it, here: ARMSX2 with `=1` and the
+  AFBC default against 1c45a6e, and, the owner's request, PPSSPP and flycast
+  on malisx2, which may upload many RGB565 and BGRA8 textures (the RGB565 to
+  AFBC copy was checked on Mario only): red and blue swapped, broken
+  textures, GPU faults in dmesg. `MALISX2_V7_AFBC_FMT=1` keeps only
+  B8G8R8A8 compressed, `0` neither; findings go to the malisx2 session.
 
 ## Repairs, each its own small job
 

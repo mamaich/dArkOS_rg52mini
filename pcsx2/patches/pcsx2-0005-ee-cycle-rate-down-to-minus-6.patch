@@ -1,0 +1,149 @@
+From: dArkOS RG52 Mini port
+Subject: EE Cycle Rate goes down to -6 (27%) for the user to choose
+
+ARMSX2 stops the EE cycle rate at -3, as PCSX2 does. On an RG52 Mini lower
+rates help the heaviest games: at -5 God of War's own time runs 34-39% faster
+than at -3 (emulated vsyncs a second) at the same frames a second, and Jak and
+Daxter's intro draws 23% more frames, 17% faster (dArkOS docs/TODO.md, "PS2:
+EE cycle rate below -3"). Nobody has checked them for breakage, so they are
+offered, not set: our default stays -3, and the settings menu lists 36%, 31%
+and 27% Speed below 50% (-4, -5, -6; the arm64 recompiler charges a block
+(5 - 2 * (rate + 1)) / 32 of its cycles where the default charges 4/32).
+
+VU0's micro programs are charged the same ratio (they kept 100% at -4..-6
+otherwise, as an unknown rate). The governor (DynamicEECycleRate, which
+AutoTune can turn on) still lowers the rate to -3 at most, as before; a rate
+set below that is its own floor.
+
+diff --git a/pcsx2/Config.h b/pcsx2/Config.h
+index b3025abd..129cdb35 100644
+--- a/pcsx2/Config.h
++++ b/pcsx2/Config.h
+@@ -1401,7 +1401,10 @@ struct Pcsx2Config
+ 	// ------------------------------------------------------------------------
+ 	struct SpeedhackOptions
+ 	{
+-		static constexpr s8 MIN_EE_CYCLE_RATE = -3;
++		// dArkOS: down to -6 (the EE at 36%, 31%, 27% for -4, -5, -6), for the user to choose.
++		// The governor still lowers the rate to -3 at most, as before.
++		static constexpr s8 MIN_EE_CYCLE_RATE = -6;
++		static constexpr s8 MIN_EE_CYCLE_RATE_GOVERNOR = -3;
+ 		static constexpr s8 MAX_EE_CYCLE_RATE = 3;
+ 		static constexpr u8 MAX_EE_CYCLE_SKIP = 3;
+ 
+diff --git a/pcsx2/EECycleRate.cpp b/pcsx2/EECycleRate.cpp
+index 374b2861..6d418d4f 100644
+--- a/pcsx2/EECycleRate.cpp
++++ b/pcsx2/EECycleRate.cpp
+@@ -37,7 +37,9 @@ namespace
+ {
+ 	s8 FloorFor(s8 configured)
+ 	{
+-		return static_cast<s8>(std::max<int>(Pcsx2Config::SpeedhackOptions::MIN_EE_CYCLE_RATE, configured - 2));
++		// dArkOS: the governor stops at -3 as before; a rate configured below it is its own floor.
++		return static_cast<s8>(std::min<int>(configured,
++			std::max<int>(Pcsx2Config::SpeedhackOptions::MIN_EE_CYCLE_RATE_GOVERNOR, configured - 2)));
+ 	}
+ } // namespace
+ 
+diff --git a/pcsx2/EECycleRateController.cpp b/pcsx2/EECycleRateController.cpp
+index 10e05b85..ac264821 100644
+--- a/pcsx2/EECycleRateController.cpp
++++ b/pcsx2/EECycleRateController.cpp
+@@ -8,10 +8,13 @@
+ 
+ namespace
+ {
+-	// The selector range the speedhack has always had.
+-	constexpr int kMinSelector = -3;
++	// The selector range the speedhack has always had, and dArkOS's -4..-6 below it.
++	constexpr int kMinSelector = -6;
+ 	constexpr int kMaxSelector = 3;
+ 
++	// dArkOS: the governor still lowers the rate to -3 at most, as before -4..-6 were allowed.
++	constexpr int kGovernorMinSelector = -3;
++
+ 	// Ratios are dimensionless and mostly land under 2. This is not a plausibility
+ 	// check, it is a "the sampler produced garbage" check: anything past it means a
+ 	// counter wrapped or a divisor was near zero, and the window is thrown away
+@@ -49,7 +52,7 @@ void EECycleRateController::OnApplied(s8 new_effective)
+ 
+ s8 EECycleRateController::GetFloor() const
+ {
+-	const int floor = std::max<int>(kMinSelector, static_cast<int>(m_baseline) - static_cast<int>(m_policy.max_steps_down));
++	const int floor = std::max<int>(kGovernorMinSelector, static_cast<int>(m_baseline) - static_cast<int>(m_policy.max_steps_down));
+ 	return static_cast<s8>(std::min<int>(floor, m_baseline));
+ }
+ 
+diff --git a/pcsx2/EECycleRateSampler.cpp b/pcsx2/EECycleRateSampler.cpp
+index db9a45f8..6d469acb 100644
+--- a/pcsx2/EECycleRateSampler.cpp
++++ b/pcsx2/EECycleRateSampler.cpp
+@@ -747,7 +747,7 @@ void EECycleRateSampler::OnFrameNotThrottled()
+ }
+ 
+ // The word is four bits of configured selector, four of effective, two of controller state
+-// and two flags. The selectors are biased by -MIN_EE_CYCLE_RATE so the whole -3..3 range is
++// and two flags. The selectors are biased by -MIN_EE_CYCLE_RATE so the whole -6..3 range is
+ // unsigned, which is what makes the round trip exact rather than sign-extension-dependent.
+ namespace
+ {
+diff --git a/pcsx2/ImGui/FullscreenUI_Settings.cpp b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+index bff8adb2..4f017a2a 100644
+--- a/pcsx2/ImGui/FullscreenUI_Settings.cpp
++++ b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+@@ -2646,6 +2646,9 @@ void FullscreenUI::DrawEmulationSettingsPage()
+ 		10.00f,
+ 	};
+ 	static constexpr const char* ee_cycle_rate_settings[] = {
++		FSUI_NSTR("27% Speed"), // dArkOS: -6..-4
++		FSUI_NSTR("31% Speed"),
++		FSUI_NSTR("36% Speed"),
+ 		FSUI_NSTR("50% Speed"),
+ 		FSUI_NSTR("60% Speed"),
+ 		FSUI_NSTR("75% Speed"),
+@@ -2696,7 +2699,7 @@ void FullscreenUI::DrawEmulationSettingsPage()
+ 	MenuHeading(FSUI_CSTR("System Settings"));
+ 
+ 	DrawIntListSetting(bsi, FSUI_ICONSTR(ICON_FA_GAUGE_HIGH, "EE Cycle Rate"), FSUI_CSTR("Underclocks or overclocks the emulated Emotion Engine CPU."),
+-		"EmuCore/Speedhacks", "EECycleRate", 0, ee_cycle_rate_settings, std::size(ee_cycle_rate_settings), true, -3);
++		"EmuCore/Speedhacks", "EECycleRate", 0, ee_cycle_rate_settings, std::size(ee_cycle_rate_settings), true, -6);
+ 	DrawIntListSetting(bsi, FSUI_ICONSTR(ICON_FA_ARROW_TREND_DOWN, "EE Cycle Skipping"),
+ 		FSUI_CSTR("Makes the emulated Emotion Engine skip cycles. Helps a small subset of games like SOTC. Most of the time it's harmful to performance."), "EmuCore/Speedhacks", "EECycleSkip", 0,
+ 		ee_cycle_skip_settings, std::size(ee_cycle_skip_settings), true);
+diff --git a/pcsx2/VU0microInterp.cpp b/pcsx2/VU0microInterp.cpp
+index 705429d0..a56ecf77 100644
+--- a/pcsx2/VU0microInterp.cpp
++++ b/pcsx2/VU0microInterp.cpp
+@@ -327,6 +327,16 @@ void InterpVU0::Execute(u32 cycles)
+ 		VU0.cycle -= cycle_change;
+ 		switch (std::min(static_cast<int>(ee_cycle_rate), static_cast<int>(cycle_change)))
+ 		{
++			// dArkOS: -4..-6 charge as the EE's own blocks do at them, (5 - 2 * (rate + 1)) / 4.
++			case -6: // 27%
++				cycle_change *= 3.75f;
++				break;
++			case -5: // 31%
++				cycle_change *= 3.25f;
++				break;
++			case -4: // 36%
++				cycle_change *= 2.75f;
++				break;
+ 			case -3: // 50%
+ 				cycle_change *= 2.0f;
+ 				break;
+diff --git a/pcsx2/arm64/microVU_Compile-arm64.inl b/pcsx2/arm64/microVU_Compile-arm64.inl
+index 595f4fe8..2394af77 100644
+--- a/pcsx2/arm64/microVU_Compile-arm64.inl
++++ b/pcsx2/arm64/microVU_Compile-arm64.inl
+@@ -509,6 +509,10 @@ static void mVUtestCycles(mV, microFlagCycles& mFC)
+ 	{
+ 		switch (std::min(static_cast<int>(mVUeeCycleRate), static_cast<int>(mVUcycles)))
+ 		{
++			// dArkOS: -4..-6 charge as the EE's own blocks do at them, (5 - 2 * (rate + 1)) / 4.
++			case -6: mVUcycles *= 3.75f;      break;
++			case -5: mVUcycles *= 3.25f;      break;
++			case -4: mVUcycles *= 2.75f;      break;
+ 			case -3: mVUcycles *= 2.0f;       break;
+ 			case -2: mVUcycles *= 1.6666667f; break;
+ 			case -1: mVUcycles *= 1.3333333f; break;
