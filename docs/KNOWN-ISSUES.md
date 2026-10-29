@@ -1778,6 +1778,42 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
   No per-title x2 in the core, as Castlevania's stereo has (patch 013): the
   owner's call of 2026-10-29. x2 runs close to the limit, so heat and the
   scene decide whether it holds 60, and that is the user's choice to make.
+- **The texture upload ring is 128 MiB, not 512** (`azahar-patch-028`,
+  2026-10-29). The Vulkan renderer stages texture uploads through one ring of
+  host-visible memory, and Mali's kernel driver backs all of it with RAM as
+  soon as it is made, RAM that cannot go to swap. What goes through it is a
+  guest texture at its native size (1024x1024 RGBA8, 4 MiB, at most; the
+  internal resolution is scaled on the GPU afterwards) or a custom texture.
+  Measured on the console on libmali, with a test core that took the ring's
+  size from the environment, 50 s from loading (savestates; Luigi's Mansion
+  from boot): RetroArch's peak RSS, which counts the driver's mappings, and
+  the GPU's memory, in MB:
+
+  | ring | Super Mario 3D Land | Castlevania | Luigi's Mansion |
+  |---|---|---|---|
+  | 512 MiB | 1353 / 689 | 1386 / 737 | 1067 / 688 |
+  | 128 MiB | 1009 / 305 | 1044 / 352 | 653 / 304 |
+  | 64 MiB | 945 / 241 | 978 / 288 | 588 / 239 |
+
+  In none of these runs did the ring fill up and start over, at 64 MiB
+  either, so no upload waited for the GPU. 128 MiB keeps room for a
+  4096x4096 RGBA8 custom texture (64 MiB); a single upload larger than the
+  whole ring would stop the core. With 1 GB of RAM (malisx2's `balloon.py`
+  locking 1024 MB, which leaves about what such a device has; ES stopped;
+  zram and the SD's swap as the image sets them up):
+  - 512 MiB: Super Mario 3D Land's own memory went to swap while it loaded,
+    and the console stopped answering for 25 minutes, until the kernel's OOM
+    killer ended RetroArch;
+  - 128 MiB: Super Mario 3D Land 60.3 fps, Castlevania 21.2, as with 2 GB,
+    with up to 240 MB of swap in use; with zram alone Castlevania 21.4; with
+    the SD's 256 MB of swap alone the OOM killer ended Castlevania while it
+    loaded;
+  - 128 MiB and 140 MB more locked, for ES's own memory, which stays while a
+    game runs: Castlevania 19.75 fps, frames up to 350 ms apart, 310 MB of
+    swap.
+
+  So a 1 GB device runs these 3DS games with the 128 MiB ring as long as
+  zram is on.
 - **RetroArch's FPS counter costs about 20%** on the vulkan driver (29.7 fps
   without it, 24.3 with it, same savestate, 2126.2). Measure without it.
 - **RGA scaling** (`video_ctx_scaling`) changes nothing on the vulkan driver
