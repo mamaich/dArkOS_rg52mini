@@ -12,6 +12,12 @@ Environment="SDL_VIDEO_EGL_DRIVER=libEGL.so"
 # nice -20, but that is pam_limits and a service has no PAM session: without
 # this the limit is 0 and every nice -19 fails, leaving emulators at nice 0.
 LimitNICE=-20
+# Realtime priority for what ES starts. libmali gives the thread that submits
+# every GPU job (mali-cmar-backend) SCHED_RR for a queue of high global priority,
+# and without this limit that fails with EPERM: the thread then waits behind the
+# emulator's own while the GPU idles. The kernel's RT throttling
+# (sched_rt_runtime_us, 95%) stays, so a spinning RT thread cannot hang the console.
+LimitRTPRIO=99
 Restart=on-failure
 # Stopping ES (the power key's poweroff, a shutdown, an update) sends SIGTERM to
 # the game it started too. RetroArch saves and quits on it in a second or two,

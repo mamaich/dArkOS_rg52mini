@@ -649,6 +649,9 @@ sudo chmod 755 Arkbuild/usr/bin/vulkaninfo
 
 # Disable requirement for sudo for setting niceness
 echo "ark              -       nice            -20" | sudo tee -a Arkbuild/etc/security/limits.conf
+# and for realtime priority (games started from ssh or a script; ES's own
+# service sets both for what it starts, see emulationstation.service)
+echo "ark              -       rtprio          99" | sudo tee -a Arkbuild/etc/security/limits.conf
 
 # Speaker Toggle to set audio output to SPK on boot
 sudo mkdir -p Arkbuild/usr/local/bin
