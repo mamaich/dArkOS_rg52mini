@@ -1817,6 +1817,33 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
 
   So a 1 GB device runs these 3DS games with the 128 MiB ring as long as
   zram is on.
+- **Azahar's colour targets are compressed (AFBC)** (`azahar-patch-029`,
+  2026-10-30). GammaOS's `rt_compress` (patch 000) makes an RGBA8 surface
+  that no shadow pass has used without MUTABLE_FORMAT, so that the driver can
+  compress it, and makes it anew with storage usage once a shadow pass needs
+  one. But the format's traits carried storage usage for every RGBA8 image
+  anyway, and libmali compresses no image with storage usage: the targets
+  stayed uncompressed. Found by the libmali session; 029 leaves storage usage
+  out of such surfaces. With it, Castlevania's 240x400 and 240x320 targets
+  are AFBC in libmali's memory dump (U-Interleaved before); the surfaces that
+  took the shadow path stay uncompressed, as they must. libmali's layer, which
+  strips storage usage from such images (`VKT_RT_NOSTORAGE=1`), finds none
+  left on 029 in Super Mario 3D Land, Castlevania and both Luigi's Mansions.
+  No GPU faults; the pictures as before. Fragment work a frame against the
+  028 core (libmali's GPU trace, frames 360-660 from the owner's states, two
+  runs each):
+
+  | | 028 | 029 |
+  |---|---|---|
+  | Castlevania | 36.6 / 36.1 ms | 36.0 / 35.4 ms |
+  | Luigi's Mansion 2 | 73.1 / 73.7 ms | 73.9 / 73.7 ms |
+  | Super Mario 3D Land | 5.4 ms | 5.1 ms |
+
+  The frame rate is the same within noise: compression saves memory traffic
+  where the targets are read and written a lot, and Luigi's Mansion 2 is not
+  held back by that. At internal resolution x2 and above, `ScaleUp` still
+  makes the scaled image with storage usage and MUTABLE_FORMAT, so it stays
+  uncompressed; not changed, since x1 is the default.
 - **RetroArch's FPS counter costs about 20%** on the vulkan driver (29.7 fps
   without it, 24.3 with it, same savestate, 2126.2). Measure without it.
 - **RGA scaling** (`video_ctx_scaling`) changes nothing on the vulkan driver
