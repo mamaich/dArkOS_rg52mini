@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.3 (build 10252026, 2026-10-26); from 1.1 on, a card
+The current release is 1.3.1 (build 10272026, 2026-10-28); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -80,6 +80,33 @@ New in 1.3, described in [KNOWN-ISSUES.md](KNOWN-ISSUES.md) and [TODO.md](TODO.m
 | Ports | a fixed gl4es in `/usr/lib/gl4es` for PortMaster ports that bring none, or whose own one is renamed away |
 | Keys | Home no longer toggles Bluetooth; DraStic's menu on Home+X; Azahar swaps the screens on Back |
 | N64 | mupen64plus_next draws on a thread of its own (GLideN64 threaded) |
+
+New in 1.3.1 (build 10272026, 2026-10-28):
+
+| | |
+|---|---|
+| Nintendo DS | DSperate starts games again on the dual-boot card (it took the empty cheats folder there for a cheat database); its screens side by side by default |
+| GameCube | Dolphin runs on malisx2 too: occlusion queries, and lines no longer fault the GPU |
+| PS2 | ARMSX2's audio buffer is 100 ms; PCSX2.ini had it under old keys ARMSX2 does not read, so it was 50 ms and a slow frame emptied it |
+| Ports | GTA San Andreas: the trigger axes are hidden from the port, so the camera no longer turns by itself |
+| EmulationStation | QUIT EMULATIONSTATION opens BaRT instead of a black screen; on the dual-boot card a system is listed once in EMULATOR SETTINGS |
+| malisx2 | built from our fork; less CPU work a draw, AFBC textures and depth, the tiler's hierarchy levels; God of War about 8% faster than in 1.3 |
+| Build | SDL2 and ONScripter built with optimisation (they were -O0) |
+
+In master for 1.4, not released yet (VERSION says 1.4; the image is built
+only when the owner says so):
+
+| | |
+|---|---|
+| GameCube | Dolphin 2609a in place of February 2023's; savestates of the old one do not load |
+| Nintendo 3DS | Azahar 2126.2 and upstream master's fixes after it (patches 021-026); the disk shader cache loads on a thread behind RetroArch's progress bar (027); the texture upload ring is 128 MiB, not 512, about 350 MB less RAM (028); the colour targets are AFBC on libmali (029) |
+| Dreamcast | flycast 2.7 with master's fixes; Atomiswave keeps its NVRAM |
+| PS2 | malisx2 by default, 10-12% faster than libmali; malisx2 d398141: one GPU job a draw (IDVS), FP16 fragment arithmetic for ARMSX2 (God of War 5-8% faster); EE Cycle Rate down to 27% in ARMSX2's menu, 50% by default |
+| Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it), openMSX 19.1 and XRoar 1.12.1 start again |
+| Doom | LZDoom and GZDoom: no turning by itself, the RG52 pad's layout |
+| HDMI | follows the cable on hotplug, debounced, not only at boot |
+| Scheduling | ES and ark may use realtime priority (LimitRTPRIO=99), which libmali asks for the thread that submits GPU jobs of a high-priority queue |
+| RG43 Pro | `make rg43v` (doster00's pull request) |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
