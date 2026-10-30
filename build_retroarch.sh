@@ -384,6 +384,7 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0000-rk3562-rotation-90.patch
 		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0008-norotation-rga.patch
 		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0016-rk3562-oga-rotation-90.patch
+		    sudo rm -f Arkbuild32/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0025-rk3562-landscape-output-no-rotation.patch
 		  fi
 		  # 32-bit uses the same GO2_ROTATION_DEGREES_90 as 64-bit.
 		  # (Previously reverted to 270 based on incorrect GBM buffer orientation theory.)
