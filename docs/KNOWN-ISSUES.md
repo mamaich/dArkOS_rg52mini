@@ -2039,11 +2039,35 @@ EmulationStation and the DSI link were up. The last non-zero value is kept by
 `99-darkos-brightness.rules` in `/run/darkos-brightness`; `hdmi-hotplug.sh`
 restores it when it switches back to the panel.
 
+**Sound over HDMI had never worked** (doster00's pull request #3 and kernel
+patch, 2026-10-30). The RK628's sound card (`rockchip,hdmi-rk628`, on SAI1) did
+not probe: our device tree gave sai1 the `i2s1m0` pins, which the RGB output to
+the RK628 holds as video data lines, so the kernel refused them (`pin gpio3-22
+already requested by ff060000.syscon:rgb; cannot claim for ff810000.sai`) and
+`rk628-sound` stayed deferred. The vendor's device tree (from the eMMC, v10 and
+v14) puts sai1 on `i2s1m1`, GPIO3_B2-B5, which nothing else here uses, and so
+does kernel eba0d6e. With it the card is there on the console (`card 1:
+rockchiphdmirk6`; the speaker stays card 0, the panel as before). Two faults on
+our side went with it:
+- `audio-switch.sh` pointed `~/.asoundrc` at the HDMI card whenever a cable
+  was in, card or no card, and then there was no sound at all, not even on the
+  speaker. It now switches only when the card is in `/proc/asound/cards`.
+- `.asoundrchdmi` named the card `rockchiphdmirk628`, but ALSA cuts card ids to
+  15 characters, so the card is `rockchiphdmirk6`.
+
+**RetroArch's picture lay on its side on HDMI** (pull request #5): patch 0000
+turns the frame 90 degrees for the portrait panel, whatever the output.
+`retroarch-patch-0025` turns it only when the display libgo2 picked is
+portrait. On a landscape one it reports the real size and presents the frame
+unrotated, as 0008 does on the landscape units. SDL ports were right already,
+since SDL rotates only for a DSI connector.
+
 Not covered: the picture stays 1920x1080, so a port or emulator that wants the
 panel's 720x1280 gets whatever it asks of the HDMI mode list; and a game on HDMI
 is ended when the cable comes out, so its unsaved progress is lost. Not yet tried
-on the device: the debounce and the switch after a game (they need a cable moved
-by hand).
+on the device: the debounce, the switch after a game and a game from Ports with
+the cable moved, the sound on a TV (doster00 heard it on his), and RetroArch's
+picture on a TV. All of them need a cable moved by hand.
 
 ## Smaller things
 

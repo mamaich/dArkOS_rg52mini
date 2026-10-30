@@ -99,13 +99,13 @@ only when the owner says so):
 | | |
 |---|---|
 | GameCube | Dolphin 2609a in place of February 2023's; savestates of the old one do not load |
-| Nintendo 3DS | Azahar 2126.2 and upstream master's fixes after it (patches 021-026); the disk shader cache loads on a thread behind RetroArch's progress bar (027); the texture upload ring is 128 MiB, not 512, about 350 MB less RAM (028); the colour targets are AFBC on libmali (029) |
+| Nintendo 3DS | Azahar 2126.2 and upstream master's fixes after it (patches 021-026); the disk shader cache loads on a thread behind RetroArch's progress bar (027); the texture upload ring is 128 MiB, not 512, about 350 MB less RAM (028); the colour targets are AFBC on libmali (029); on malisx2, Luigi's Mansion 2 gets past its shader preload (Mesa's register allocation, malisx2 da1e3a2) |
 | Dreamcast | flycast 2.7 with master's fixes; Atomiswave keeps its NVRAM |
 | PS1 | standalone DuckStation is no longer in the image: its author did not agree to the way it was passed on; PS1 games run in RetroArch, as ES starts them by default; an update to 1.4 takes it off and keeps memory cards and savestates ([KNOWN-ISSUES](KNOWN-ISSUES.md#standalone-duckstation-not-in-the-image-since-14)) |
-| PS2 | malisx2 by default, 10-12% faster than libmali; malisx2 d398141: one GPU job a draw (IDVS), FP16 fragment arithmetic for ARMSX2 (God of War 5-8% faster); EE Cycle Rate down to 27% in ARMSX2's menu, 50% by default |
+| PS2 | malisx2 by default, 10-12% faster than libmali; malisx2 d398141 (da1e3a2 in the image builds the same code for ARMSX2): one GPU job a draw (IDVS), FP16 fragment arithmetic for ARMSX2 (God of War 5-8% faster); EE Cycle Rate down to 27% in ARMSX2's menu, 50% by default |
 | Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it), openMSX 19.1 and XRoar 1.12.1 start again |
 | Doom | LZDoom and GZDoom: no turning by itself, the RG52 pad's layout |
-| HDMI | follows the cable on hotplug, debounced, not only at boot |
+| HDMI | follows the cable on hotplug, debounced, not only at boot; sound over HDMI (the RK628's sound card had no pins, kernel eba0d6e); a game started from Ports counts as a game; RetroArch's picture is no longer on its side on a TV (patch 0025); doster00's pull requests #3-#5 |
 | Scheduling | ES and ark may use realtime priority (LimitRTPRIO=99), which libmali asks for the thread that submits GPU jobs of a high-priority queue |
 | RG43 Pro | `make rg43v` (doster00's pull request) |
 

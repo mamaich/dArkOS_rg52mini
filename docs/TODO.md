@@ -1425,7 +1425,9 @@ deciding what resolution a plugged display should get. Since 2026-10-29 the
 handler debounces and defers a plug-in during a game to its end (KNOWN-ISSUES);
 to check with a cable: wiggle it in the menu (one restart, not several), plug
 it in during a game (the game goes on, HDMI after quitting), pull it during a
-game on HDMI (the game ends, the panel comes back lit).
+game on HDMI (the game ends, the panel comes back lit). Since 2026-10-30, also:
+the sound on the TV, RetroArch's picture on it (upright, filling the screen),
+and the same plug and pull with a game from Ports started in a `*-port-*` unit.
 
 HDMI does nothing on the device. KNOWN-ISSUES has the evidence that the kernel
 side matches the Android image where HDMI works, so this is dArkOS-side work.
