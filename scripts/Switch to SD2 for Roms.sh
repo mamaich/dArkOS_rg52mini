@@ -92,7 +92,6 @@ then
   sed -i '/roms\//s//roms2\//g'  /home/ark/.config/retroarch/config/Atari800/retroarch_A800.cfg
   sed -i '/roms\//s//roms2\//g'  /home/ark/.config/retroarch/config/Atari800/retroarch_XEGS.cfg
   sed -i '/roms\//s//roms2\//g'  /home/ark/.config/mupen64plus/mupen64plus.cfg
-  sed -i '/roms\//s//roms2\//g'  /home/ark/.local/share/duckstation/settings.ini
   sed -i '/roms\/bios/s//roms2\/bios/g' /opt/amiberry/conf/amiberry.conf
   sed -i '/.\/351Files 2/s//.\/351Files-sd2 2/g' /opt/system/351Files.sh
   sudo sed -i '/roms\//s//roms2\//g' /usr/local/bin/scummvm.sh
@@ -122,7 +121,6 @@ then
   sudo sed -i '/roms\//s//roms2\//g' /roms2/easyrpg/Scan_for_new_games.easyrpg
   sudo cp -f -v -r /roms/wolf/Scan_for_new_games.wolf /roms2/wolf/Scan_for_new_games.wolf
   sudo sed -i '/roms\//s//roms2\//g' /roms2/wolf/Scan_for_new_games.wolf
-  sudo sed -i '/roms\//s//roms2\//g' /roms2/psx/duckstation_gamesettings/*.ini
   sudo cp -f -r -v /roms/ports/* /roms2/ports/
   unlink /opt/drastic/backup
   ln -sf /roms2/nds/backup/ /opt/drastic/backup

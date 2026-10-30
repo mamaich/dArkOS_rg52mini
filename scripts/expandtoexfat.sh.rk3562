@@ -81,8 +81,7 @@ if [ "$(cat /etc/hostname 2>/dev/null)" == "rg43h" ]; then
     MUP="$UCONF/mupen64plus/mupen64plus.cfg"
     [ -f "$MUP" ] && sudo -u ark sed -i 's#J0B8/#J0B10/#g' "$MUP"
     # PPSSPP pause is already R3 (10-107) on rg43h and R3 exists on the V too,
-    # so it needs no change. DuckStation (OpenPauseMenu=Guide) and flycast
-    # (runtime-generated mapping) also need nothing.
+    # so it needs no change; nor does flycast (runtime-generated mapping).
     sync
   fi
 fi

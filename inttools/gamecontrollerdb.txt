@@ -1682,6 +1682,6 @@ xinput,XInput Controller,a:b0,b:b1,back:b6,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,
 # This file is consumed by SDL2 tools (gptokeyb menus, controllerTester, gametank, pico8,
 # xroar, mediaplayer, netplay, etc.), so it uses the SDL2 raw-button order: SDL-A is raw b0
 # (the bottom/South button). It matches what SDL2 auto-generates from the evdev codes.
-# DuckStation bundles SDL3, which enumerates this pad differently (SDL-A = b1); it reads its
-# own duckstation/configs/gamecontrollerdb.txt instead -- do NOT use the SDL3 order here.
+# SDL3 enumerates this pad differently (SDL-A = b1); a program with its own SDL3 needs a db
+# of its own -- do NOT use the SDL3 order here.
 1900a4dd726b333536322d6a6f797300,rk3562-joystick,a:b1,b:b0,x:b2,y:b3,back:b8,start:b9,guide:b10,misc1:b17,leftstick:b11,rightstick:b12,dpup:b13,dpdown:b14,dpleft:b15,dpright:b16,leftshoulder:b4,rightshoulder:b5,lefttrigger:a2,righttrigger:a5,leftx:a0,lefty:a1,rightx:a3,righty:a4,platform:Linux,

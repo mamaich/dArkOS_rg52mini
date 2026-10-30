@@ -266,24 +266,38 @@ OPP table starts at 300; the NPU list is untouched. `drivers/rknpu/` also parks
 at 200 MHz — fine with this BL31, but needs the same check if a future table
 drops the NPU's lowest step.
 
-## DuckStation: its licence, and settings made on the first start (1.4)
+## Standalone DuckStation: not in the image since 1.4
 
 DuckStation is CC BY-NC-ND 4.0. Its README allows "unmodified releases and
 code" to be passed on and says "pre-configured settings and packages are
 considered modifications"; newer READMEs also forbid publishing modified
-versions, patches included. The image carries upstream's AppImage
-(0.1-10495, the "mini" frontend, the last that runs without a display
-server) unmodified, renamed `/opt/duckstation/duckstationsa`. Up to 1.3.1
-it also put our settings.ini and controller DB into DuckStation's folder.
-Since 1.4 those wait in `/usr/local/share/darkos/duckstation`, and
-`standalone-duckstation` copies them into `~/.local/share/duckstation` on the
-first start when they are not there, as a user would set them; afterwards
-they are the user's and the launcher leaves them alone. An update from
-1.3.1 keeps a settings.ini DuckStation has written (it does on every exit)
-and deletes an untouched one, which the next start makes again. The owner
-chose this on 2026-10-28, knowing it is a grey zone, and wrote to
-DuckStation's author about it. Newer DuckStation (0.1-12083) is Qt only,
-needs Wayland or X, and is not taken (TODO.md, upstream updates for 1.4).
+versions, patches included. Up to 1.3.1 the image carried upstream's AppImage
+(0.1-10495, the "mini" frontend, the last that runs without a display server)
+unmodified, as `/opt/duckstation/duckstationsa`, with our settings.ini and
+controller DB in DuckStation's folder. On 2026-10-28 master moved those out,
+for the launcher to make on the first start, and the owner wrote to
+DuckStation's author. The author did not agree to that, and does not publish
+the mini frontend himself; newer DuckStation (0.1-12083) is Qt only and needs
+Wayland or X. Standalone DuckStation also brought no speed the image would
+miss (TODO.md, "The PlayStation emulators compared"). So on 2026-10-30 the
+owner took it out of the image and of the repositories: the AppImage,
+`build_duckstationsa.sh`, its settings, the `standalone-duckstation` launcher
+and its entry in ES, and rk3566_core_builds' recipe for the old source build
+with its patches.
+
+PS1 games run in RetroArch, as ES starts them by default: pcsx_rearmed
+(RetroArch32), or the duckstation and swanstation cores.
+
+An update to 1.4 deletes the files of it the old image had and the user did
+not change: the program, its launcher, an untouched settings.ini.
+`ota/hooks/1.4-duckstation-removed.sh` takes `standalone-duckstation` out of
+an es_systems.cfg that is the user's own copy, and out of the games ES was
+told to start with it (their gamelist.xml), which then start with the
+system's emulator; a system set to it needs nothing, as ES takes the
+system's first emulator for a name it does not list. What stays: the memory
+cards (per game in `/roms/psx`, `<game>_1.mcd`), the savestates in
+`/roms/psx/savestates`, the per-game settings in
+`/roms/psx/duckstation_gamesettings`, and a settings.ini the user changed.
 
 ## Doom: the player turned by himself — fixed in 1.4
 
@@ -459,8 +473,9 @@ Khronos loader loads it into every Vulkan program.
      centred, so 4:3 gets black bars. 854x480 fills the panel, as in SDL.
 7. **The panel as it is, for a program that turns the picture itself** (after
    v1.0).
-   - Standalone DuckStation is an AppImage with its own SDL3, which sees the
-     panel as 720x1280; it turns its picture itself (`Rotation = Rotate90`).
+   - Standalone DuckStation (in the image up to 1.3.1) is an AppImage with its
+     own SDL3, which sees the panel as 720x1280; it turns its picture itself
+     (`Rotation = Rotate90`).
    - With the layer from v10082026 (1.0) on, it found no 720x1280 mode, and
      the driver makes none, not even of the panel's size. So it stopped with
      "SDL_Vulkan_CreateSurface() failed: Vulkan couldn't find a predefined mode
@@ -503,8 +518,8 @@ Tested on the device:
     (`DisplayRotation = 90`), so with the layer it lay on its side. The
     rg52mini template now has 0, and `standalone-pcsx2sa` changes 90 to 0 in
     an ini already on /roms.
-  - Standalone **DuckStation**: it failed before item 7; now its picture is
-    right way up.
+  - Standalone **DuckStation**: it failed before item 7; then its picture was
+    right way up (it is not in the image since 1.4).
   - **PPSSPP-2021** has no Vulkan on KMSDRM ("Vulkan subsystem 13 not
     supported", then exit). Its rg52mini config asked for Vulkan, so it never
     started. The configs now ask for GL, and `ppsspp.sh` changes an old one.

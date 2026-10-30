@@ -62,12 +62,10 @@ fi
   sed -i '/roms2/s//roms/g'  /home/ark/.config/retroarch/config/Atari800/retroarch_5200.cfg
   sed -i '/roms2/s//roms/g'  /home/ark/.config/retroarch/config/Atari800/retroarch_A800.cfg
   sed -i '/roms2/s//roms/g'  /home/ark/.config/retroarch/config/Atari800/retroarch_XEGS.cfg
-  sed -i '/roms2/s//roms/g'  /home/ark/.local/share/duckstation/settings.ini
   sed -i '/roms2/s//roms/g'  /home/ark/.config/mupen64plus/mupen64plus.cfg
   sed -i '/roms2\/bios/s//roms\/bios/g' /opt/amiberry/conf/amiberry.conf
   sed -i '/roms2\//s//roms\//g' /home/ark/.config/scummvm/scummvm.ini
   sed -i '/.\/351Files-sd2 2/s//.\/351Files 2/g' /opt/system/351Files.sh
-  sudo sed -i '/roms2\//s//roms\//g' /roms/psx/duckstation_gamesettings/*.ini
   unlink /opt/hypseus/roms
   ln -sfv /roms/daphne/roms/ /opt/hypseus/roms
   unlink /opt/hypseus-singe/singe

@@ -1641,8 +1641,6 @@
 					<core>swanstation</core>
 				</cores>
 			</emulator>
-			<emulator name="standalone-duckstation">
-		      </emulator>
 		</emulators>
 		<platform>psx</platform>
 		<theme>psx</theme>

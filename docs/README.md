@@ -101,6 +101,7 @@ only when the owner says so):
 | GameCube | Dolphin 2609a in place of February 2023's; savestates of the old one do not load |
 | Nintendo 3DS | Azahar 2126.2 and upstream master's fixes after it (patches 021-026); the disk shader cache loads on a thread behind RetroArch's progress bar (027); the texture upload ring is 128 MiB, not 512, about 350 MB less RAM (028); the colour targets are AFBC on libmali (029) |
 | Dreamcast | flycast 2.7 with master's fixes; Atomiswave keeps its NVRAM |
+| PS1 | standalone DuckStation is no longer in the image: its author did not agree to the way it was passed on; PS1 games run in RetroArch, as ES starts them by default; an update to 1.4 takes it off and keeps memory cards and savestates ([KNOWN-ISSUES](KNOWN-ISSUES.md#standalone-duckstation-not-in-the-image-since-14)) |
 | PS2 | malisx2 by default, 10-12% faster than libmali; malisx2 d398141: one GPU job a draw (IDVS), FP16 fragment arithmetic for ARMSX2 (God of War 5-8% faster); EE Cycle Rate down to 27% in ARMSX2's menu, 50% by default |
 | Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it), openMSX 19.1 and XRoar 1.12.1 start again |
 | Doom | LZDoom and GZDoom: no turning by itself, the RG52 pad's layout |
