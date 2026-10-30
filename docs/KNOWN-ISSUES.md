@@ -2024,6 +2024,13 @@ second more (read five times). EmulationStation stays alive while a game runs
   the debounce. Waiting instead was tried in the pull request and leaves a black
   screen until the game is quit, because a game drawing on HDMI cannot move to
   the panel.
+- **Games started from Ports** are not children of EmulationStation: their
+  launchers run them in a systemd unit of their own (`NAME-port-UID`, from
+  `systemd-run`), so restarting it did not end them. Left alone, such a game
+  kept drawing to the output that was gone and held the display lock, and the
+  next launch closed at once (seen on an RG52 Mini with Cuphead). They count as a
+  game for the two cases above, and when the cable is pulled the handler stops the
+  running `*-port-*.service` units.
 
 **Found while testing the unplug:** switching to HDMI also leaves the internal
 backlight at 0 (`/sys/class/backlight/backlight/brightness`), and nothing puts it

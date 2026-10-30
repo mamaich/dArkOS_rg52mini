@@ -26,8 +26,15 @@ done
 
 # EmulationStation stays alive while a game runs: the game is its child, and a
 # restart ends it with its unsaved progress.
+# The games started from Ports are not its children: the launchers run them in a
+# systemd unit of their own (NAME-port-UID, from systemd-run). A restart of
+# EmulationStation does not end those; they would go on drawing to the output that
+# just went away and keep the display lock, and the next launch would close at
+# once. They count as a game here, and are stopped with it.
 es=$(pgrep -f '^/usr/bin/emulationstation/emulationstation' | head -1)
-if [ -n "$es" ] && pgrep -P "$es" > /dev/null; then
+ports() { systemctl list-units --type=service --state=running --plain --no-legend '*-port-*.service' 2>/dev/null | awk '{print $1}'; }
+busy() { { [ -n "$es" ] && pgrep -P "$es" > /dev/null; } || [ -n "$(ports)" ]; }
+if busy; then
   if [ "$want" = 1 ]; then
     # Plugged in during a game, which goes on on the panel: switch when it ends.
     # One waiter at a time; it lets the lock go and runs this script again, which
@@ -36,13 +43,21 @@ if [ -n "$es" ] && pgrep -P "$es" > /dev/null; then
     exec 7>/run/hdmi-hotplug.wait
     flock -n 7 || exit 0
     logger -t hdmi-hotplug "HDMI connected during a game: switching when it ends"
-    while kill -0 "$es" 2>/dev/null && pgrep -P "$es" > /dev/null; do sleep 2; done
+    while busy; do sleep 2; done
     exec 7>&-
     exec "$0"
   fi
   # Unplugged during a game on HDMI: its picture is gone, and a game drawing on
   # HDMI cannot move to the panel, so it is ended with EmulationStation.
   logger -t hdmi-hotplug "HDMI disconnected during a game: the game is ended"
+  # Write the choice first: a Port started without the frontend starts it again
+  # when it ends, and it has to read the new state.
+  echo "$want" > /var/run/drmConn
+  units=$(ports)
+  if [ -n "$units" ]; then
+    logger -t hdmi-hotplug "stopping the Ports games: $(echo $units)"
+    timeout 20 systemctl stop $units
+  fi
 fi
 
 echo "$want" > /var/run/drmConn
