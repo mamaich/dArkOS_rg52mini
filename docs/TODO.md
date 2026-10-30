@@ -1468,6 +1468,45 @@ output if the bridge has not answered by the time initcalls finish, so if the
 connector is genuinely absent from `/sys/class/drm`, check `dmesg` for the rgb
 and rk628 probe order before concluding anything about the hardware.
 
+## USB: ROMs from a PC over MTP (owner, 2026-10-31: on a free night)
+
+Today the USB-C port only charges the console when it is connected to a PC. The
+owner wants ROMs copied from Windows the way an Android device takes them: over
+MTP, which Windows Explorer shows as a media device without a driver. Planned
+for a night when the console is free of other work, or earlier if the owner asks.
+
+What is already there (checked 2026-10-31):
+- The kernel has the gadget side: `CONFIG_USB_GADGET`, `CONFIG_USB_CONFIGFS`,
+  `CONFIG_USB_CONFIGFS_F_FS` (FunctionFS), mass storage, ACM.
+- The USB-C controller `fe500000.usb` is `dr_mode = otg` behind a role switch
+  (`fe500000.usb-role-switch`, TCPM with FUSB302/HUSB311). On a cable to a PC
+  the role is `device`, and `/sys/class/udc` lists `fe500000.usb`.
+- Debian trixie has `umtp-responder` 1.3.10, an MTP responder on FunctionFS
+  (github.com/viveris/uMTP-Responder). GammaOS does MTP on the same port, so the
+  hardware side works.
+
+The plan:
+1. `umtp-responder` in the image.
+2. A service that builds the configfs gadget, mounts FunctionFS, starts `umtprd`
+   and binds the UDC when the port turns to the device role with a PC behind it,
+   and tears it all down when the cable goes. Storage "ROMs" is `/roms`, and
+   `/roms2` too when the second card is there. ext4 is fine: MTP serves files,
+   not the block device, so nothing has to be unmounted.
+3. An Options switch for it, like Enable Remote Services.
+4. ES shows the new games after it reloads its lists, or after a restart.
+
+Notes:
+- Mass storage is no use: Windows does not read ext4, and the partition would
+  have to leave Linux while it is shared. A network over USB (NCM/ECM) needs
+  kernel options that are off.
+- MTP over USB 2.0 runs at about 15-25 MB/s, so a 4 GB PS2 image takes minutes.
+- Decide whether the gadget is up from the configfs/UDC state itself. GammaOS's
+  nano looked for `function*` links in configfs, but on this kernel they are
+  `f1`/`f2`. So it took MTP for off, switched the USB function every ~14 s, and
+  the transfer broke (found by the GammaOS session, 2026-10-31).
+- Charging has to keep working with the gadget up. Check it on the console with
+  a cable to the PC, along with a copy of a big file and an unplug mid-copy.
+
 ## Open questions on the device
 
 * **L2's noise passes the kernel's dead zone** (2026-10-26). With a game
