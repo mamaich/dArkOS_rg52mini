@@ -24,8 +24,9 @@
 # shader arithmetic in FP16 where nothing needs 32 bits, MALISX2_V7_FP16=1
 # deciding by an estimate of the paired operations, set for ARMSX2 by its
 # launcher; 7e4a41d, af9083f: B8G8R8A8 and RGB565 images AFBC-compressed by
-# default, MALISX2_V7_AFBC_FMT=0 for neither), and the work on the driver
-# itself has its own notes and session
+# default, MALISX2_V7_AFBC_FMT=0 for neither; a9daa27: MALISX2_NIR_DUMP, the
+# shaders the compiler gets written to a file; 33adb61, da1e3a2: Mesa from our
+# fork, below), and the work on the driver itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
 # malisx2 is a Vulkan driver for Arm's Mali GPUs on Arm's own kernel driver
@@ -50,7 +51,7 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="d39814144b58994b65d2c020188b6d01708e1bd0"
+MALISX2_COMMIT="da1e3a2f8f4e0d44641a88665a0c3e2287ab0978"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained on 796ca04 on an
@@ -107,11 +108,16 @@ if [ ! -f "Arkbuild${MALISX2_LIB}" ]; then
     verify_action
     git -C "${MALISX2_SRC}" checkout -q --force FETCH_HEAD
     verify_action
-    # and Mesa (upstream with bmdhacks' kraid changes) at mesa/, at the commit
-    # malisx2's meson.build pins
+    # and Mesa at mesa/, at the commit malisx2's meson.build pins: branch
+    # rg52mini-ra of our fork of bmdhacks' armsx2-turnip (upstream Mesa with his
+    # kraid changes). Ours are in the Bifrost register allocator: large shaders
+    # that spill (Luigi's Mansion 2's, in Azahar) took minutes each and the game
+    # never left its shader preload (f125984), and a round of allocation spills
+    # for two failures, not one (17d9d33): that preload 119 -> 93 s, ARMSX2's
+    # shaders of God of War and Jak and Daxter compile to the same code.
     MESA_COMMIT=$(sed -n "s/^mesa_commit = '\([0-9a-f]*\)'.*/\1/p" "${MALISX2_SRC}/meson.build")
     git init -q "${MALISX2_SRC}/mesa"
-    git -C "${MALISX2_SRC}/mesa" fetch --depth=1 https://github.com/bmdhacks/armsx2-turnip.git "${MESA_COMMIT}"
+    git -C "${MALISX2_SRC}/mesa" fetch --depth=1 https://github.com/mamaich/armsx2-turnip-rg52mini.git "${MESA_COMMIT}"
     verify_action
     git -C "${MALISX2_SRC}/mesa" checkout -q --force FETCH_HEAD
     verify_action
