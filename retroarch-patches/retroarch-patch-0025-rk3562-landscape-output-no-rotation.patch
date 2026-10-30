@@ -1,0 +1,60 @@
+RK3562: do not rotate the RetroArch picture on landscape outputs (HDMI)
+
+Patch 0000 makes the drm_go2 context swap width and height and present the
+frame rotated by 90 degrees, which is right for the RG52 Mini's portrait
+panel (720x1280) and wrong for anything landscape. With an HDMI cable the
+console drives the 1920x1080 output, RetroArch still reported 1080x1920 and
+rotated the frame, so it came out on its side (SDL ports were fine: SDL only
+rotates for a DSI connector).
+
+go2_display_* describes the connector libgo2 picked (it follows
+/var/run/drmConn). Rotate only when it is portrait; otherwise report the
+real size and present with GO2_ROTATION_DEGREES_0, which is what patch 0008
+(norotation-rga) does for the landscape devices. This only adds lines around
+the ones 0008 replaces, so 0008 still applies on top.
+
+diff --git a/gfx/drivers_context/drm_go2_ctx.c b/gfx/drivers_context/drm_go2_ctx.c
+--- a/gfx/drivers_context/drm_go2_ctx.c
++++ b/gfx/drivers_context/drm_go2_ctx.c
+@@ -81,6 +81,7 @@
+    unsigned ctx_h;
+    unsigned native_width;
+    unsigned native_height;
++   bool rotated;
+    bool core_hw_context_enable;
+ } gfx_ctx_go2_drm_data_t;
+ 
+@@ -125,6 +126,16 @@
+    drm->presenter     = go2_presenter_create(drm->display,
+          DRM_FORMAT_XRGB8888, 0xff000000, true);
+ 
++   /* Only a portrait panel is shown rotated. HDMI and any other landscape
++    * output is shown as it is: undo the swap of dimensions above. */
++   drm->rotated = go2_display_width_get(drm->display)
++      < go2_display_height_get(drm->display);
++   if (!drm->rotated)
++   {
++      drm->native_width  = go2_display_width_get(drm->display);
++      drm->native_height = go2_display_height_get(drm->display);
++   }
++
+    return drm;
+ }
+ 
+@@ -334,6 +345,16 @@
+ #ifdef HAVE_EGL
+    go2_context_swap_buffers(drm->context);
+    surf     = go2_context_surface_lock(drm->context);
++   if (!drm->rotated)
++   {
++      go2_presenter_post(drm->presenter,
++            surf,
++            src_x, src_y, src_w, src_h,
++            out_x, out_y, out_w, out_h,
++            GO2_ROTATION_DEGREES_0, 2);
++      go2_context_surface_unlock(drm->context, surf);
++      return;
++   }
+    go2_presenter_post(drm->presenter,
+          surf,
+          src_x, src_y, src_w, src_h,

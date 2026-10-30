@@ -41,6 +41,7 @@ else
 	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0000-rk3562-rotation-90.patch
 	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0008-norotation-rga.patch
 	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0016-rk3562-oga-rotation-90.patch
+	    sudo rm -f Arkbuild/home/ark/${CHIPSET}_core_builds/patches/retroarch-patch-0025-rk3562-landscape-output-no-rotation.patch
 	  fi
 	  call_chroot "cd /home/ark &&
 		cd ${CHIPSET}_core_builds &&
