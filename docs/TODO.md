@@ -1425,9 +1425,13 @@ deciding what resolution a plugged display should get. Since 2026-10-29 the
 handler debounces and defers a plug-in during a game to its end (KNOWN-ISSUES);
 to check with a cable: wiggle it in the menu (one restart, not several), plug
 it in during a game (the game goes on, HDMI after quitting), pull it during a
-game on HDMI (the game ends, the panel comes back lit). Since 2026-10-30, also:
-the sound on the TV, RetroArch's picture on it (upright, filling the screen),
-and the same plug and pull with a game from Ports started in a `*-port-*` unit.
+game on HDMI (the game ends, the panel comes back lit). All of it, with the sound, RetroArch's picture and a game from Ports in a
+`*-port-*` unit, was checked with a cable on 2026-10-30 (KNOWN-ISSUES). Left:
+- ES exits when it starts on HDMI and the RK628 cannot read the EDID, as
+  happens while a cable is being moved. It could start on the panel instead.
+- `audio-switch.sh` moves the sound to HDMI at once when the cable goes in
+  during a game, while the picture waits for the game's end. The game keeps the
+  device it opened, so it is heard only by programs that open sound later.
 
 HDMI does nothing on the device. KNOWN-ISSUES has the evidence that the kernel
 side matches the Android image where HDMI works, so this is dArkOS-side work.

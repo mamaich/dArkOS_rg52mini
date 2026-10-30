@@ -2064,10 +2064,27 @@ since SDL rotates only for a DSI connector.
 
 Not covered: the picture stays 1920x1080, so a port or emulator that wants the
 panel's 720x1280 gets whatever it asks of the HDMI mode list; and a game on HDMI
-is ended when the cable comes out, so its unsaved progress is lost. Not yet tried
-on the device: the debounce, the switch after a game and a game from Ports with
-the cable moved, the sound on a TV (doster00 heard it on his), and RetroArch's
-picture on a TV. All of them need a cable moved by hand.
+is ended when the cable comes out, so its unsaved progress is lost. **Checked with a cable on 2026-10-30** (the owner moved it, an HDMI grabber on
+the PC showed the picture and recorded the sound):
+- ES switches once per plug.
+- RetroArch's picture on HDMI is upright and fills the height.
+- The sound plays over HDMI.
+- A game on HDMI is ended when the cable is pulled, and ES comes back on the
+  lit panel.
+- A cable plugged in during a game waits for its end.
+- The same two cases with Cuphead, a Port in a `cuphead-port-0` unit, started
+  by ES.
+
+**The cable moved in and out every few seconds** while ES was starting on HDMI
+made ES exit at once, several times in a row (`rk628: failed to get edid`).
+After 5 failures in 10 s systemd stopped restarting it (the start limit), and
+the handler's restart for the pull that followed was refused, or skipped as ES
+was not running: a black screen until a reboot. The handler now restarts ES when
+it runs, is being restarted or has failed, after `systemctl reset-failed`; not
+when it was stopped on purpose. Checked the same way: the panel came back.
+
+Not covered: why ES exits when HDMI's EDID cannot be read. While the cable is
+moved, it fails until the next change is acted on.
 
 ## Smaller things
 

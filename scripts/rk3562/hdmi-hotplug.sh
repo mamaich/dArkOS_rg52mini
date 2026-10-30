@@ -62,7 +62,15 @@ fi
 
 echo "$want" > /var/run/drmConn
 logger -t hdmi-hotplug "HDMI $([ $want = 1 ] && echo connected || echo disconnected): drmConn $cur -> $want"
-if [ -n "$es" ]; then
+# EmulationStation may also be failing on the output that went away: started on
+# HDMI by the previous change while the cable still bounced, it exits at once,
+# and after 5 failures in 10 s systemd stops restarting it (the start limit) and
+# would refuse this restart too, leaving a black screen. So it is restarted when
+# it runs, is being restarted or has failed, with the failures forgotten first;
+# not when it was stopped on purpose (a Port started without the frontend).
+state=$(systemctl show -p ActiveState --value emulationstation)
+if [ -n "$es" ] || [ "$state" = activating ] || [ "$state" = failed ]; then
+  systemctl reset-failed emulationstation
   systemctl restart emulationstation
 fi
 # Back on the internal screen: switching the panel off for HDMI also left the
