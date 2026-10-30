@@ -1472,7 +1472,6 @@ and rk628 probe order before concluding anything about the hardware.
 
 **Done 2026-10-31.** It is in master and checked on the console (KNOWN-ISSUES,
 "USB: ROMs from a PC over MTP"). Left:
-- A USB device on the port (OTG keyboard, pad) while the gadget is up.
 - /roms2 is added only if it is mounted when the service starts.
 - ES could reload its lists by itself after a copy (on the disconnect, say).
 The notes from before the work follow.

@@ -2132,8 +2132,12 @@ What it took:
 - While a big file is being copied, the PC's file manager shows the console
   empty: MTP serves one operation at a time.
 
-Not checked yet: a USB device on the port (an OTG keyboard or pad) with the
-gadget up. The controller should switch to host by itself.
+**A USB device on the port with the gadget up** (2026-10-31, a USB-C flash
+drive). The port turned host and source by itself, and the drive came up as
+`sda`. The controller's UDC is gone while the port is a host, and the service
+restarted once at the disconnect. With the PC's cable back, the port was a
+device again, the gadget bound again (umtprd logged one read error and
+carried on), and Windows listed the ROMs.
 
 ## Smaller things
 
