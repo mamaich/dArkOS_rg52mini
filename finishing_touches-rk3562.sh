@@ -79,6 +79,18 @@ sudo cp audio/99-hdmi-audio.rules Arkbuild/etc/udev/rules.d/99-hdmi-audio.rules
 # output. This re-evaluates drmConn on every DRM connector change.
 sudo install -m 755 scripts/rk3562/hdmi-hotplug.sh Arkbuild/usr/local/bin/hdmi-hotplug.sh
 sudo install -m 644 scripts/rk3562/99-hdmi-hotplug.rules Arkbuild/etc/udev/rules.d/99-hdmi-hotplug.rules
+# ROMs over USB from a PC, by MTP (KNOWN-ISSUES, "USB: ROMs from a PC over MTP"):
+# umtp-responder serves /roms (and /roms2) through a FunctionFS gadget that
+# darkos-mtp.service builds; 99-darkos-mtp.rules restarts it after a disconnect.
+# On by default; Options > "Disable USB File Transfer" turns it off.
+call_chroot "dpkg -s umtp-responder >/dev/null 2>&1 || (apt-get -y update && DEBIAN_FRONTEND=noninteractive eatmydata apt-get -y install --no-install-recommends umtp-responder)"
+verify_action
+sudo install -m 755 scripts/rk3562/darkos-mtp.sh Arkbuild/usr/local/sbin/darkos-mtp
+sudo install -m 644 scripts/rk3562/darkos-mtp.service Arkbuild/etc/systemd/system/darkos-mtp.service
+sudo install -m 644 scripts/rk3562/99-darkos-mtp.rules Arkbuild/etc/udev/rules.d/99-darkos-mtp.rules
+sudo chroot Arkbuild/ bash -c "systemctl enable darkos-mtp"
+sudo cp "dArkOS_Tools/rk3562/Disable USB File Transfer.sh" Arkbuild/opt/system/
+sudo cp "dArkOS_Tools/rk3562/Disable USB File Transfer.sh" "dArkOS_Tools/rk3562/Enable USB File Transfer.sh" Arkbuild/usr/local/bin/
 sudo chroot Arkbuild/ bash -c "chown ark:ark /home/ark/.asoundrc*"
 sudo chroot Arkbuild/ bash -c "ln -sfv /home/ark/.asoundrc /etc/asound.conf"
 sudo chroot Arkbuild/ bash -c "cp -fv /usr/share/alsa/alsa.conf /usr/share/alsa/alsa.conf.mednafen"

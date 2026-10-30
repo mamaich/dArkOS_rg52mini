@@ -106,6 +106,7 @@ only when the owner says so):
 | Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it), openMSX 19.1 and XRoar 1.12.1 start again |
 | Doom | LZDoom and GZDoom: no turning by itself, the RG52 pad's layout |
 | HDMI | follows the cable on hotplug, debounced, not only at boot; sound over HDMI (the RK628's sound card had no pins, kernel eba0d6e); a game started from Ports counts as a game; RetroArch's picture is no longer on its side on a TV (patch 0025); doster00's pull requests #3-#5 |
+| USB | ROMs from a PC over MTP: the console shows up in Windows as a media device "RG52 Mini" with a ROMs folder, about 21 MB/s; Options > Disable USB File Transfer turns it off ([KNOWN-ISSUES](KNOWN-ISSUES.md#usb-roms-from-a-pc-over-mtp-since-14)) |
 | Scheduling | ES and ark may use realtime priority (LimitRTPRIO=99), which libmali asks for the thread that submits GPU jobs of a high-priority queue |
 | RG43 Pro | `make rg43v` (doster00's pull request) |
 

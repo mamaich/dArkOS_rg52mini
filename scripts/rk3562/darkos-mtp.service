@@ -1,0 +1,19 @@
+[Unit]
+Description=dArkOS: ROMs over USB from a PC (MTP)
+After=local-fs.target
+
+[Service]
+Type=simple
+User=ark
+Group=ark
+UMask=0002
+ExecStartPre=+/usr/local/sbin/darkos-mtp setup
+ExecStart=/usr/bin/umtprd -conf /run/darkos-mtp/umtprd.conf
+ExecStartPost=+/usr/local/sbin/darkos-mtp bind
+ExecStop=+/usr/local/sbin/darkos-mtp unbind
+ExecStopPost=+/usr/local/sbin/darkos-mtp teardown
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

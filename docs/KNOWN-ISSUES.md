@@ -2086,6 +2086,55 @@ when it was stopped on purpose. Checked the same way: the panel came back.
 Not covered: why ES exits when HDMI's EDID cannot be read. While the cable is
 moved, it fails until the next change is acted on.
 
+## USB: ROMs from a PC over MTP (since 1.4)
+
+On a cable to a PC the console shows up as a media device, as an Android phone
+does, and ROMs are copied with the PC's file manager. Windows needs no driver.
+Asked for by the owner on 2026-10-31.
+
+How it works:
+- `umtp-responder` (Debian's 1.3.10) serves `/roms` as storage "ROMs", plus
+  `/roms2` as "ROMs (SD2)" when the second card is mounted. It does so through
+  a FunctionFS function of a USB gadget that `darkos-mtp.service`
+  (`scripts/rk3562/darkos-mtp.sh`) builds in configfs.
+- The kernel had all of this already (`CONFIG_USB_CONFIGFS_F_FS`). The USB-C
+  controller (`fe500000.usb`, dwc3) is OTG behind a role switch and becomes a
+  device on a cable to a PC.
+- `umtprd` runs as ark, so copied files are ark's: group `media_rw` with the
+  ROM folders' ACLs, umask 002. Hidden files are not shown.
+- The PC sees the model from the device tree without its vendor ("RG52 Mini"),
+  maker "dArkOS". The serial is `dArkOS-` plus the board's serial.
+- On by default. Options > "Disable USB File Transfer" stops it, and it no longer
+  starts at boot; "Enable USB File Transfer" brings it back.
+- ES lists new games after a restart (QUIT > RESTART EMULATIONSTATION).
+
+Measured on the console on 2026-10-31, with a cable to a Windows PC:
+- about 21 MB/s to the console, a 300 MB file with the right checksum;
+- browsing the 220 ROM folders;
+- the cable pulled during a copy, and the PC finds the console again once it is
+  back in.
+
+What it took:
+- **`-conf <file>`**, not `-conf:<file>`. With the colon umtprd quietly took
+  `/etc/umtprd/umtprd.conf`, the package's example (storage `/var/lib/umtp`,
+  maker "Viveris Technologies"). Windows then kept that name for the serial, so
+  the serial got the `dArkOS-` prefix.
+- **A cable pulled during a copy** left umtprd in a FunctionFS read that no
+  signal ends, a zombie even after SIGKILL: the port came back configured, and
+  the PC got no answer. Only unbinding the gadget from the controller returns
+  the read. So the service unbinds first when it stops (`ExecStop`), and
+  `99-darkos-mtp.rules` restarts it at every USB disconnect (`USB_STATE=
+  DISCONNECTED` from the kernel's `android_usb` device). It skips the restart
+  within 5 s of its own start, as the gadget's own unbinding sends the same
+  event.
+- A copy cut off this way leaves the partial file on the console. MTP on
+  Android does the same.
+- While a big file is being copied, the PC's file manager shows the console
+  empty: MTP serves one operation at a time.
+
+Not checked yet: a USB device on the port (an OTG keyboard or pad) with the
+gadget up. The controller should switch to host by itself.
+
 ## Smaller things
 
 * **No plymouth.** The command line carries `quiet splash` and
