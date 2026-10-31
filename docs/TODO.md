@@ -58,9 +58,35 @@ it. Confirmed on the device.
 - Done the same day, in master for 1.5: XRoar showed only a field of `@` as a
   Dragon 32 and as a CoCo 2 (the launchers' `-ram 2048`), and the Dragon 32
   system's `dragon.sh` was never installed (KNOWN-ISSUES, XRoar and openMSX).
-- Upstream, seen 2026-10-31 and not taken into 1.4: ARMSX2 2.9.1, OpenBOR
-  v7533, openMSX 22.0, and new commits in Dolphin, SDL2, DSperate, gl4es,
-  GammaOS's azahar-nano and christianhaitian's core builds. The owner decides.
+- Upstream seen 2026-10-31, tried the same day (the owner: take what is faster;
+  OpenBOR v7533, openMSX 22 and the U-Boot fork's boot-menu commits not wanted).
+  Built in a chroot of the 1.4 build's rootfs cache, measured on the console as
+  ES starts the games, against 1.4's build:
+  - **ARMSX2**: the upstream commits read for speed; the four that were never
+    measured here (EE recompiler: fde237e8c, c9d83f216, 364df45d9; 8330ebc02,
+    the event test after MTC0 Status) on a7ad453 with its profile, against the
+    same build without them, three rounds each: Jak's intro 35.31 fps against
+    35.82, God of War on the ship 23.10 against 23.37. Not taken; ARMSX2 stays.
+  - **Dolphin** master c4856ead (2026-10-31; #14853 among 129 commits, our
+    patches apply with offsets): the ND Demo 46.10 fps against 45.90 for 2609a,
+    three rounds, within the spread; Metroid Prime starts. Not taken.
+  - **DSperate** main f608b4c (IPC FIFO words delivered at their send time, the
+    frontend no longer realtime, a stylus speed option): Diddy Kong Racing 59.2
+    fps against 59.7, its main thread 68% of a core against 59%. Not taken.
+  - **gl4es** bc4314d: taken (wide lines as quads where the driver has 1 px).
+  - **armGBA** (MagnominusGit/armGBA, christianhaitian's new recipe): draws
+    right; 007 Everything or Nothing and PeterLemon's 3DEngine at 60 fps as with
+    mGBA and gpSP, 5-6% of the CPU against mGBA's 7%. The owner decides whether
+    it becomes a choice for GBA.
+  - **azahar-nano** after 8d68e5ecaab: what the GammaOS session recommends for
+    the core is in our patches already (009, 015, 019, 020). It also found that
+    Castlevania's cyan frames in the intro are the game's own fade, drawn with
+    both eyes as well, and that with 020 its intro still takes the timing rule.
+  - **SDL2** release-2.32.x, 88 commits: nothing we have seen fixed and no speed;
+    the head is an untagged 2.32.11-dev (scripts/sdl2.sh's extension would need
+    3200.11), and 0dcfa78be makes ALSA's device list open every hw PCM. Not
+    moved. Worth a patch at most: 21ac66c8b (SDL_AtomicSet with a full barrier
+    on aarch64; the owner decides).
 
 ## Upstream updates for 1.4 (2026-10-28)
 
