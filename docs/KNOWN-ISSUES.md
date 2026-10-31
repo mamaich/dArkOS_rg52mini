@@ -2217,9 +2217,20 @@ release: GBA, SNES, Mega Drive, FBNeo 60 fps, PS1 (pcsx_rearmed and the
 DuckStation core) 50, N64 (mupen64plus_next) 50, Azahar's Super Mario 3D
 Land on Vulkan 60; pictures the right way up and colours the same as the
 release's; RGUI's Quick Menu and main menu (ArkOS, Reboot, Shutdown).
-Not checked yet: the picture on HDMI, and the oga video driver (not the
-default), whose blits master makes from BGRA into RGB565 and which may swap
-red and blue on this RGA.
+
+On HDMI (2026-11-01, through the capture card): SNES and GBA at 60 fps, PS1
+at 50, 1920x1080, the right way up, colours right, the games in 4:3, RGUI's
+Quick Menu upright; with the cable out again, the picture back on the panel
+at 60. Once, the first PS1 start after GBA showed garbage on the capture
+card (bits of the GBA frame) while the console's own scanout held the right
+PS1 frame; three more starts, that order among them, were clean, so it was
+past the console (the RK628 bridge or the capture card).
+
+The oga video driver (not the default) shows the panel the right way up and
+in the right colours (RGB565 scanout); v1.22.2's oga swaps red and blue on
+this panel and tears. On HDMI, oga turns the picture 90 degrees, in v1.22.2
+as here: it is made for the panel, use gl there. Master's own oga turns
+(ROT_270) show the panel upside down, as patch 0016 says.
 
 ## USB: ROMs from a PC over MTP (since 1.4)
 
