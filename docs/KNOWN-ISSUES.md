@@ -2086,6 +2086,33 @@ when it was stopped on purpose. Checked the same way: the panel came back.
 Not covered: why ES exits when HDMI's EDID cannot be read. While the cable is
 moved, it fails until the next change is acted on.
 
+## Scraper: ScreenScraper's developer login (since 1.4)
+
+ScreenScraper wants a developer login (devid, devpassword) in every request. ES
+takes it at build time (`exports.sh`: DEV_ID, DEV_PASS; gitignored). The images
+up to 1.3.1 were built without one, so every scrape failed with "Erreur de login :
+Vérifier vos identifiants développeur".
+
+`es-0003-screenscraper-dev-login.patch` decides at run time, in this order:
+1. The user's own login: `ScreenScraperDevId` and `ScreenScraperDevPassword` in
+   `~/.emulationstation/es_settings.cfg`.
+2. The build's, if ScreenScraper takes it. It is asked once (`ssinfraInfos`),
+   since a login in an image can go out of date. With no answer at all (no
+   network) it is kept.
+3. The one RetroGameSets' RGSX hands out
+   (`retrogamesets.fr/rgsx/manager/rgsx_screenscraper_credentials_api.php`, a
+   friendly project; the owner, 2026-10-31). It is fetched once per run while
+   the server answers.
+
+A check or fetch with no answer (curl, 5 s) is tried again a minute later, and
+the login is kept in memory only. A user's ScreenScraper account (SCRAPER >
+USERNAME, PASSWORD) is sent as before.
+
+Checked on the console on 2026-10-31 with an ES built without a login: a single
+game scraped through RGSX's login, with cover, rating, developer and description.
+The console's CA store verifies both servers. ScreenScraper's certificate
+chains to Let's Encrypt YE2, which Python's certifi on the PC did not take.
+
 ## USB: ROMs from a PC over MTP (since 1.4)
 
 On a cable to a PC the console shows up as a media device, as an Android phone

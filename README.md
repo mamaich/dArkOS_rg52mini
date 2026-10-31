@@ -84,7 +84,7 @@ malisx2, и сам malisx2 стал быстрее; в ARMSX2 EE Cycle Rate мо
 снова запускаются ScummVM, XRoar и openMSX; управление в LZDoom и GZDoom под
 геймпад консоли; HDMI подхватывается при подключении кабеля, а не только при
 загрузке, и по нему идёт звук; ROM-ы можно копировать с ПК по USB, как на
-телефон с Android (MTP); Luigi's Mansion 2 на malisx2 больше не зависает
+телефон с Android (MTP); снова работает скрапер ScreenScraper; Luigi's Mansion 2 на malisx2 больше не зависает
 на загрузке шейдеров; сборка для RG43 Pro. Standalone DuckStation из образа убран, игры PS1
 идут в RetroArch, как и раньше по умолчанию. Подробности — в
 [docs/README.md](docs/README.md#state-of-the-port).
