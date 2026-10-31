@@ -116,6 +116,7 @@ only when the owner says so):
 | | |
 |---|---|
 | Build | the plutovg and plutosvg sources build_pcsx2sa.sh leaves in /home/ark when it builds ARMSX2 afresh are removed; 1.4's image has them (3.3 MB), and the update to 1.5 takes them off |
+| XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

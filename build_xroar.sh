@@ -29,10 +29,13 @@ else
 fi
 
 sudo cp -a xroar/coco.sh Arkbuild/usr/local/bin/
+# ES's Dragon 32 system starts dragon.sh; until 1.5 it was not installed
+sudo cp -a xroar/dragon.sh Arkbuild/usr/local/bin/
 sudo cp -R xroar/controls/ Arkbuild/opt/xroar/
 sudo cp -a xroar/xroar.gptk Arkbuild/opt/xroar/
 
 call_chroot "chown -R ark:ark /opt/"
 sudo chmod 777 Arkbuild/opt/xroar/xroar
 sudo chmod 777 Arkbuild/usr/local/bin/coco.sh
+sudo chmod 777 Arkbuild/usr/local/bin/dragon.sh
 

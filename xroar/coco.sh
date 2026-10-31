@@ -112,7 +112,10 @@ if [[ $EMULATOR == "standalone" ]]; then
   # headers turn on and its configure cannot turn off); the image has no desktop GL, so
   # gl4es's library stands in for it, or xroar does not start at all (1.3.1 and before).
   [ -f /usr/lib/gl4es/libGL.so.1 ] && export LD_LIBRARY_PATH=/usr/lib/gl4es${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-  /opt/xroar/xroar -vo-picture title -rompath /$directory/bios -machine $CORE -tv-input cmp-br -ram 2048 ${cmd} "$GAME" ${params} ${type}
+  # 2 MB of RAM is for a CoCo 3. XRoar 1.12 gives it to a CoCo 1/2 as well, and then
+  # shows only a field of @, never BASIC (1.4).
+  case "$CORE" in coco3*) ram="-ram 2048" ;; *) ram="" ;; esac
+  /opt/xroar/xroar -vo-picture title -rompath /$directory/bios -machine $CORE -tv-input cmp-br ${ram} ${cmd} "$GAME" ${params} ${type}
   #/opt/xroar/xroar -ccr partial -vo-picture title -rompath /$directory/bios -machine $CORE -tv-input cmp-br -ram 2048 ${cmd} "$GAME" ${params} ${type}
 
   # Done running the game.  Time to clean up the temp memory space if needed.

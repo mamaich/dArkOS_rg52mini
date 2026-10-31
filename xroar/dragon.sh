@@ -109,8 +109,11 @@ else
   type=""
 fi
 
-# Now run the game
-/opt/xroar/xroar -vo-picture title -rompath /$directory/bios -machine $CORE -tv-input cmp-br -ram 2048 ${cmd} "$GAME" ${params} ${type}
+# Now run the game. As in coco.sh: the build links libGL.so.1, which the image does not
+# have, so gl4es's library stands in; and no -ram 2048, which is for a CoCo 3 (a Dragon
+# given it shows only a field of @, never BASIC).
+[ -f /usr/lib/gl4es/libGL.so.1 ] && export LD_LIBRARY_PATH=/usr/lib/gl4es${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+/opt/xroar/xroar -vo-picture title -rompath /$directory/bios -machine $CORE -tv-input cmp-br ${cmd} "$GAME" ${params} ${type}
 #/opt/xroar/xroar -ccr partial -vo-picture title -rompath /$directory/bios -machine $CORE -tv-input cmp-br -ram 2048 ${cmd} "$GAME" ${params} ${type}
 
 # Done running the game.  Time to clean up the temp memory space if needed.

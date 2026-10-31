@@ -348,14 +348,22 @@ cannot open shared object file", in 1.3.1 and before. Their launchers
 (`coco.sh`, `openmsx`) now put `/usr/lib/gl4es` first in the library path, so
 gl4es stands in; XRoar shows the Dragon 32's BASIC prompt, openMSX C-BIOS.
 
-On the 1.4 image (2026-10-31) only half of that holds. openMSX runs a
-cartridge from C-BIOS. XRoar starts and loads its ROMs (`d32.rom`, and
-DragonDOS's `ddos10.rom` for a Dragon 32), but as a Dragon 32 and as a CoCo 2
-its screen stays on the power-on field of `@`: with SDL's sound and with
-`-ao null`, after 5 s and after 25 s. It never gets to BASIC; why is open
-(TODO.md). The Dragon 32 system in ES has an older fault besides: its command
-starts `/usr/local/bin/dragon.sh`, which would be `xroar/dragon.sh`, but
-build_xroar.sh installs only `coco.sh`. Its games have never started.
+On the 1.4 image (2026-10-31) only half of that held. openMSX runs a
+cartridge from C-BIOS. XRoar started and loaded its ROMs, but as a Dragon 32
+and as a CoCo 2 its screen stayed on a field of `@` and never got to BASIC.
+Not the GPU (SDL's software renderer showed the same), not the sound
+(`-ao null` too), not DragonDOS (`-no-machine-cart` too), and not the build:
+a CPU trace on the console matched one of XRoar 1.12.1 built on the PC, both
+in BASIC's keyboard loop after 2 s. The launchers' `-ram 2048` did it. That
+is 2 MB, for a CoCo 3; XRoar 1.12 gives it to a Dragon or a CoCo 1/2 too,
+and their screens stay blank. Without it the Dragon 32 shows its BASIC (and
+DragonDOS 1.0), the CoCo 2 Extended Color BASIC 1.1.
+
+The Dragon 32 system had an older fault besides: its command starts
+`/usr/local/bin/dragon.sh`, which is `xroar/dragon.sh`, but build_xroar.sh
+installed only `coco.sh`, so its games never started. For 1.5 coco.sh passes
+`-ram 2048` to a CoCo 3 only, and dragon.sh is installed, without it and with
+gl4es's libGL; both were checked on the console as ES starts them.
 Nothing else in /opt or /usr/local misses a library, apart from Kodi's
 visualisation add-ons, which want desktop GL and are not for this build.
 
