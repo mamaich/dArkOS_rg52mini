@@ -7,7 +7,7 @@
 # an #if it cannot evaluate is no longer substituted; Don't Starve's blur and bloom shaders failed
 # with "Array subscript too big"). Built as PortMaster's are: no X11, GLX stubs, its EGL wrapper,
 # GBM for LIBGL_FB=4. See docs/KNOWN-ISSUES.md.
-GL4ES_COMMIT=c1d7d014fcf687ed33f30ce78b6480b3be1cbeee
+GL4ES_COMMIT=bc4314d8369f169d3fa81c5ed1b46b3dba4e74a5
 sudo rm -rf Arkbuild/tmp/gl4es
 call_chroot "cd /tmp && git clone https://github.com/ptitSeb/gl4es.git gl4es && cd gl4es && git checkout -q ${GL4ES_COMMIT}"
 sudo cp gl4es-fix/gl4es-preproc-conditional-defines.patch Arkbuild/tmp/gl4es/
