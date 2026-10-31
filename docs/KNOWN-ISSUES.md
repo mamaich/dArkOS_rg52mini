@@ -565,6 +565,15 @@ Vulkan, so the layer is built for aarch64 only.
   `video_driver = "vulkan"` it logs "Couldn't find any video driver named
   \"vulkan\"", and its menu does not offer one. Cores that want Vulkan run in
   the 64-bit `retroarch`, which the layer turns.
+- **malisx2 for armhf: not built (the owner, 2026-10-31).** It would need
+  Mesa and its Rust shader compiler built for armv7, an armhf Vulkan loader,
+  manifest and rotation layer, and `retroarch32` and its cores rebuilt with
+  Vulkan, for little: the image's only 32-bit programs are `retroarch32` (51
+  cores) and `retrorun32`, and of those cores only parallel_n64
+  (paraLLEl-RDP, too heavy for the G52) and flycast (whose 64-bit builds run
+  on Vulkan at 60 fps) have a Vulkan renderer. Everything here that needs
+  Vulkan is 64-bit. The kernel side would not stand in the way: the armhf
+  libmali drives the GPU through the same kbase.
 
 **Mina the Hollower, port side.** The port's launcher sets
 `GOTHIC_BACKEND=gles` for `DEVICE_NAME = RG52MINI`, so that the game uses GLES,
