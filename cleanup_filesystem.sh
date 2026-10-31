@@ -6,6 +6,8 @@ call_chroot "rm -rf /home/ark/EmulationStation-fcamod"
 call_chroot "rm -rf /home/ark/libgo2"
 call_chroot "rm -rf /home/ark/linux-rga"
 call_chroot "rm -rf /home/ark/${CHIPSET}_core_builds"
+# plutovg/plutosvg, built for ARMSX2 when it is not in the cache
+call_chroot "rm -rf /home/ark/plutovg /home/ark/plutosvg"
 # Remove SDL 1.2 headers installed to /usr/local by sdl12-compat (linapplesa build)
 sudo rm -rf Arkbuild/usr/local/include/SDL/
 
