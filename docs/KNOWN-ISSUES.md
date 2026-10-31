@@ -2106,7 +2106,7 @@ How it works:
   maker "dArkOS". The serial is `dArkOS-` plus the board's serial.
 - On by default. Options > "Disable USB File Transfer" stops it, and it no longer
   starts at boot; "Enable USB File Transfer" brings it back.
-- ES lists new games after a restart (QUIT > RESTART EMULATIONSTATION).
+- ES lists new games after SELECT > UPDATE GAMES LISTS in a game list.
 
 Measured on the console on 2026-10-31, with a cable to a Windows PC:
 - about 21 MB/s to the console, a 300 MB file with the right checksum;
