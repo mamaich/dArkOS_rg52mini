@@ -69,15 +69,18 @@ it. Confirmed on the device.
     35.82, God of War on the ship 23.10 against 23.37. Not taken; ARMSX2 stays.
   - **Dolphin** master c4856ead (2026-10-31; #14853 among 129 commits, our
     patches apply with offsets): the ND Demo 46.10 fps against 45.90 for 2609a,
-    three rounds, within the spread; Metroid Prime starts. Not taken.
+    three rounds, within the spread; Metroid Prime starts. Taken after all (the
+    owner: a change within the noise is taken too), eb48282 in the fork.
   - **DSperate** main f608b4c (IPC FIFO words delivered at their send time, the
     frontend no longer realtime, a stylus speed option): Diddy Kong Racing 59.2
-    fps against 59.7, its main thread 68% of a core against 59%. Not taken.
+    fps against 59.7, its main thread 68% of a core against 59%. Taken after all
+    (the owner: an emulator not bound here takes everything; DS games run at full
+    speed), e60d3df in the fork.
   - **gl4es** bc4314d: taken (wide lines as quads where the driver has 1 px).
   - **armGBA** (MagnominusGit/armGBA, christianhaitian's new recipe): draws
     right; 007 Everything or Nothing and PeterLemon's 3DEngine at 60 fps as with
-    mGBA and gpSP, 5-6% of the CPU against mGBA's 7%. The owner decides whether
-    it becomes a choice for GBA.
+    mGBA and gpSP, 5-6% of the CPU against mGBA's 7%. A choice for GBA from 1.5
+    (the owner), mGBA stays the default; it plays GB and GBC too, not offered there.
   - **azahar-nano** after 8d68e5ecaab: what the GammaOS session recommends for
     the core is in our patches already (009, 015, 019, 020). It also found that
     Castlevania's cyan frames in the intro are the game's own fade, drawn with
@@ -85,8 +88,9 @@ it. Confirmed on the device.
   - **SDL2** release-2.32.x, 88 commits: nothing we have seen fixed and no speed;
     the head is an untagged 2.32.11-dev (scripts/sdl2.sh's extension would need
     3200.11), and 0dcfa78be makes ALSA's device list open every hw PCM. Not
-    moved. Worth a patch at most: 21ac66c8b (SDL_AtomicSet with a full barrier
-    on aarch64; the owner decides).
+    moved. 21ac66c8b (SDL_AtomicSet with a full barrier on ARM) is taken as
+    sdl2-patch-0009, tried with every 64-bit SDL program and ES on the console;
+    the 32-bit build gets it at the next image build.
 
 ## Upstream updates for 1.4 (2026-10-28)
 
