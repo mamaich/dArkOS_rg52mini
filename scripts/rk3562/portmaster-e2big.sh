@@ -15,13 +15,46 @@
 # which gl4es ports source instead of libgl_default.txt: the same, and the image's gl4es
 # (/usr/lib/gl4es, build_gl4es.sh) for a port without a gl4es of its own.
 #
+# And it gives PortMaster's window the whole screen: PortMaster has no entry for this device,
+# so its GUI (pugwash) took the default 640x480, a 4:3 window with black bars on each side of
+# the 16:9 panel. pugwash already asks SDL for the screen's size, but uses it only for a device
+# it calls "default"; the patch below uses it for any device its table lacks.
+#
 # PortMaster overwrites its files when it updates itself, so this runs at boot
-# and from portmaster-e2big.path whenever mod_dArkOS.txt changes.
+# and from portmaster-e2big.path whenever mod_dArkOS.txt or pugwash changes.
 
 MARK="# dArkOS RG52 Mini: E2BIG guard"
 MARK_GL4ES="# dArkOS RG52 Mini: gl4es render-target fix"
 MARK_VULKAN="# dArkOS RG52 Mini: Vulkan driver through sudo"
 MARK_LIBGL="# dArkOS RG52 Mini: the image's gl4es"
+
+# pugwash: a device PortMaster's HW_INFO lacks gets the screen's own size, as "default" does.
+# Prints what it did; exit 2 when the code it patches is not there (a PortMaster that changed
+# it, or one that knows this device), and then it leaves the file alone.
+pugwash_screen_size() {
+  python3 - "$1" <<'PY'
+import sys
+MARK = "# dArkOS RG52 Mini: screen size"
+OLD = """        if capabilities['device'] == 'default':
+            capabilities = harbourmaster.device_info(override_resolution=(self.display_width, self.display_height))
+"""
+NEW = OLD + """        elif capabilities['device'] not in harbourmaster.HW_INFO:
+            # dArkOS RG52 Mini: screen size (added by /usr/local/bin/portmaster-e2big.sh)
+            # PortMaster has no entry for this device, so it got the default 640x480: a 4:3
+            # window with black bars on the 16:9 screen. The screen's size, as for "default".
+            capabilities = harbourmaster.device_info(override_resolution=(self.display_width, self.display_height))
+"""
+p = sys.argv[1]
+s = open(p, encoding="utf-8", newline="").read()
+if MARK in s:
+    sys.exit(0)
+if s.count(OLD) != 1:
+    sys.exit(2)
+# in place: the file keeps its owner, mode and ACL
+open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD, NEW))
+print("patched")
+PY
+}
 
 for dir in /opt/system/Tools/PortMaster /roms/ports/PortMaster /roms2/ports/PortMaster /roms/tools/PortMaster; do
   f="$dir/mod_dArkOS.txt"
@@ -74,6 +107,12 @@ if [ ! -d "$PWD/gl4es.$DEVICE_ARCH" ] && [ ! -d "$PWD/gl4es" ] && [ -f /usr/lib/
 fi
 LIBGL
     logger -t portmaster-e2big "image gl4es fallback added to $lg"
+  fi
+  pw="$dir/pugwash"
+  if [ -f "$pw" ]; then
+    r=$(pugwash_screen_size "$pw"); rc=$?
+    [ "$r" = patched ] && logger -t portmaster-e2big "screen size added to $pw"
+    [ $rc = 2 ] && logger -t portmaster-e2big "$pw: code for the screen size not found, left as it is"
   fi
   grep -qF "$MARK" "$f" && continue
   cat >> "$f" <<'GUARD'

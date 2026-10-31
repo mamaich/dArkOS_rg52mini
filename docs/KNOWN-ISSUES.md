@@ -237,6 +237,39 @@ A side effect seen during the test, not caused by the fix: on the first port
 run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
 `libMali.so`. They already point there in the image, so nothing changes.
 
+## PortMaster's window had black bars on the sides — fixed in 1.5
+
+Reported by the owner, 2026-11-01: Options > Tools > PortMaster drew a 4:3
+picture in the middle of the 16:9 panel, black bars left and right.
+
+PortMaster's GUI, `pugwash`, sizes its window from the device it detects, by
+its table `HW_INFO` (`pylibs/harbourmaster/hardware.py`). It has no entry for
+the RG52 Mini (its GUI shows "Device: unknown": pugwash runs as root, so
+`~/.config/.DEVICE` is not read), so it gets the default's 640x480. pugwash
+asks SDL for the screen's size (1280x720 here) but uses it only for a device
+it calls "default", not for one its table lacks. SDL then shows the 640x480
+window scaled to the panel's height, 4:3.
+
+**Fix:** `portmaster-e2big.sh` (see the E2BIG section above) also patches
+`pugwash`: a device that `HW_INFO` lacks gets the screen's size, as "default"
+does. PortMaster then lays its themes out for 16:9 at 1280x720 (on HDMI at the
+TV's mode, by the same code; not checked on HDMI yet) and reports "16:9" among the device's capabilities; everything else
+it knows of the device (capabilities, CPU, RAM) stays as it was.
+`pylibs/harbourmaster/hardware.py` is not the place for the fix: pugwash
+re-extracts `pylibs` from `pylibs.zip` after every update, at its own start,
+before anything could patch it. `pugwash` itself is a plain file an update
+replaces, so `portmaster-e2big.path` now watches it too. If PortMaster changes
+that code, the patch leaves the file alone and logs it.
+
+Checked on the console (PortMaster 2026.06.23-0015): the main menu and All
+Ports' list with its previews fill the screen. A fix sent to us for this
+(PM.zip: the window hard-coded to 1280x720 in `pugwash`, `DISPLAY_WIDTH` and
+`DISPLAY_HEIGHT` in `PortMaster.sh`) fills the screen too, but PortMaster
+still lays out its 640x480 4:3 theme in it, so the small print comes out
+smaller; it would also be lost on PortMaster's next update. The complete fix
+belongs in PortMaster: an `HW_INFO` entry for the RG52 Mini, or the screen's
+size for any device the table lacks.
+
 ## v10052026: the power button rebooted revision A boards — fixed in the kernel
 
 The bootloader v10052026 ships (`uboot-oc-stocktee-shmkept.img`) has the BL31

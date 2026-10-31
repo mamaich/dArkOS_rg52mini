@@ -1,11 +1,17 @@
 [Unit]
-Description=PortMaster: re-add the E2BIG guard after PortMaster installs or updates
+Description=PortMaster: re-add the E2BIG guard and the screen size after PortMaster installs or updates
 
 [Path]
 PathChanged=/opt/system/Tools/PortMaster/mod_dArkOS.txt
 PathChanged=/roms/ports/PortMaster/mod_dArkOS.txt
 PathChanged=/roms2/ports/PortMaster/mod_dArkOS.txt
 PathChanged=/roms/tools/PortMaster/mod_dArkOS.txt
+# pugwash: an update replaces it; the patch's own write sets this off once more, and that run
+# finds the patch in place and writes nothing
+PathChanged=/opt/system/Tools/PortMaster/pugwash
+PathChanged=/roms/ports/PortMaster/pugwash
+PathChanged=/roms2/ports/PortMaster/pugwash
+PathChanged=/roms/tools/PortMaster/pugwash
 Unit=portmaster-e2big.service
 
 [Install]
