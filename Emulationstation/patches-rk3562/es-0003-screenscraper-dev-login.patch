@@ -1,0 +1,150 @@
+dArkOS: ScreenScraper's developer login is no longer only what the build was given.
+- The user's own comes first (es_settings.cfg: ScreenScraperDevId and
+  ScreenScraperDevPassword).
+- Then the build's (exports.sh, DEV_ID/DEV_PASS), if ScreenScraper takes it: it is
+  asked once (ssinfraInfos), as a login in an image can go out of date. With no
+  answer at all it is kept.
+- Otherwise the scraper fetches the one RetroGameSets' RGSX hands out
+  (retrogamesets.fr, a friendly project), once per run while its server answers.
+A check or fetch with no answer (curl, 5 s) is tried again a minute later, and the
+login is kept in memory only. An image built without exports.sh had no login at
+all, and every scrape failed with "Erreur de login : Vérifier vos identifiants
+développeur".
+
+diff --git a/es-app/src/scrapers/ScreenScraper.cpp b/es-app/src/scrapers/ScreenScraper.cpp
+index b4227f4..5d41ce5 100644
+--- a/es-app/src/scrapers/ScreenScraper.cpp
++++ b/es-app/src/scrapers/ScreenScraper.cpp
+@@ -13,11 +13,114 @@
+ #include "EsLocale.h"
+ #include "md5.h"
+ #include <thread>
++#include <mutex>
++#include <cstdio>
++#include <ctime>
+ 
+ using namespace PlatformIds;
+ 
+ #if defined(SCREENSCRAPER_DEV_LOGIN)
+ 
++// dArkOS: the developer login ScreenScraper asks every request for.
++// - The user's own comes first (es_settings.cfg: ScreenScraperDevId and
++//   ScreenScraperDevPassword).
++// - Then the one the build was given (exports.sh), if ScreenScraper takes it: it is
++//   asked once (ssinfraInfos), as a login in an image can go out of date. With no
++//   answer at all (no network) it is kept.
++// - Otherwise the one RetroGameSets' RGSX hands out, fetched once per run while its
++//   server answers.
++// A check or fetch that got no answer is tried again a minute later. The login is
++// kept in memory only.
++#define RGSX_DEV_LOGIN_URL "https://retrogamesets.fr/rgsx/manager/rgsx_screenscraper_credentials_api.php"
++
++// What curl gets from url within 5 s, "" if nothing.
++static std::string curlGet(const std::string& url)
++{
++	std::string body;
++	FILE* f = popen(("curl -s -m 5 '" + url + "'").c_str(), "r");
++	if (f == NULL)
++		return body;
++	char buf[256];
++	size_t n;
++	while ((n = fread(buf, 1, sizeof(buf), f)) > 0)
++		body.append(buf, n);
++	pclose(f);
++	return body;
++}
++
++// The value of "key":"..." in a flat JSON object, its \x escapes undone; "" if absent.
++static std::string jsonString(const std::string& json, const std::string& key)
++{
++	size_t pos = json.find("\"" + key + "\"");
++	if (pos == std::string::npos)
++		return "";
++	pos = json.find(':', pos + key.size() + 2);
++	if (pos == std::string::npos)
++		return "";
++	pos = json.find('"', pos);
++	if (pos == std::string::npos)
++		return "";
++	std::string value;
++	for (size_t i = pos + 1; i < json.size(); i++)
++	{
++		if (json[i] == '"')
++			return value;
++		if (json[i] == '\\' && i + 1 < json.size())
++			i++;
++		value += json[i];
++	}
++	return "";
++}
++
++static std::string screenScraperDevLogin()
++{
++	std::string id = Settings::getInstance()->getString("ScreenScraperDevId");
++	std::string pass = Settings::getInstance()->getString("ScreenScraperDevPassword");
++	if (!id.empty() && !pass.empty())
++		return "devid=" + HttpReq::urlEncode(id) + "&devpassword=" + HttpReq::urlEncode(pass);
++
++	static std::mutex lock;
++	static int builtState = -1; // -1 not known yet, 0 refused, 1 taken
++	static time_t builtTry = 0;
++	static std::string fetched;
++	static time_t fetchTry = 0;
++	std::lock_guard<std::mutex> guard(lock);
++
++	std::string built = SCREENSCRAPER_DEV_LOGIN;
++	bool haveBuilt = built.find("devid=&") == std::string::npos && !Utils::String::endsWith(built, "devpassword=");
++	if (haveBuilt && builtState < 0 && time(NULL) - builtTry >= 60)
++	{
++		builtTry = time(NULL);
++		std::string answer = curlGet("https://api.screenscraper.fr/api2/ssinfraInfos.php?" + built
++			+ "&softname=" + HttpReq::urlEncode(VERSIONED_SOFT_NAME) + "&output=json");
++		if (answer.find("\"success\":\"true\"") != std::string::npos)
++			builtState = 1;
++		else if (!answer.empty())
++		{
++			builtState = 0;
++			LOG(LogWarning) << "ScreenScraper: the build's developer login is refused";
++		}
++	}
++	if (haveBuilt && builtState != 0)
++		return built;
++
++	if (fetched.empty() && time(NULL) - fetchTry >= 60)
++	{
++		fetchTry = time(NULL);
++		std::string body = curlGet(RGSX_DEV_LOGIN_URL);
++		id = jsonString(body, "devid");
++		pass = jsonString(body, "devpassword");
++		if (!id.empty() && !pass.empty())
++		{
++			fetched = "devid=" + HttpReq::urlEncode(id) + "&devpassword=" + HttpReq::urlEncode(pass);
++			LOG(LogInfo) << "ScreenScraper: developer login from RGSX";
++		}
++		else
++			LOG(LogWarning) << "ScreenScraper: no developer login (RGSX's server gave none)";
++	}
++	return fetched.empty() ? built : fetched;
++}
++
+ std::string ScreenScraperRequest::ensureUrl(const std::string url)
+ {
+ 	return Utils::String::replace(
+@@ -631,7 +734,7 @@ std::string ScreenScraperRequest::ScreenScraperConfig::getGameSearchUrl(const st
+ 	
+ 
+ 	std::string ret = API_URL_BASE
+-		+ "/jeuInfos.php?" + std::string(SCREENSCRAPER_DEV_LOGIN) +
++		+ "/jeuInfos.php?" + screenScraperDevLogin() +
+ 		+ "&softname=" + HttpReq::urlEncode(VERSIONED_SOFT_NAME)
+ 		+ "&output=xml"
+ 		+ "&romnom=" + HttpReq::urlEncode(gameName);
+@@ -639,7 +742,7 @@ std::string ScreenScraperRequest::ScreenScraperConfig::getGameSearchUrl(const st
+ 	if (jeuRecherche)
+ 	{
+ 		ret = std::string(API_URL_BASE)
+-			+ "/jeuRecherche.php?" + std::string(SCREENSCRAPER_DEV_LOGIN) +
++			+ "/jeuRecherche.php?" + screenScraperDevLogin() +
+ 			+ "&softname=" + HttpReq::urlEncode(VERSIONED_SOFT_NAME)
+ 			+ "&output=xml"
+ 			+ "&recherche=" + HttpReq::urlEncode(gameName);
