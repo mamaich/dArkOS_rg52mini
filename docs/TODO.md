@@ -1530,6 +1530,17 @@ Notes:
 
 ## Open questions on the device
 
+* **USB to a PC on revision A** (2026-10-31). Nothing here was tried on a
+  revision A board: MTP (1.4) and OTG only on revision B, whose HUSB311 gives
+  the role. On A, U-Boot's fixup (55f7bc4d2c) disables the HUSB311 node and
+  points dwc3 at the USB2 PHY's extcon, as the vendor's V10 tree does. The
+  GammaOS session has a report from an A owner: on a PC the device "comes and
+  goes", with any cable; OTG host works there (a mouse). Its suspects: the
+  PHY's VBUS poll (bvalid once a second, the PHY off and BC1.2 again when it
+  drops) and BC1.2 taking the PC for a charger (DCP, not SDP). A report from
+  an A board on dArkOS 1.4 (does Explorer keep "RG52 Mini", `journalctl -u
+  darkos-mtp`, `dmesg | grep -i -e dwc3 -e u2phy -e bc12`) would narrow it;
+  pass it on to the GammaOS session.
 * **L2's noise passes the kernel's dead zone** (2026-10-26). With a game
   running and nobody pressing it, ABS_Z rose to 1073 and 1272 a few times in
   30 s (`TRIG_DZ_OUTPUT` 800 in `rk3562-joystick.c`, whose comment has the
