@@ -272,6 +272,9 @@ if [ "$CHIPSET" == "rk3562" ]; then
   # rg503's is -O0 since upstream dropped its Makefile for a CMakeLists with no
   # build type; onscripter.sh now asks for Release
   build_a53_core onscripter https://github.com/iyzsong/onscripter-libretro.git onscripter
+  # armGBA, a GBA core written for ARM (christianhaitian's recipe, pinned in ours): a choice
+  # beside mGBA, which stays the default; 1-2 points of CPU less in our tries (docs/TODO.md)
+  build_a53_core armgba pinned armgba
   # Nintendo 3DS: not in rg503's set at all, built here from a pinned release
   build_a53_core azahar pinned azahar
   # and its cheat database: GammaOS's cheats3ds.zip (CTRPF, 60FPS and Sharkive Action Replay

@@ -1285,6 +1285,7 @@
 				<cores>
 					<core>mgba_rumble</core>
 					<core>mgba</core>
+					<core>armgba</core>
 					<core>vbam</core>
 					<core>vba_next</core>
 					<core>gpsp</core>
