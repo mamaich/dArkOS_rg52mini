@@ -696,11 +696,19 @@ Atomiswave's KOV7 30 as before, Azahar's Super Mario 3D Land 60, Dolphin's
 ND Demo 46, the Mina the Hollower port 60; no GPU faults. The malisx2
 session checked Luigi's Mansion 2, Castlevania, ARMSX2 and Metroid Prime.
 
-**The DuckStation core on RetroArch's Vulkan driver crashes on malisx2**
+**The DuckStation core on RetroArch's Vulkan driver crashed on malisx2**
 (SIGSEGV before its first frame), with 1.4's malisx2 and with 4c91f3c alike;
-on libmali it runs (Hover Racing, 50 fps). RetroArch's driver is `gl`, so it
-takes a user who set it to Vulkan and picked MALISX2 for PS1. With the
-malisx2 session (2026-10-31).
+on libmali it ran (Hover Racing, 50 fps). RetroArch's driver is `gl`, so it
+took a user who set it to Vulkan and picked MALISX2 for PS1. The malisx2
+session found two causes, one after the other. RetroArch makes a 0x0 image
+for a core that has given no frame yet and asks its memory without checking
+that the image was made; malisx2 6405617 lays an image with a zero extent out
+as 1x1, as libmali takes it. Then RetroArch remakes its swapchain, and Mesa's
+display WSI freed the old one with a page flip pending, whose handler read
+freed memory; Mesa 37083d3 waits for the flips first, up to 1 s. Fixed in
+428b5b2, for 1.5; checked on the console (2026-10-31): Hover Racing on
+RetroArch's Vulkan driver at 50 fps, as on libmali; PPSSPP, flycast, Azahar,
+Dolphin, ARMSX2 and the Mina port start and quit on it, as fast as before.
 
 ## gl4es ports rendered black into their own textures: gl4es-fix (after 1.0)
 

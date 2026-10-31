@@ -53,8 +53,8 @@ it. Confirmed on the device.
 - Done the same day, in master for 1.5: malisx2 4c91f3c in the recipe (upstream
   0.3.1 merged, Mesa e07f62e, the pipeline cache's fragment-reads mask fixed in
   ebebd37), with a profile trained on it; checked on the console
-  (KNOWN-ISSUES, "malisx2 0.3.1"). Left: the DuckStation core on RetroArch's
-  Vulkan driver crashes on malisx2, 1.4's too; the malisx2 session has it.
+  (KNOWN-ISSUES, "malisx2 0.3.1"). Then 428b5b2: the DuckStation core on
+  RetroArch's Vulkan driver no longer crashes on malisx2 (1.4's did too).
 - Done the same day, in master for 1.5: XRoar showed only a field of `@` as a
   Dragon 32 and as a CoCo 2 (the launchers' `-ram 2048`), and the Dragon 32
   system's `dragon.sh` was never installed (KNOWN-ISSUES, XRoar and openMSX).
@@ -1541,6 +1541,16 @@ Notes:
   an A board on dArkOS 1.4 (does Explorer keep "RG52 Mini", `journalctl -u
   darkos-mtp`, `dmesg | grep -i -e dwc3 -e u2phy -e bc12`) would narrow it;
   pass it on to the GammaOS session.
+  The GammaOS session then tried revision A's tree on a B board: MTP copies of
+  1.85 GB and 512 MB went through. With the owner's loose cable it found the
+  cause of drops: dwc3 takes bvalid straight from the PHY's VBUS comparator,
+  so a VBUS dip of ~0.6 s ends the session. Its fix, in
+  mamaich/kernel_rk3562_rg52mini d329ba734 (phy-rockchip-inno-usb2.c only,
+  `rg52_vbus_hold`, GammaOS v1.16): in B_PERIPHERAL the controller's bvalid is
+  forced from the GRF, the real VBUS read from the charger (power supply
+  "usb"), and the session held up to 2 s without it; a pull is noticed after
+  2 s. Write-up: GammaOSNext-RG52mini doc/rg52mini/02-план.md (186bfe160e4).
+  To take only if an A board shows the same drops on dArkOS (owner's word).
 * **L2's noise passes the kernel's dead zone** (2026-10-26). With a game
   running and nobody pressing it, ABS_Z rose to 1073 and 1272 a few times in
   30 s (`TRIG_DZ_OUTPUT` 800 in `rk3562-joystick.c`, whose comment has the

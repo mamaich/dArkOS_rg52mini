@@ -116,7 +116,7 @@ only when the owner says so):
 | | |
 |---|---|
 | Build | the plutovg and plutosvg sources build_pcsx2sa.sh leaves in /home/ark when it builds ARMSX2 afresh are removed; 1.4's image has them (3.3 MB), and the update to 1.5 takes them off |
-| malisx2 | 4c91f3c: upstream's 0.3.1 merged (dynamic rendering, timeline semaphores, events and real occlusion queries advertised; Mesa e07f62e); Castlevania 3-5% faster, a first start's shader compile about 4% longer (Luigi's Mansion 2: 100 s against 96); a profile trained on this code |
+| malisx2 | 4c91f3c: upstream's 0.3.1 merged (dynamic rendering, timeline semaphores, events and real occlusion queries advertised; Mesa e07f62e); Castlevania 3-5% faster, a first start's shader compile about 4% longer (Luigi's Mansion 2: 100 s against 96); a profile trained on this code; 428b5b2: the DuckStation core on RetroArch's Vulkan driver no longer crashes on it |
 | XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
 
 Built but never launched: freej2me-plus. It had been silently missing from
