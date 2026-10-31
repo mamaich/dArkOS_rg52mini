@@ -685,6 +685,23 @@ it, with perf queries off (their results read 0; with libmali nothing
 changes). On the console: ND Demo 41 fps, Metroid Prime runs and draws right;
 other GameCube games are not tried yet (TODO.md, "Dolphin on malisx2").
 
+**malisx2 0.3.1 (4c91f3c, for 1.5).** Upstream's 0.3.1 advertises dynamic
+rendering (with depth/stencil resolve and render pass 2), timeline semaphores
+and events, and answers occlusion queries for real. A program that takes
+another path when it sees them takes a new one, so on 2026-10-31 everything
+that runs on Vulkan here was tried on it as a user who picks MALISX2 gets
+it: vulkaninfo lists the four extensions; PPSSPP (Final Fantasy, Street
+Fighter Alpha 3) 60 fps, flycast (Crazy Taxi, the 240p Test Suite) 60,
+Atomiswave's KOV7 30 as before, Azahar's Super Mario 3D Land 60, Dolphin's
+ND Demo 46, the Mina the Hollower port 60; no GPU faults. The malisx2
+session checked Luigi's Mansion 2, Castlevania, ARMSX2 and Metroid Prime.
+
+**The DuckStation core on RetroArch's Vulkan driver crashes on malisx2**
+(SIGSEGV before its first frame), with 1.4's malisx2 and with 4c91f3c alike;
+on libmali it runs (Hover Racing, 50 fps). RetroArch's driver is `gl`, so it
+takes a user who set it to Vulkan and picked MALISX2 for PS1. With the
+malisx2 session (2026-10-31).
+
 ## gl4es ports rendered black into their own textures: gl4es-fix (after 1.0)
 
 **The problem (1.0 and earlier).** In Don't Starve the HUD showed, but the

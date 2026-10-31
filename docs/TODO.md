@@ -50,10 +50,11 @@ it. Confirmed on the device.
 
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
-- malisx2 4c91f3c in the recipe: upstream 0.3.1 merged, Mesa e07f62e (branch
-  rg52mini-20261031 of our Mesa fork), the pipeline cache's fragment-reads mask
-  fixed (ebebd37). The malisx2 session pushed it on the owner's word; PPSSPP
-  and flycast are to be checked on it before it goes in.
+- Done the same day, in master for 1.5: malisx2 4c91f3c in the recipe (upstream
+  0.3.1 merged, Mesa e07f62e, the pipeline cache's fragment-reads mask fixed in
+  ebebd37), with a profile trained on it; checked on the console
+  (KNOWN-ISSUES, "malisx2 0.3.1"). Left: the DuckStation core on RetroArch's
+  Vulkan driver crashes on malisx2, 1.4's too; the malisx2 session has it.
 - Done the same day, in master for 1.5: XRoar showed only a field of `@` as a
   Dragon 32 and as a CoCo 2 (the launchers' `-ram 2048`), and the Dragon 32
   system's `dragon.sh` was never installed (KNOWN-ISSUES, XRoar and openMSX).
