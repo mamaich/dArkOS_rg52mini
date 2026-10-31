@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.3.1 (build 10272026, 2026-10-28); from 1.1 on, a card
+The current release is 1.4 (build 10312026, 2026-10-31); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -93,8 +93,7 @@ New in 1.3.1 (build 10272026, 2026-10-28):
 | malisx2 | built from our fork; less CPU work a draw, AFBC textures and depth, the tiler's hierarchy levels; God of War about 8% faster than in 1.3 |
 | Build | SDL2 and ONScripter built with optimisation (they were -O0) |
 
-In master for 1.4, not released yet (VERSION says 1.4; the image is built
-only when the owner says so):
+New in 1.4 (build 10312026, 2026-10-31):
 
 | | |
 |---|---|
@@ -103,13 +102,20 @@ only when the owner says so):
 | Dreamcast | flycast 2.7 with master's fixes; Atomiswave keeps its NVRAM |
 | PS1 | standalone DuckStation is no longer in the image: its author did not agree to the way it was passed on; PS1 games run in RetroArch, as ES starts them by default; an update to 1.4 takes it off and keeps memory cards and savestates ([KNOWN-ISSUES](KNOWN-ISSUES.md#standalone-duckstation-not-in-the-image-since-14)) |
 | PS2 | malisx2 by default, 10-12% faster than libmali; malisx2 d398141 (da1e3a2 in the image builds the same code for ARMSX2): one GPU job a draw (IDVS), FP16 fragment arithmetic for ARMSX2 (God of War 5-8% faster); EE Cycle Rate down to 27% in ARMSX2's menu, 50% by default |
-| Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it), openMSX 19.1 and XRoar 1.12.1 start again |
+| Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it) and openMSX 19.1 start again; XRoar 1.12.1 starts too, but its screen stays on the power-on pattern ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
 | Doom | LZDoom and GZDoom: no turning by itself, the RG52 pad's layout |
 | HDMI | follows the cable on hotplug, debounced, not only at boot; sound over HDMI (the RK628's sound card had no pins, kernel eba0d6e); a game started from Ports counts as a game; RetroArch's picture is no longer on its side on a TV (patch 0025); doster00's pull requests #3-#5 |
-| Scraper | ScreenScraper works again: with no developer login of the user's or the build's, ES uses the one RGSX hands out (es-0003; [KNOWN-ISSUES](KNOWN-ISSUES.md#scraper-screenscrapers-developer-login-since-14)) |
+| Scraper | ScreenScraper works again: with no developer login of the user's or the build's, ES fetches one from a friendly project's server (es-0003; [KNOWN-ISSUES](KNOWN-ISSUES.md#scraper-screenscrapers-developer-login-since-14)) |
 | USB | ROMs from a PC over MTP: the console shows up in Windows as a media device "RG52 Mini" with a ROMs folder, about 21 MB/s; Options > Disable USB File Transfer turns it off ([KNOWN-ISSUES](KNOWN-ISSUES.md#usb-roms-from-a-pc-over-mtp-since-14)) |
 | Scheduling | ES and ark may use realtime priority (LimitRTPRIO=99), which libmali asks for the thread that submits GPU jobs of a high-priority queue |
 | RG43 Pro | `make rg43v` (doster00's pull request) |
+
+In master for 1.5, not released yet (VERSION says 1.5; the image is built
+only when the owner says so):
+
+| | |
+|---|---|
+| Build | the plutovg and plutosvg sources build_pcsx2sa.sh leaves in /home/ark when it builds ARMSX2 afresh are removed; 1.4's image has them (3.3 MB), and the update to 1.5 takes them off |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

@@ -347,6 +347,15 @@ no desktop GL (only Mali's GLES), so they ended at once with "libGL.so.1:
 cannot open shared object file", in 1.3.1 and before. Their launchers
 (`coco.sh`, `openmsx`) now put `/usr/lib/gl4es` first in the library path, so
 gl4es stands in; XRoar shows the Dragon 32's BASIC prompt, openMSX C-BIOS.
+
+On the 1.4 image (2026-10-31) only half of that holds. openMSX runs a
+cartridge from C-BIOS. XRoar starts and loads its ROMs (`d32.rom`, and
+DragonDOS's `ddos10.rom` for a Dragon 32), but as a Dragon 32 and as a CoCo 2
+its screen stays on the power-on field of `@`: with SDL's sound and with
+`-ao null`, after 5 s and after 25 s. It never gets to BASIC; why is open
+(TODO.md). The Dragon 32 system in ES has an older fault besides: its command
+starts `/usr/local/bin/dragon.sh`, which would be `xroar/dragon.sh`, but
+build_xroar.sh installs only `coco.sh`. Its games have never started.
 Nothing else in /opt or /usr/local misses a library, apart from Kodi's
 visualisation add-ons, which want desktop GL and are not for this build.
 
@@ -2099,17 +2108,18 @@ Vérifier vos identifiants développeur".
 2. The build's, if ScreenScraper takes it. It is asked once (`ssinfraInfos`),
    since a login in an image can go out of date. With no answer at all (no
    network) it is kept.
-3. The one RetroGameSets' RGSX hands out
-   (`retrogamesets.fr/rgsx/manager/rgsx_screenscraper_credentials_api.php`, a
-   friendly project; the owner, 2026-10-31). It is fetched once per run while
-   the server answers.
+3. One fetched from a friendly project's server, whose address is in the
+   patch. Its author asked that the source not be advertised, so release
+   notes and these docs do not name it (the owner, 2026-10-31). It is fetched
+   once per run while the server answers.
 
 A check or fetch with no answer (curl, 5 s) is tried again a minute later, and
 the login is kept in memory only. A user's ScreenScraper account (SCRAPER >
 USERNAME, PASSWORD) is sent as before.
 
 Checked on the console on 2026-10-31 with an ES built without a login: a single
-game scraped through RGSX's login, with cover, rating, developer and description.
+game scraped through the fetched login, with cover, rating, developer and
+description. The owner scraped on the 1.4 image the same day: it works.
 The console's CA store verifies both servers. ScreenScraper's certificate
 chains to Let's Encrypt YE2, which Python's certifi on the PC did not take.
 

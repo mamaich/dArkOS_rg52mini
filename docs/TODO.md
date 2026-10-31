@@ -48,6 +48,20 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
+## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
+
+- malisx2 4c91f3c in the recipe: upstream 0.3.1 merged, Mesa e07f62e (branch
+  rg52mini-20261031 of our Mesa fork), the pipeline cache's fragment-reads mask
+  fixed (ebebd37). The malisx2 session pushed it on the owner's word; PPSSPP
+  and flycast are to be checked on it before it goes in.
+- XRoar: as a Dragon 32 and as a CoCo 2 it loads its ROMs, but its screen stays
+  on the power-on field of `@` (KNOWN-ISSUES, XRoar and openMSX). Find why.
+- Dragon 32 in ES: install `xroar/dragon.sh` (build_xroar.sh copies only
+  coco.sh), with the gl4es library path coco.sh has.
+- Upstream, seen 2026-10-31 and not taken into 1.4: ARMSX2 2.9.1, OpenBOR
+  v7533, openMSX 22.0, and new commits in Dolphin, SDL2, DSperate, gl4es,
+  GammaOS's azahar-nano and christianhaitian's core builds. The owner decides.
+
 ## Upstream updates for 1.4 (2026-10-28)
 
 `tools/upstream/check.py` on 2026-10-27 found newer releases of ten components

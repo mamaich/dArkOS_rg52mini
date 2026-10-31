@@ -70,6 +70,7 @@ EmulationStation-fcamod, RetroArch и около тридцати отдельн
 
 | Выпуск | Дата | Коротко |
 |---|---|---|
+| [1.4](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.4) (сборка 10312026) | 31.10.2026 | Dolphin 2609a; Azahar 2126.2 с исправлениями из его master, полосой прогресса при загрузке кэша шейдеров и примерно на 350 МБ меньшим расходом памяти; flycast 2.7; PS2 по умолчанию на malisx2, и сам malisx2 стал быстрее; в ARMSX2 EE Cycle Rate можно опустить до 27 %; снова запускаются ScummVM и openMSX; управление в LZDoom и GZDoom под геймпад консоли; HDMI подхватывается при подключении кабеля, и по нему идёт звук (исправления doster00); ROM-ы с ПК по USB (MTP); снова работает скрапер ScreenScraper; standalone DuckStation убран; обновление по сети с 1.3.1, 1.3, 1.2 и 1.1 |
 | [1.3.1](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.3.1) (сборка 10272026) | 28.10.2026 | DSperate снова запускает игры на общей карте с GammaOS, экраны по умолчанию рядом; Dolphin работает и на malisx2; звук ARMSX2 в тяжёлых играх без прерываний; в GTA San Andreas камера больше не крутится сама; QUIT EMULATIONSTATION открывает меню BaRT вместо чёрного экрана; malisx2 из нашего форка, PS2 и 3DS на нём быстрее; SDL2 и ONScripter собраны с оптимизацией; обновление по сети с 1.3, 1.2 и 1.1 |
 | [1.3](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.3) (сборка 10252026) | 26.10.2026 | Nintendo 3DS на Azahar с изменениями azahar-nano от GammaOS: Super Mario 3D Land на полной скорости, Castlevania: Mirror of Fate около 21 кадра вместо 9, читы, Realtime Audio; PS2 на ARMSX2 вместо форка PCSX2; выбор драйвера Vulkan для каждой системы (Arm или malisx2); драйвер Mali g29p1-5; свой gl4es для портов; глубокий сон (около 4,5 дня от полного заряда) и выключение после двух часов сна на батарее; Home больше не переключает Bluetooth; обновление по сети и с 1.2, и сразу с 1.1 |
 | [1.2](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.2) (сборка 10182026) | 18.10.2026 | Первое обновление по сети, с 1.1; игры в zip снова запускаются в RetroArch; Dreamcast, Naomi и Atomiswave по умолчанию в отдельном flycast (59–60 кадров); ядра N64, flycast, CD-i, PuzzleScript и GameTank собраны под Cortex-A53 этой консоли; работают retrorun, PC-98, Apple II и ECWolf; на общей карте с GammaOS видны игры в папках ES-DE; эмуляторы с приоритетом -19; у каждой карты свои ключи SSH; apt не подменяет библиотеки Mali |
@@ -77,17 +78,7 @@ EmulationStation-fcamod, RetroArch и около тридцати отдельн
 | [1.0](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v10082026) (сборка 10082026) | 09.10.2026 | Vulkan-программы (RetroArch на Vulkan, порты вроде Mina the Hollower) больше не рисуют боком — свой слой поворота; RetroArch пересобран со всеми патчами, исправлен драйвер «oga»; свежий DSperate; работа на общей карте с GammaOS Next |
 | [Предыдущие релизы](https://github.com/mamaich/dArkOS_rg52mini/releases) (v09162026 — v10072026) | 19.09 — 08.10.2026 | Свой загрузчик и ядро: заставка, Bluetooth со звуком и геймпадами, USB host, лог загрузки через `pstore`; исправлены чёрный экран и перезагрузка по кнопке питания на ревизии A; возвращён потерянный `-O3` (flycast, fake-08); Kodi 21.3; новый эмулятор DS — DSperate, заново собраны Yabasanshiro, freej2me-plus, GameTank, Hypseus Singe; порты PortMaster снова запускаются, порты от других прошивок — без правок; режим «overclock» и разгон памяти до 928 МГц по желанию; пониженное разрешение для тяжёлых игр; звук после PSP и PS2, zram |
 
-**Готовится 1.4**, образа пока нет. Уже в master: Dolphin 2609a; Azahar 2126.2
-с исправлениями из его master, полосой прогресса при загрузке кэша шейдеров и
-примерно на 350 МБ меньшим расходом памяти; flycast 2.7; PS2 по умолчанию на
-malisx2, и сам malisx2 стал быстрее; в ARMSX2 EE Cycle Rate можно опустить до 27 %;
-снова запускаются ScummVM, XRoar и openMSX; управление в LZDoom и GZDoom под
-геймпад консоли; HDMI подхватывается при подключении кабеля, а не только при
-загрузке, и по нему идёт звук; ROM-ы можно копировать с ПК по USB, как на
-телефон с Android (MTP); снова работает скрапер ScreenScraper; Luigi's Mansion 2 на malisx2 больше не зависает
-на загрузке шейдеров; сборка для RG43 Pro. Standalone DuckStation из образа убран, игры PS1
-идут в RetroArch, как и раньше по умолчанию. Подробности — в
-[docs/README.md](docs/README.md#state-of-the-port).
+**Готовится 1.5**, образа пока нет. Что уже в master — в [docs/README.md](docs/README.md#state-of-the-port).
 
 ## Подробности
 
