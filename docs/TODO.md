@@ -131,7 +131,12 @@ Left, and why:
 * **Azahar 2127.0** (alpha: new save state fields, every shader cache
   rebuilt) and azahar-nano's e62a0042457 (the right-eye disabler by
   framebuffer), which as it is would switch off our stereo_skip (patches
-  013/014): it needs adapting and a check on Castlevania.
+  013/014): it needs adapting and a check on Castlevania. The GammaOS session
+  measured it on Mali (2026-10-31, Android, its Azahar core): Castlevania
+  7.0-7.5 fps against 17-18 with the timing rule, eye_lists=1 no help; the
+  timing rule now and then drops the left eye's lighting pass (2-3 cyan
+  frames in 12). GammaOS v1.16 keeps the timing rule for that game by title
+  ID (eye_rule=timing). Not to be taken for Castlevania as it is.
 * **ARMSX2 after 2.9** (we stay at a7ad453, above): the VU program cache rewritten as one pack per game
   in RAM (a day old, up to 128 MB here) and a COP2 clamp change in the JIT.
   master e3c7d21 tried once with 2.9's profile (2026-10-28): Jak's intro 30.2
