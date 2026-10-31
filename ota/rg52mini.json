@@ -71,6 +71,54 @@
    "size": 167915520,
    "sha256": "65216bcf278c535eb1c65df8125abdd51964beb73ed2e3224dfb52aad8079df5",
    "url": "https://github.com/mamaich/dArkOS_rg52mini/releases/download/v1.3.1/dArkOS_rg52mini_ota_1.1_20261014145009-to-1.3.1_20261027181937.tar"
+  },
+  {
+   "device": "rg52mini",
+   "version": "1.4",
+   "build_id": "20261031054416",
+   "from_version": "1.3.1",
+   "from_build_id": "20261027181937",
+   "datetime": 1793428617,
+   "filename": "dArkOS_rg52mini_ota_1.3.1_20261027181937-to-1.4_20261031054416.tar",
+   "size": 193802240,
+   "sha256": "c59b1fde6fb955c1067f4031b400a3513d64acd0be795b38c78a13b4c9847153",
+   "url": "https://github.com/mamaich/dArkOS_rg52mini/releases/download/v1.4/dArkOS_rg52mini_ota_1.3.1_20261027181937-to-1.4_20261031054416.tar"
+  },
+  {
+   "device": "rg52mini",
+   "version": "1.4",
+   "build_id": "20261031054416",
+   "from_version": "1.3",
+   "from_build_id": "20261025224049",
+   "datetime": 1793428878,
+   "filename": "dArkOS_rg52mini_ota_1.3_20261025224049-to-1.4_20261031054416.tar",
+   "size": 205864960,
+   "sha256": "0822048283d4bf5ad5a1302d7d9c91b9caaa9ddd62802e8aa1bf20cebcc20566",
+   "url": "https://github.com/mamaich/dArkOS_rg52mini/releases/download/v1.4/dArkOS_rg52mini_ota_1.3_20261025224049-to-1.4_20261031054416.tar"
+  },
+  {
+   "device": "rg52mini",
+   "version": "1.4",
+   "build_id": "20261031054416",
+   "from_version": "1.2",
+   "from_build_id": "20261018052939",
+   "datetime": 1793429139,
+   "filename": "dArkOS_rg52mini_ota_1.2_20261018052939-to-1.4_20261031054416.tar",
+   "size": 257781760,
+   "sha256": "d892fc7c15425f4a4328f727d78a0d661bb3e931ad04cb7a232f76ec48e2e846",
+   "url": "https://github.com/mamaich/dArkOS_rg52mini/releases/download/v1.4/dArkOS_rg52mini_ota_1.2_20261018052939-to-1.4_20261031054416.tar"
+  },
+  {
+   "device": "rg52mini",
+   "version": "1.4",
+   "build_id": "20261031054416",
+   "from_version": "1.1",
+   "from_build_id": "20261014145009",
+   "datetime": 1793429405,
+   "filename": "dArkOS_rg52mini_ota_1.1_20261014145009-to-1.4_20261031054416.tar",
+   "size": 267950080,
+   "sha256": "966be1d781ab19aad1b8201af40a21d7bc394afb19ab3ca7b23b0d1b56b1a03b",
+   "url": "https://github.com/mamaich/dArkOS_rg52mini/releases/download/v1.4/dArkOS_rg52mini_ota_1.1_20261014145009-to-1.4_20261031054416.tar"
   }
  ]
 }
