@@ -2165,6 +2165,62 @@ description. The owner scraped on the 1.4 image the same day: it works.
 The console's CA store verifies both servers. ScreenScraper's certificate
 chains to Let's Encrypt YE2, which Python's certifi on the PC did not take.
 
+## RetroArch from master: retroarch-next, a second choice (since 1.5)
+
+The owner, 2026-10-31: besides the release (v1.22.2, the default), RetroArch
+built from libretro's master, 64-bit only, for a user to pick by hand where a
+fix of master's matters to a game. It is offered in EMULATOR SETTINGS as
+`retroarch-next`, for every system ES starts with RetroArch's own command
+line (61 with the alias systems: arcade, the 8- and 16-bit consoles, GB, GBC,
+GBA, PS1, MSX ...). Systems started through a script of their own (n64.sh,
+dreamcast.sh, saturn.sh, naomi.sh, atomiswave.sh, ppsspp.sh, amiga.sh ...)
+are left out: those scripts tell emulators apart by name.
+
+How it is made:
+- `rk3562_core_builds/scripts/retroarch-next.sh` builds a pinned master commit
+  (fab8d5f, 2026-10-31) with the 64-bit configure of `retroarch.sh`, and
+  `patches/retroarch-next/`, the release's patches ported to master, numbered
+  in the order they apply. `build_retroarch.sh` puts it at
+  `/opt/retroarch-next/bin/retroarch` on the RG52 Mini, cached by the commit
+  and a hash of the recipe and patches, and
+  `scripts/rk3562/es-retroarch-next.py` adds the choice to es_systems.cfg.
+- The binary is named `retroarch`, so whatever looks for a running RetroArch
+  (hotkeys, sleep, the Vulkan driver choice) finds it.
+- `/usr/local/bin/retroarch-next` runs it with `~/.config/retroarch-next/
+  retroarch.cfg`, copied with the core options from the release's on its
+  first start. Every path in that cfg is absolute to `~/.config/retroarch`,
+  so the cores, BIOS, saves, states, playlists, remaps and overrides are the
+  release's; a cores link there serves ES's `-L` path.
+
+What porting to master took. Master rewrote the `drm_go2` context (no libgo2:
+its own dumb buffers, the RGA blit straight into them, for the Odroid Go
+Advance) and moved its menu settings into tables, so ten of the release's
+patches did not apply:
+- the panel: the frame turned by ROT_90, not the OGA's ROT_270; scanout in
+  XRGB8888 read by the RGA in the GL surface's own format, so red and blue
+  cannot swap (patch 0020's subject on v1.22.2) and no RGB565 banding; the
+  connector from `/var/run/drmConn`; a landscape output (HDMI) driven
+  without a turn, where master refused it (0025's subject); the first mode
+  where none is preferred (0010);
+- Reboot and Shutdown in the main menu as on Lakka, no Reset to Default
+  Config (0003); Ozone, its widgets and Material UI scaled for the panel
+  (0005, 0006, 0009); the oga driver turned for this panel (0016);
+- `/var/run/drmMode` (0011): as it is, it applies with fuzz into
+  `drm_get_resources()`, before the connector exists; ported to the end of
+  `drm_get_encoder()`, where v1.22.2 has it;
+- network commands bound to 127.0.0.1 by default through master's own
+  `network_cmd_bind_address` (0023), and no state serialized before a load
+  (0024). Patches 0021 and 0022 are in master already.
+
+Checked on the console (2026-10-31), as ES starts the games, against the
+release: GBA, SNES, Mega Drive, FBNeo 60 fps, PS1 (pcsx_rearmed and the
+DuckStation core) 50, N64 (mupen64plus_next) 50, Azahar's Super Mario 3D
+Land on Vulkan 60; pictures the right way up and colours the same as the
+release's; RGUI's Quick Menu and main menu (ArkOS, Reboot, Shutdown).
+Not checked yet: the picture on HDMI, and the oga video driver (not the
+default), whose blits master makes from BGRA into RGB565 and which may swap
+red and blue on this RGA.
+
 ## USB: ROMs from a PC over MTP (since 1.4)
 
 On a cable to a PC the console shows up as a media device, as an Android phone

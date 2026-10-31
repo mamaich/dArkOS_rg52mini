@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# dArkOS: RetroArch built from libretro's master (/opt/retroarch-next), the second choice
+# beside the release in ES's EMULATOR SETTINGS ("retroarch-next"). Its binary is named
+# retroarch, so everything that looks for a running RetroArch finds it. Its retroarch.cfg and
+# core options are its own, copied from the release's on its first start; the cores, BIOS,
+# saves, states and the rest are the release's, by the absolute paths in that cfg (and the
+# cores link that ES's -L path goes through).
+
+R=/home/ark/.config/retroarch
+N=/home/ark/.config/retroarch-next
+
+sudo chmod 666 /dev/tty0
+printf "\033c" > /dev/tty0
+
+if [ ! -f "$N/retroarch.cfg" ]; then
+  mkdir -p "$N"
+  cp "$R/retroarch.cfg" "$N/retroarch.cfg"
+  [ -f "$R/retroarch-core-options.cfg" ] && cp "$R/retroarch-core-options.cfg" "$N/"
+fi
+[ -e "$N/cores" ] || ln -s "$R/cores" "$N/cores"
+
+/opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" "$@"

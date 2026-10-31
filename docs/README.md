@@ -122,6 +122,7 @@ only when the owner says so):
 | GBA | armGBA, a core written for ARM, as a choice in EMULATOR SETTINGS beside mGBA, which stays the default |
 | SDL2 | 2.32.10 with release-2.32.x's 21ac66c8b: SDL_AtomicSet with a full barrier on ARM |
 | Ports | gl4es bc4314d: wide lines drawn as quads where the driver has only 1 px |
+| RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f, 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |
 | XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
 
 Built but never launched: freej2me-plus. It had been silently missing from

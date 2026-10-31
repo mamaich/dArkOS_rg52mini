@@ -84,6 +84,12 @@ fi
 # Systems for the ROM folders GammaOS/ES-DE name differently (tg16, megacd,
 # fbneo ...), each grouped with the system dArkOS uses for that machine.
 sudo python3 scripts/rk3562/es-aliases.py Arkbuild/etc/emulationstation/es_systems.cfg
+# RetroArch from master (build_retroarch.sh) as a second choice for the systems RetroArch
+# starts directly; after the aliases, so that they have it too. The RG52 Mini only: its
+# patches are for this panel.
+if [ "$UNIT" == "rg52mini" ]; then
+  sudo python3 scripts/rk3562/es-retroarch-next.py Arkbuild/etc/emulationstation/es_systems.cfg
+fi
 
 # Use existing config or fall back to rk3566/353m configs
 if [ -f "Emulationstation/es_input.cfg.${UNIT}" ]; then

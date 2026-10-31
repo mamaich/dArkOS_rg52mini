@@ -115,6 +115,32 @@ call_chroot "chown -R ark:ark /opt/"
 sudo chmod 777 Arkbuild/opt/cmds/*
 sudo chmod 777 Arkbuild/usr/local/bin/retroarch
 sudo chmod 777 Arkbuild/opt/retroarch/bin/*
+# RG52 Mini: RetroArch from libretro's master as well, 64-bit only, a second choice in ES's
+# EMULATOR SETTINGS ("retroarch-next"; the owner, 2026-10-31); the release stays the default.
+# Its own recipe and patches (ported to master, rk3562_core_builds/patches/retroarch-next),
+# cached by the commit and a hash of both. See docs/KNOWN-ISSUES.md, "RetroArch from master".
+if [ "$CHIPSET" == "rk3562" ] && [ "$UNIT" == "rg52mini" ]; then
+  RANEXT_KEY="$(grep -oP '(?<=^commit=")[0-9a-f]+' rk3562_core_builds/scripts/retroarch-next.sh)_$(cat rk3562_core_builds/scripts/retroarch-next.sh rk3562_core_builds/patches/retroarch-next/*.patch | sha1sum | cut -c1-12)"
+  RANEXT_CACHE=Arkbuild_package_cache/${CHIPSET}/retroarch-next_${UNIT}
+  if [ -f "${RANEXT_CACHE}.tar.gz" ] && [ "$(cat ${RANEXT_CACHE}.commit 2>/dev/null)" == "${RANEXT_KEY}" ]; then
+    sudo tar -xvzpf ${RANEXT_CACHE}.tar.gz
+  else
+    call_chroot "cd /home/ark/${CHIPSET}_core_builds && eatmydata ./builds-alt.sh retroarch-next"
+    verify_action
+    sudo mkdir -p Arkbuild/opt/retroarch-next/bin
+    sudo cp -a Arkbuild/home/ark/${CHIPSET}_core_builds/retroarch64/retroarch-next Arkbuild/opt/retroarch-next/bin/retroarch
+    sudo rm -f ${RANEXT_CACHE}.tar.gz ${RANEXT_CACHE}.commit
+    sudo tar -czpf ${RANEXT_CACHE}.tar.gz Arkbuild/opt/retroarch-next/bin/retroarch
+    echo "${RANEXT_KEY}" | sudo tee ${RANEXT_CACHE}.commit > /dev/null
+  fi
+  sudo rm -rf Arkbuild/home/ark/${CHIPSET}_core_builds/retroarch-next
+  # Its binary is named retroarch, so whatever looks for a running RetroArch finds it;
+  # the launcher gives it a config of its own (~/.config/retroarch-next)
+  sudo cp retroarch/scripts/retroarch-next Arkbuild/usr/local/bin/
+  sudo chmod 777 Arkbuild/usr/local/bin/retroarch-next
+  sudo chmod 777 Arkbuild/opt/retroarch-next/bin/retroarch
+  call_chroot "chown -R ark:ark /opt/retroarch-next"
+fi
 # Add cores requested from retroarch_cores
 if [ "$CHIPSET" == "rk3326" ]; then
   CORE_REPO="master"
