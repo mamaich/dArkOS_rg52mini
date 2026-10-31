@@ -29,8 +29,11 @@
 # fork, below; cd6dcb3, 4c91f3c: upstream's 0.3.1 merged, which advertises
 # dynamic rendering, timeline semaphores and events, and answers occlusion
 # queries for real, with Mesa e07f62e; ebebd37: the pipeline cache keeps the
-# fragment shader's reads mask, which the merge had lost), and
-# the work on the driver itself has its own notes and session
+# fragment shader's reads mask, which the merge had lost; 6405617: an image
+# with a zero extent laid out as 1x1, and Mesa 37083d3: the display WSI waits
+# for a page flip before it frees a swapchain, so the DuckStation core on
+# RetroArch's Vulkan driver no longer crashes), and the work on the driver
+# itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
 # malisx2 is a Vulkan driver for Arm's Mali GPUs on Arm's own kernel driver
@@ -55,11 +58,12 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="4c91f3c80fb16f6e204f53d8041ce477664e7d24"
+MALISX2_COMMIT="428b5b2e00fba9e4c0f315a1a22ebae2bd09181d"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained on 4c91f3c on an
-# RG52 Mini (2026-10-31): Azahar's Super Mario 3D Land and Luigi's Mansion
+# RG52 Mini (2026-10-31; 428b5b2 changed only cold paths after it): Azahar's
+# Super Mario 3D Land and Luigi's Mansion
 # from an empty pipeline cache (825 and 288 pipelines); ARMSX2 started as ES
 # does, 90 s each of God of War from a savestate on the ship, Jak and Daxter's
 # intro and Jak and Daxter in game from the owner's save. Castlevania is left
