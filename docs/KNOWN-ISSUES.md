@@ -259,7 +259,9 @@ Played). es-0005 adds the choice **LAST PLAYED SYSTEM**:
 
 Checked on the console: with Game Boy and Dangan saved, ES opened on Game Boy
 with Dangan under the cursor; starting Hermano saved it at once; after ES
-restarted, Game Boy with Hermano under the cursor.
+restarted, Game Boy with Hermano under the cursor. The default: with no
+`StartupSystem` in `es_settings.cfg` (a user who had NONE) and Game Boy saved,
+the new ES opened on Game Boy; the one before it, on the first system.
 
 ## Headphones: the speaker played too — fixed in 1.5
 
