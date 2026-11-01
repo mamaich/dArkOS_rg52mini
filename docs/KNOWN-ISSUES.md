@@ -237,6 +237,30 @@ A side effect seen during the test, not caused by the fix: on the first port
 run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
 `libMali.so`. They already point there in the image, so nothing changes.
 
+## USB pads in Xbox 360 mode did nothing — fixed in 1.5
+
+Reported by the owner, 2026-11-01: of two no-name USB pads, both "Xbox 360" on
+a PC, one worked on the console and the other's buttons did nothing.
+
+The silent one is a ShanWan pad. It comes up as a PS3 HID pad (2563:0973),
+drops off within a second and comes back as 045e:028e "Controller(XBOX 360 For
+Windows)", the mode it takes when the host does not answer it as a PS3 does.
+In that mode its interface is the Xbox 360 vendor class (ff/5d/01), which only
+`xpad` drives, and `rg52mini_defconfig` had no `xpad`: no driver bound, no
+input device. A pad that stays a HID gamepad works through hid-generic, which
+is why the other one did.
+
+**Fix**, kernel 1c9d338: `JOYSTICK_XPAD` on, with force feedback and the LED
+(the pad's player number), and from upstream xpad the vendor read (bRequest
+0x01, wValue 0x100) that some third-party 360-style pads wait for before they
+send input, as Windows' driver does it; a pad that does not answer gets a
+warning only. Checked on the console: the pad is "Microsoft X-Box 360 pad",
+and its d-pad, sticks, triggers and buttons come through as input events.
+
+A pad plugged in at boot may enumerate before the built-in controls and take
+`js0` (it did here: the built-in pad was `js1`); one plugged in later comes
+after them.
+
 ## ES: start on the system last played — since 1.5
 
 Asked for by the owner, 2026-11-01: after a reboot ES should open on the system
