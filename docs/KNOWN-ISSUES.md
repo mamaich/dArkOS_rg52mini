@@ -2485,6 +2485,14 @@ this panel and tears. On HDMI, oga turns the picture 90 degrees, in v1.22.2
 as here: it is made for the panel, use gl there. Master's own oga turns
 (ROT_270) show the panel upside down, as patch 0016 says.
 
+**An update keeps the user's es_systems.cfg** (OTA: a file under `etc/` that
+differs from both builds stays, the new one beside it as `.ota-new`), and the
+entries come from `es-retroarch-next.py` at the image's build. So
+`ota/hooks/1.5-es-retroarch-next.sh` adds them to such a copy, the same way and
+only where missing; an untouched file is the image's already. Seen on the
+owner's console, 2026-11-01: its es_systems.cfg was 1.4's, and Mega Drive
+offered no retroarch-next; the hook added it for 61 systems.
+
 ## USB: ROMs from a PC over MTP (since 1.4)
 
 On a cable to a PC the console shows up as a media device, as an Android phone
