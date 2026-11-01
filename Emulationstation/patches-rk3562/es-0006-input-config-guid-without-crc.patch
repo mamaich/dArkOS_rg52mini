@@ -1,0 +1,51 @@
+dArkOS: es_input.cfg's configs match a pad's GUID without SDL's name CRC.
+SDL 2.26 and later put a CRC of the device's name into bytes 2-3 of a joystick's
+GUID, and give known pads names of their own ("Xbox 360 Controller" for the
+kernel's "Microsoft X-Box 360 pad"). The configs in es_input.cfg were made with
+older SDL, 0000 in those bytes and the kernel's names: such a pad matched
+neither its GUID nor its name, ES took it for unconfigured and ignored its
+buttons. A config is now looked up by the GUID, then by the GUID with the CRC
+zeroed (bus, vendor, product and version the same), as SDL matches its own
+mappings, then by the name.
+
+--- a/es-core/src/InputManager.cpp
++++ b/es-core/src/InputManager.cpp
+@@ -283,6 +283,18 @@
+ 	return false;
+ }
+ 
++// dArkOS: a GUID without the CRC of the device's name, which SDL 2.26 and later put into
++// bytes 2-3 (hex 4-7). The configs in es_input.cfg were made with older SDL, which had 0000
++// there, and SDL now also gives known pads names of its own ("Xbox 360 Controller" for the
++// kernel's "Microsoft X-Box 360 pad"): such a pad matched neither its GUID nor its name, and
++// ES ignored it as unconfigured. SDL matches its own mappings the same way, CRC zeroed.
++static std::string guidWithoutCrc(const std::string& guid)
++{
++	if (guid.size() != 32)
++		return guid;
++	return guid.substr(0, 4) + "0000" + guid.substr(8);
++}
++
+ bool InputManager::loadInputConfig(InputConfig* config)
+ {
+ 	std::string path = getConfigPath();
+@@ -304,6 +316,19 @@
+ 
+ 	pugi::xml_node configNode = root.find_child_by_attribute("inputConfig", "deviceGUID", config->getDeviceGUIDString().c_str());
+ 	if(!configNode)
++	{
++		// dArkOS: the same bus, vendor, product and version, CRC aside (guidWithoutCrc)
++		const std::string guid = guidWithoutCrc(config->getDeviceGUIDString());
++		for (pugi::xml_node node = root.child("inputConfig"); node; node = node.next_sibling("inputConfig"))
++		{
++			if (guidWithoutCrc(node.attribute("deviceGUID").as_string()) == guid)
++			{
++				configNode = node;
++				break;
++			}
++		}
++	}
++	if(!configNode)
+ 		configNode = root.find_child_by_attribute("inputConfig", "deviceName", config->getDeviceName().c_str());
+ 	if(!configNode)
+ 		return false;

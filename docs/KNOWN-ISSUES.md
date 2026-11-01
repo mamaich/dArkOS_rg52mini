@@ -261,6 +261,54 @@ A pad plugged in at boot may enumerate before the built-in controls and take
 `js0` (it did here: the built-in pad was `js1`); one plugged in later comes
 after them.
 
+## USB pads: ES ignored them, RetroArch put them after the console — fixed in 1.5
+
+Found with the owner's two ShanWan pads, 2026-11-01 (the kernel side, xpad, is
+the section above).
+
+**ES did not react to a pad it has a config for.** `es_input.cfg` holds 128
+pads' configs, made with older SDL. SDL 2.26 and later put a CRC of the
+device's name into bytes 2-3 of the GUID and give known pads names of their own:
+SDL 2.32 calls the Xbox 360 pad "Xbox 360 Controller", GUID
+`030081b85e0400008e02000010010000`, where the file has "Microsoft X-Box 360
+pad", `030000005e0400008e02000010010000`. Neither matched, ES took the pad for
+unconfigured and ignored it. es-0006 looks a config up by the GUID, then by the
+GUID with the CRC zeroed (as SDL matches its own mappings), then by the name.
+
+**RetroArch's player order followed the device numbers.** RetroArch numbers the
+pads by their devnodes (`udev_joypad.c` sorts them with `strcmp`), and Linux
+gives a new input device the lowest free number. A pad plugged in at boot could
+come before the console's controls (`event4` and `event5`), one plugged in later
+after them; RetroArch had profiles for neither of the owner's pads ("not
+configured"), and it takes hotkeys from player 1's pad only, in the numbering
+`retroarch.cfg` has for the console's controls (Home 10, Start 9): with a USB pad
+as player 1, its "Home" was the right stick's click and the console's Home did
+nothing.
+
+**Fix**, as ArkOS does it on the RK3566 consoles (`retroarch.cfg.ext` makes an
+external pad player 1, `controller_setup.sh` writes a RetroArch profile from
+ES's mapping), but worked out at each start, since the order is not fixed here:
+`ra-extpads.py`, run by the `retroarch`, `retroarch32` and `retroarch-next`
+wrappers, prints a config for `--appendconfig` when a USB pad with an ES
+mapping is in:
+- `input_playerN_joypad_index`: the USB pads in RetroArch's order, then the
+  console's controls, then any pad without a mapping;
+- player 1's binds empty, so each pad plays by its profile;
+- the hotkeys in player 1's pad's numbering: its guide button (BTN_MODE, its
+  number worked out as `udev_add_pad()` does) as Home when it has one, else ES's
+  hotkey button; Start exits, X opens the menu, R1 saves, L1 loads, B resets,
+  R2 fast-forwards, up and down set the brightness, as on the console.
+A pad without a profile gets one from ES's mapping (picked as ES picks it: the
+GUID with the CRC computed, then without it, then the name), marked so that it
+is rewritten when ES's mapping changes; a profile it did not write is left
+alone. With no USB pad RetroArch starts as before. `config_save_on_exit` is off,
+so none of it is written back to `retroarch.cfg`.
+
+Checked on the console: with the Xbox 360 pad, the other ShanWan (0079:181c, a
+HID pad) and the console's controls, RetroArch appended the config and found
+both profiles; the owner played Zombies Ate My Neighbors (Mega Drive) with the
+two USB pads as players 1 and 2.
+
 ## ES: start on the system last played — since 1.5
 
 Asked for by the owner, 2026-11-01: after a reboot ES should open on the system

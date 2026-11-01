@@ -19,4 +19,7 @@ if [ ! -f "$N/retroarch.cfg" ]; then
 fi
 [ -e "$N/cores" ] || ln -s "$R/cores" "$N/cores"
 
-/opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" "$@"
+# USB pads first, the console's own controls last (ra-extpads.py, as for the release)
+ext=""
+[ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "$N")
+/opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" ${ext:+"--appendconfig=$ext"} "$@"

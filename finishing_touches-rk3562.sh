@@ -84,6 +84,10 @@ sudo install -m 644 scripts/rk3562/99-hdmi-hotplug.rules Arkbuild/etc/udev/rules
 # speaker's amplifier is fed from the headphone output). spktoggle.sh runs it at boot too.
 sudo install -m 755 scripts/rk3562/headphone-path.sh Arkbuild/usr/local/bin/headphone-path.sh
 sudo install -m 644 scripts/rk3562/99-darkos-headphone.rules Arkbuild/etc/udev/rules.d/99-darkos-headphone.rules
+# USB pads first in RetroArch, the console's own controls last, each pad by a profile made
+# from EmulationStation's mapping (the RK3566's retroarch.cfg.ext and controller_setup.sh,
+# worked out at each start): run by the retroarch, retroarch32 and retroarch-next wrappers.
+sudo install -m 755 scripts/rk3562/ra-extpads.py Arkbuild/usr/local/bin/ra-extpads.py
 # ROMs over USB from a PC, by MTP (KNOWN-ISSUES, "USB: ROMs from a PC over MTP"):
 # umtp-responder serves /roms (and /roms2) through a FunctionFS gadget that
 # darkos-mtp.service builds; 99-darkos-mtp.rules restarts it after a disconnect.

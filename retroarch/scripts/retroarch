@@ -66,5 +66,9 @@ if compgen -G "/boot/rk3566*" > /dev/null; then
     /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg "$@"
   fi
 else
-  /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg "$@"
+  # dArkOS RG52 Mini: USB pads first, the console's own controls last, as the RK3566's
+  # retroarch.cfg.ext does (ra-extpads.py; only in the RG52 Mini's image)
+  ext=""
+  [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "/home/ark/.config/${emulator}")
+  /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} "$@"
 fi
