@@ -259,8 +259,29 @@ holds whichever path was set at shutdown. Options > Advanced > Fix Audio runs it
 as well. Only on the RG52 Mini: the RG56PRO and the RG43H run their speaker from
 the `HP` path.
 
+**The speaker kept playing, quieter, when the headphones went in during a
+game.** The codec sets the amplifier's GPIO only when a stream starts
+(`rk817_digital_mute_dac()`), so a path switched while a game held its stream
+open changed the registers (the `HP` path's DAC volume, `hp-volume` 54, about
+-20 dB) and left the amplifier on. Kernel d188e7c: the codec keeps whether the
+DAC plays, and a path switched then sets the GPIOs for the new path at once.
+The gating at stream start and stop, with `spk-mute-delay-ms` against the
+click, is as it was. On 2026-09-13 (ad4b47f) the amplifier's GPIO moved from
+the sound card's driver, where DAPM turned it off on the jack, to the codec, to
+get rid of that click; the jack's part went with it.
+
+**Headphones win over HDMI.** With HDMI in, `audio-switch.sh` pointed
+`~/.asoundrc` at the HDMI card, headphones or not. It now keeps the sound on
+card 0 while headphones are in, and `headphone-path.sh` runs it on each plug
+while HDMI is in, so pulling them out moves the sound back to HDMI. Without
+HDMI it is not run on a plug: `~/.asoundrc` may be a Bluetooth headset's. An
+app that has the sound device open keeps it: a game picks the change up when
+it starts, ES when it restarts.
+
 Checked on the console by the owner: headphones in, the speaker is silent;
-pulled out, the speaker plays; in and out four times, each switched by the rule.
+pulled out, the speaker plays; in and out four times, each switched by the
+rule; with kernel d188e7c in and out during a Dreamcast game, the speaker
+silent with the headphones in. HDMI with headphones not checked yet.
 
 ## ES: no clock, the battery's percent off the screen, a game's logo in the corner — fixed in 1.5
 
