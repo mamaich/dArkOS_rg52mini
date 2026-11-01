@@ -50,12 +50,12 @@ it. Confirmed on the device.
 
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
-- Done the same day, in master for 1.5: malisx2 4c91f3c in the recipe (upstream
+- Done the same day, in 1.5: malisx2 4c91f3c in the recipe (upstream
   0.3.1 merged, Mesa e07f62e, the pipeline cache's fragment-reads mask fixed in
   ebebd37), with a profile trained on it; checked on the console
   (KNOWN-ISSUES, "malisx2 0.3.1"). Then 428b5b2: the DuckStation core on
   RetroArch's Vulkan driver no longer crashes on malisx2 (1.4's did too).
-- Done the same day, in master for 1.5: XRoar showed only a field of `@` as a
+- Done the same day, in 1.5: XRoar showed only a field of `@` as a
   Dragon 32 and as a CoCo 2 (the launchers' `-ram 2048`), and the Dragon 32
   system's `dragon.sh` was never installed (KNOWN-ISSUES, XRoar and openMSX).
 - Upstream seen 2026-10-31, tried the same day (the owner: take what is faster;

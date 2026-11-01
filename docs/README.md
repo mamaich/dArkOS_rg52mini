@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.4 (build 10312026, 2026-10-31); from 1.1 on, a card
+The current release is 1.5 (build 11012026, 2026-11-02); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -110,12 +110,11 @@ New in 1.4 (build 10312026, 2026-10-31):
 | Scheduling | ES and ark may use realtime priority (LimitRTPRIO=99), which libmali asks for the thread that submits GPU jobs of a high-priority queue |
 | RG43 Pro | `make rg43v` (doster00's pull request) |
 
-In master for 1.5, not released yet (VERSION says 1.5; the image is built
-only when the owner says so):
+New in 1.5 (build 11012026, 2026-11-02):
 
 | | |
 |---|---|
-| Build | the plutovg and plutosvg sources build_pcsx2sa.sh leaves in /home/ark when it builds ARMSX2 afresh are removed; 1.4's image has them (3.3 MB), and the update to 1.5 takes them off |
+| Build | the plutovg and plutosvg sources build_pcsx2sa.sh leaves in /home/ark when it builds ARMSX2 afresh are removed; 1.4's image has them (3.3 MB), and the update to 1.5 takes their files off: the two folders stay with their `.git` in them, about 600 KB, since make-ota skips `.git` |
 | malisx2 | 4c91f3c: upstream's 0.3.1 merged (dynamic rendering, timeline semaphores, events and real occlusion queries advertised; Mesa e07f62e); Castlevania 3-5% faster, a first start's shader compile about 4% longer (Luigi's Mansion 2: 100 s against 96); a profile trained on this code; 428b5b2: the DuckStation core on RetroArch's Vulkan driver no longer crashes on it |
 | GameCube | Dolphin master c4856ead (2026-10-31) in place of 2609a: the ND Demo within the spread, 2609a's savestates load (same version) |
 | Nintendo DS | DSperate f608b4c: the ARM9's IPC FIFO at send time, the lean rasterizer's attributes as the DS has them, a stylus speed option |
@@ -130,6 +129,21 @@ only when the owner says so):
 | PortMaster | its window fills the screen, no black bars on the sides: `portmaster-e2big.sh` gives it the screen's size ([KNOWN-ISSUES](KNOWN-ISSUES.md#portmasters-window-had-black-bars-on-the-sides--fixed-in-15)) |
 | RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f, 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |
 | XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
+| Sleep | not changed, but the notes advise unplugging USB devices before sleep and plugging a charger into an awake console: a USB headset on the port turns deep sleep into a loop of wakes ([KNOWN-ISSUES](KNOWN-ISSUES.md#usb-devices-on-the-port-in-sleep-it-woke-again-and-again--advice-in-15-not-fixed)) |
+
+Checked for 1.5 on the dual-boot card: the update 1.4 -> 1.5 from `ROMs/update`
+(70 files, every hook, the 1.4 snapshot kept), then the engines that changed,
+each game as ES starts it, on 1.4 before the update and on 1.5 after it, the
+same card: Dolphin (ND Demo 46.5 -> 47.5 fps), DSperate (59.5 -> 59.1), DraStic,
+PPSSPP, flycast (Crazy Taxi, Atomiswave), PS1 in RetroArch32 and the DuckStation
+core on Vulkan (Arm's driver, and malisx2, which 1.4 crashed on), Azahar, ARMSX2
+on malisx2 (God of War 43.7 -> 44.0), Mina the Hollower, Mega Drive in RetroArch
+and retroarch-next, GBA in mGBA and armGBA (6% CPU against 8%), N64; XRoar's
+Dragon 32 and CoCo at BASIC's OK. No crash, the sound playing, the speed the
+same.
+
+In master for 1.6, not released yet (VERSION says 1.6; the image is built
+only when the owner says so): nothing yet.
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
