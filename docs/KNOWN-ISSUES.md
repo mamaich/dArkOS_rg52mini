@@ -270,7 +270,8 @@ Reported by the owner, 2026-11-01, with es-theme-nes-box, the default theme, at
 
 Checked on the console: the clock at the bottom right in the system and game
 list views, "100%" whole at the top right, Academy's logo whole in the bar,
-left of the clock. Not checked on HDMI.
+left of the clock. On HDMI the owner checked the battery's percent and the
+game's logo, 2026-11-01: both right.
 
 ## PortMaster's window had black bars on the sides — fixed in 1.5
 
@@ -2188,7 +2189,8 @@ is ended when the cable comes out, so its unsaved progress is lost. **Checked wi
 the PC showed the picture and recorded the sound):
 - ES switches once per plug.
 - RetroArch's picture on HDMI is upright and fills the height.
-- The sound plays over HDMI.
+- The sound plays over HDMI (the owner again on 2026-11-01, with 1.5's master
+  on the console).
 - A game on HDMI is ended when the cable is pulled, and ES comes back on the
   lit panel.
 - A cable plugged in during a game waits for its end.
