@@ -1,0 +1,4 @@
+# RG52 Mini: the RK817's playback path follows the headphone jack, HP with headphones in and
+# SPK without (headphone-path.sh). The sound card's driver reports the jack on its extcon,
+# "rk817-sound", and each change of it comes as a "change" uevent.
+ACTION=="change", SUBSYSTEM=="extcon", ATTR{name}=="rk817-sound", RUN+="/usr/local/bin/headphone-path.sh"

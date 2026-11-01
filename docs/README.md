@@ -122,6 +122,7 @@ only when the owner says so):
 | GBA | armGBA, a core written for ARM, as a choice in EMULATOR SETTINGS beside mGBA, which stays the default |
 | SDL2 | 2.32.10 with release-2.32.x's 21ac66c8b: SDL_AtomicSet with a full barrier on ARM |
 | Ports | gl4es bc4314d: wide lines drawn as quads where the driver has only 1 px |
+| Headphones | with headphones in, the speaker is silent: the playback path follows the jack (`headphone-path.sh`, run by a udev rule; [KNOWN-ISSUES](KNOWN-ISSUES.md#headphones-the-speaker-played-too--fixed-in-15)) |
 | EmulationStation | UI Settings > Show Clock shows the clock (at the bottom right, it was below the screen); the battery's percent at the top right is on the screen; nes-box shows a game's logo whole, in the bar at the bottom (es-0004, `1.5-nesbox-marquee.sh`; [KNOWN-ISSUES](KNOWN-ISSUES.md#es-no-clock-the-batterys-percent-off-the-screen-a-games-logo-in-the-corner--fixed-in-15)) |
 | PortMaster | its window fills the screen, no black bars on the sides: `portmaster-e2big.sh` gives it the screen's size ([KNOWN-ISSUES](KNOWN-ISSUES.md#portmasters-window-had-black-bars-on-the-sides--fixed-in-15)) |
 | RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f, 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |

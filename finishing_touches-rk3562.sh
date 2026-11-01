@@ -79,6 +79,11 @@ sudo cp audio/99-hdmi-audio.rules Arkbuild/etc/udev/rules.d/99-hdmi-audio.rules
 # output. This re-evaluates drmConn on every DRM connector change.
 sudo install -m 755 scripts/rk3562/hdmi-hotplug.sh Arkbuild/usr/local/bin/hdmi-hotplug.sh
 sudo install -m 644 scripts/rk3562/99-hdmi-hotplug.rules Arkbuild/etc/udev/rules.d/99-hdmi-hotplug.rules
+# Headphones: the RK817's playback path follows the jack, HP with headphones in and SPK
+# without. On SPK the sound came out of the headphones and the speaker at once (the
+# speaker's amplifier is fed from the headphone output). spktoggle.sh runs it at boot too.
+sudo install -m 755 scripts/rk3562/headphone-path.sh Arkbuild/usr/local/bin/headphone-path.sh
+sudo install -m 644 scripts/rk3562/99-darkos-headphone.rules Arkbuild/etc/udev/rules.d/99-darkos-headphone.rules
 # ROMs over USB from a PC, by MTP (KNOWN-ISSUES, "USB: ROMs from a PC over MTP"):
 # umtp-responder serves /roms (and /roms2) through a FunctionFS gadget that
 # darkos-mtp.service builds; 99-darkos-mtp.rules restarts it after a disconnect.

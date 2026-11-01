@@ -51,5 +51,8 @@ else
       /usr/sbin/alsactl restore -f /var/local/asound.state
 	  sudo rm -f /var/local/asound.state
   fi
+  # RG52 Mini: the state saved at shutdown may hold either path; the headphone jack decides
+  # (headphone-path.sh, only on the RG52 Mini's image)
+  [ -x /usr/local/bin/headphone-path.sh ] && /usr/local/bin/headphone-path.sh
 fi
 

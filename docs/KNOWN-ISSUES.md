@@ -237,6 +237,31 @@ A side effect seen during the test, not caused by the fix: on the first port
 run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
 `libMali.so`. They already point there in the image, so nothing changes.
 
+## Headphones: the speaker played too — fixed in 1.5
+
+Reported by the owner, 2026-11-01: with headphones in, the sound came out of the
+headphones and the speaker at once.
+
+The RK817's speaker amplifier is fed from its headphone output, and the codec
+turns the amplifier on (`spk-ctl-gpios`) only on the `SPK` playback path; `HP`
+leaves it off. The vendor's device tree is the same. Android's audio HAL sets
+the path on the jack's event. On dArkOS nothing did: at boot `spktoggle.sh` sets
+`SPK` and restores the mixer state saved at shutdown, and the path stayed there,
+headphones or not. The sound card's driver (`rockchip_multicodecs`) does see the
+jack: it reports it on the extcon `rk817-sound` (`HEADPHONE=1`), which sends a
+`change` uevent each time.
+
+**Fix:** `headphone-path.sh` sets `HP` with headphones in and `SPK` without, on
+card 0, and logs each switch (`journalctl -t headphone-path`).
+`99-darkos-headphone.rules` runs it on every change of `rk817-sound`, with no
+daemon. `spktoggle.sh` runs it at boot after the restore, since the saved state
+holds whichever path was set at shutdown. Options > Advanced > Fix Audio runs it
+as well. Only on the RG52 Mini: the RG56PRO and the RG43H run their speaker from
+the `HP` path.
+
+Checked on the console by the owner: headphones in, the speaker is silent;
+pulled out, the speaker plays; in and out four times, each switched by the rule.
+
 ## ES: no clock, the battery's percent off the screen, a game's logo in the corner — fixed in 1.5
 
 Reported by the owner, 2026-11-01, with es-theme-nes-box, the default theme, at
