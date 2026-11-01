@@ -276,7 +276,12 @@ card 0 while headphones are in, and `headphone-path.sh` runs it on each plug
 while HDMI is in, so pulling them out moves the sound back to HDMI. Without
 HDMI it is not run on a plug: `~/.asoundrc` may be a Bluetooth headset's. An
 app that has the sound device open keeps it: a game picks the change up when
-it starts, ES when it restarts.
+it starts, ES when it restarts. So with HDMI in, headphones pulled out during a
+game send that game's sound to the console's speaker (card 0 back on `SPK`),
+and the next game plays on HDMI; headphones plugged in during a game on HDMI
+leave its sound on the TV. Moving a playing stream between cards needs a sound
+server (PipeWire, or a router over snd-aloop); the owner chose to keep the
+speaker for that moment, 2026-11-01.
 
 Checked on the console by the owner: headphones in, the speaker is silent;
 pulled out, the speaker plays; in and out four times, each switched by the
