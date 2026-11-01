@@ -367,6 +367,62 @@ restarted, Game Boy with Hermano under the cursor. The default: with no
 `StartupSystem` in `es_settings.cfg` (a user who had NONE) and Game Boy saved,
 the new ES opened on Game Boy; the one before it, on the first system.
 
+## USB devices on the port in sleep: it woke again and again — advice in 1.5, not fixed
+
+Reported by the owner, 2026-11-01, on revision B with 1.4: a USB headset
+(Plantronics Blackwire 3220) in the USB-C port, the device put to sleep, then
+the power key: a black screen, ES's menu sounds heard as the keys were pressed.
+
+**What happens.** The console feeds the headset (it is the Type-C source, OTG
+5 V). In deep sleep that 5 V goes away, the HUSB311 sees VBUS drop and wakes
+the system a few seconds in ("Resume caused by IRQ 96, husb311"). The sleep
+hook takes husb311 among the causes for the charger's cable (f5160ac, above)
+and puts the device back to sleep, and so on: 49 wakes on the serial console,
+each with `xhci-hcd ... xHC error in resume`. A press of the power key lands in
+one of the short awake windows and goes back to sleep with it; Wi-Fi is never
+up long enough for ssh. Pulling the headset out ends it. Any device the console
+powers from the port should do the same; only the headset was tried.
+
+The headset itself works as a sound card: the upstream udev rule links the USB
+card's control device to `controlC7`, `checknswitchforusbdac.sh` points
+`~/.asoundrc` at it, and games play in it with the volume keys working. ES's
+own sounds stay on the speaker until ES restarts (it opens the sound device
+once).
+
+**Tried and dropped**, all on the owner's console, which was then put back to
+1.4's kernel (#35) and hook:
+
+* The hook counting presses of the key (`rk805_pwrkey_fall` in
+  `/proc/interrupts`), so that a press wakes the device whatever else woke it.
+  The self-wakes went on, and a press between two of them was still lost.
+* The port sink-only while asleep: `sink` into
+  `/sys/class/typec/port0/port_type` in pre, `dual` after a wake that stays
+  awake (none on revision A, which has no HUSB311 bound). The headset drops off
+  at once, the device sleeps with one resume, by the key, and the headset is
+  back about 4 s after `dual`. But then a charger or a PC plugged in while
+  asleep did not charge:
+  - after an alert husb311's resume soft-resets the chip and calls
+    `tcpm_tcpc_reset()`; tcpm goes through PORT_RESET with Rd kept on CC, and
+    a sink-only port does not toggle, so a source already on the port is never
+    seen again: CC does not change, no alert comes;
+  - the USB PHY's OTG state machine (`phy-rockchip-inno-usb2.c`) stays in
+    A_HOST after the host role ends (role NONE leaves EXTCON_USB_HOST set) and
+    runs only on a VBUS rise. VBUS from a charger rises before tcpm gives the
+    device role, so the machine still sees the host and stops: no SDP or DCP,
+    and the PMIC does not charge. Awake this is hidden by the PD hard resets a
+    charger without PD gets, which drop and raise VBUS after the role is set.
+  Kernel #43 fixed both (the state machine run when the role becomes device; a
+  sink-only port in SNK_UNATTACHED attaching the source CC already shows),
+  with the hook waiting up to 3 s for the charger's type before it goes back to
+  sleep. Seen on the device with it: the headset swapped for a PC cable while
+  asleep charged within a second of the plug; a PC cable in before sleep kept
+  charging; out while asleep, then a charger in, charged; the screen dark all
+  along. The owner chose not to go on with it, 2026-11-01. Not tried: a PD
+  charger after a USB device with the device awake, where no hard reset comes.
+
+**The 1.5 notes advise** unplugging USB devices before sleep, and plugging a
+charger or a PC into a console that is awake.
+
 ## Headphones: the speaker played too — fixed in 1.5
 
 Reported by the owner, 2026-11-01: with headphones in, the sound came out of the
