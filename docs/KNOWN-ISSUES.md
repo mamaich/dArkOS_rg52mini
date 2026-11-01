@@ -288,7 +288,8 @@ window scaled to the panel's height, 4:3.
 **Fix:** `portmaster-e2big.sh` (see the E2BIG section above) also patches
 `pugwash`: a device that `HW_INFO` lacks gets the screen's size, as "default"
 does. PortMaster then lays its themes out for 16:9 at 1280x720 (on HDMI at the
-TV's mode, by the same code; not checked on HDMI yet) and reports "16:9" among the device's capabilities; everything else
+TV's mode, by the same code: the owner checked it on HDMI, 2026-11-01, and it
+shows right) and reports "16:9" among the device's capabilities; everything else
 it knows of the device (capabilities, CPU, RAM) stays as it was.
 `pylibs/harbourmaster/hardware.py` is not the place for the fix: pugwash
 re-extracts `pylibs` from `pylibs.zip` after every update, at its own start,
