@@ -237,6 +237,26 @@ A side effect seen during the test, not caused by the fix: on the first port
 run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
 `libMali.so`. They already point there in the image, so nothing changes.
 
+## ES: start on the system last played — since 1.5
+
+Asked for by the owner, 2026-11-01: after a reboot ES should open on the system
+of the game played last (Nintendo 3DS after Mario 3D Land). UI Settings > START
+ON SYSTEM could only name one fixed system (or a collection, such as Last
+Played). es-0005 adds the choice **LAST PLAYED SYSTEM**:
+
+- when a game starts, ES writes the system whose list it was started from (a
+  collection or a group, as browsed) and the game's path to `es_settings.cfg`
+  (`LastSystem`, `LastGame`) at once, since the console is often switched off
+  without quitting ES; only while this choice is set;
+- at start ES goes to that system, with the cursor on that game in its list (a
+  group's member stands for its group; the game is found by its path, which a
+  collection's entry shares). With nothing saved yet, or the system gone or
+  hidden, it starts as with NONE.
+
+Checked on the console: with Game Boy and Dangan saved, ES opened on Game Boy
+with Dangan under the cursor; starting Hermano saved it at once; after ES
+restarted, Game Boy with Hermano under the cursor.
+
 ## Headphones: the speaker played too — fixed in 1.5
 
 Reported by the owner, 2026-11-01: with headphones in, the sound came out of the

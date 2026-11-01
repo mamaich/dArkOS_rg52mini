@@ -1,0 +1,104 @@
+dArkOS: START ON SYSTEM > LAST PLAYED SYSTEM.
+UI Settings > START ON SYSTEM could start ES on one fixed system only. The new
+choice, LAST PLAYED SYSTEM ("lastsystem"), starts it on the system a game was
+last started from, with the cursor on that game in its list; with "start on
+game list" or the system view hidden it opens that list.
+- launch() saves the system whose list the game is started from (a collection
+  or a group, as the user browsed it) and the game's path to es_settings.cfg
+  (LastSystem, LastGame) at once: the console is often switched off without
+  quitting ES. Only while LAST PLAYED SYSTEM is chosen.
+- goToStart() finds the system (a group's member stands for its group), puts
+  the list's cursor on the game, found by its path (a collection's entry has its
+  game's path), and goes there. With nothing saved yet, or the system gone or
+  hidden, ES starts as with NONE.
+
+--- a/es-core/src/Settings.cpp
++++ b/es-core/src/Settings.cpp
+@@ -92,6 +92,9 @@
+ 	mBoolMap["BrightnessPopup"] = true;
+ 	
+ 	mStringMap["StartupSystem"] = "";
++	// dArkOS: START ON SYSTEM > LAST PLAYED, saved when a game starts
++	mStringMap["LastSystem"] = "";
++	mStringMap["LastGame"] = "";
+ 
+ 	mStringMap["FolderViewMode"] = "never";
+ 
+--- a/es-app/src/guis/GuiMenu.cpp
++++ b/es-app/src/guis/GuiMenu.cpp
+@@ -1446,6 +1446,8 @@
+ 	// Optionally start in selected system
+ 	auto systemfocus_list = std::make_shared< OptionListComponent<std::string> >(mWindow, _("START ON SYSTEM"), false);
+ 	systemfocus_list->add(_("NONE"), "", Settings::getInstance()->getString("StartupSystem") == "");
++	// dArkOS: the system a game was last started from, with that game selected
++	systemfocus_list->add(_("LAST PLAYED SYSTEM"), "lastsystem", Settings::getInstance()->getString("StartupSystem") == "lastsystem");
+ 
+ 	for (auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++)
+ 		if ("retropie" != (*it)->getName() && (*it)->isVisible())
+--- a/es-app/src/views/ViewController.cpp
++++ b/es-app/src/views/ViewController.cpp
+@@ -54,6 +54,46 @@
+ 
+ 	// If specific system is requested, go directly to the game list
+ 	auto requestedSystem = Settings::getInstance()->getString("StartupSystem");
++
++	// dArkOS: START ON SYSTEM > LAST PLAYED. The system a game was last started from
++	// (LastSystem; a group's system stands for its members) with the cursor on that game
++	// (LastGame), both saved by launch(). With none saved yet, or the system gone or
++	// hidden, ES starts as with NONE.
++	if (requestedSystem == "lastsystem")
++	{
++		requestedSystem = "";
++		auto lastSystem = Settings::getInstance()->getString("LastSystem");
++		auto lastGame = Settings::getInstance()->getString("LastGame");
++		for (auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++)
++		{
++			SystemData* system = *it;
++			if (lastSystem.empty() || system->getName() != lastSystem)
++				continue;
++			if (system->isGroupChildSystem() && system->getParentGroupSystem() != nullptr)
++				system = system->getParentGroupSystem();
++			if (!system->isVisible())
++				break;
++
++			if (!lastGame.empty())
++			{
++				for (auto file : system->getRootFolder()->getFilesRecursive(GAME))
++				{
++					if (file->getPath() != lastGame)
++						continue;
++					auto view = getGameListView(system);
++					if (view)
++						view->setCursor(file);
++					break;
++				}
++			}
++
++			if (hideSystemView || startOnGamelist)
++				goToGameList(system, forceImmediate);
++			else
++				goToSystemView(system, forceImmediate);
++			return;
++		}
++	}
+ 	if("" != requestedSystem && "retropie" != requestedSystem)
+ 	{
+ 		for(auto it = SystemData::sSystemVector.cbegin(); it != SystemData::sSystemVector.cend(); it++){
+@@ -249,6 +289,17 @@
+ 		return;
+ 	}
+ 
++	// dArkOS: for START ON SYSTEM > LAST PLAYED, the system whose list the game is started
++	// from (a collection, a group) and the game, written now: a console is often switched
++	// off without quitting ES
++	if (Settings::getInstance()->getString("StartupSystem") == "lastsystem" &&
++	    mState.viewing == GAME_LIST && mState.system != nullptr)
++	{
++		Settings::getInstance()->setString("LastSystem", mState.system->getName());
++		Settings::getInstance()->setString("LastGame", game->getPath());
++		Settings::getInstance()->saveFile();
++	}
++
+ 	// Hide the current view
+ 	//if (mCurrentView)
+ 		//mCurrentView->onHide();
