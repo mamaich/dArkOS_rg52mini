@@ -251,7 +251,11 @@ Played). es-0005 adds the choice **LAST PLAYED SYSTEM**:
 - at start ES goes to that system, with the cursor on that game in its list (a
   group's member stands for its group; the game is found by its path, which a
   collection's entry shares). With nothing saved yet, or the system gone or
-  hidden, it starts as with NONE.
+  hidden, it starts as with NONE;
+- it is the default (the owner, the same day): ES writes to `es_settings.cfg`
+  only what differs from the default, so a user who had NONE, which was never
+  written, gets it on a new image and after an update; a system chosen by
+  name stays, and NONE chosen from now on is written as `""`.
 
 Checked on the console: with Game Boy and Dangan saved, ES opened on Game Boy
 with Dangan under the cursor; starting Hermano saved it at once; after ES

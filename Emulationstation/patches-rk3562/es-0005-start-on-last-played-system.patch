@@ -11,14 +11,22 @@ game list" or the system view hidden it opens that list.
   the list's cursor on the game, found by its path (a collection's entry has its
   game's path), and goes there. With nothing saved yet, or the system gone or
   hidden, ES starts as with NONE.
+- It is the default. es_settings.cfg keeps only what differs from the default,
+  so a user who had NONE (never written) gets it, after an update as well; a
+  system chosen by name stays, and NONE chosen now is written as "".
 
 --- a/es-core/src/Settings.cpp
 +++ b/es-core/src/Settings.cpp
-@@ -92,6 +92,9 @@
+@@ -91,7 +91,13 @@
+ 	mBoolMap["HideSystemView"] = false;
  	mBoolMap["BrightnessPopup"] = true;
  	
- 	mStringMap["StartupSystem"] = "";
-+	// dArkOS: START ON SYSTEM > LAST PLAYED, saved when a game starts
+-	mStringMap["StartupSystem"] = "";
++	// dArkOS: START ON SYSTEM is LAST PLAYED SYSTEM by default. es_settings.cfg keeps only what
++	// differs from the default, so a user who had NONE (never written) gets it too, after an
++	// update as well; a system chosen by name, or NONE chosen now (written as ""), stays.
++	mStringMap["StartupSystem"] = "lastsystem";
++	// LAST PLAYED SYSTEM's system and game, saved when a game starts
 +	mStringMap["LastSystem"] = "";
 +	mStringMap["LastGame"] = "";
  
