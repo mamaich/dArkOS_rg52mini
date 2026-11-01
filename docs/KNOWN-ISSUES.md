@@ -261,6 +261,38 @@ A pad plugged in at boot may enumerate before the built-in controls and take
 `js0` (it did here: the built-in pad was `js1`); one plugged in later comes
 after them.
 
+## Select on ES's screen: the screen went out again, presses seemed lost — fixed in 1.5
+
+Reported by the owner, 2026-11-01: on ES's system list Select puts the screen
+out (LAUNCH SCREENSAVER, the black screensaver); pressed again, the screen was
+lit only while Select was held; and now and then a press did nothing.
+
+- **ES started the screensaver on Select's release, and any input ends it.** On
+  a dark screen the press lit it and the release started the screensaver again.
+  es-0007: the release of the press that woke the screen (or woke ES from sleep)
+  goes nowhere else.
+- **The black screensaver set the backlight in the background and read it back
+  too late.** It turned it off with `brightnessctl s 0% &` and, when stopped,
+  read the level back (0 by then) and put back an older one, if any; two
+  `brightnessctl` in the background could also finish in either order, the
+  "0%" last, and the screen stayed dark with the screensaver over. es-0007
+  keeps the level found at the start and runs `brightnessctl -q` in the
+  foreground, so the two are applied in order.
+- **Select's contact opens in the middle of a press.** A key log of the
+  owner's console showed 27 ms down, 57 ms up, 13 ms down for one press, and,
+  with a 100 ms hold, a second contact 120-135 ms after a release now and then.
+  Each was a second press: the screensaver started on one release and the next
+  press ended it at once, too fast to see, so the press looked lost. Kernel
+  (`rk3562-joystick.c`): Select's release counts once the line has had no edge
+  for 100 ms, timed from the IRQ's last edge (the vendor's debounce-interval
+  for these keys is 100 ms); its press comes at once, and the other buttons keep
+  their 5 ms. Not on Start: a release held back would merge a quick second
+  press, and RetroArch quits on Home with Start pressed twice.
+
+Checked on the console by the owner: Select puts the screen out and lights it,
+and stays as left, a few dozen presses in a row; other buttons not changed (the
+owner did not see the need).
+
 ## USB pads: ES ignored them, RetroArch put them after the console — fixed in 1.5
 
 Found with the owner's two ShanWan pads, 2026-11-01 (the kernel side, xpad, is

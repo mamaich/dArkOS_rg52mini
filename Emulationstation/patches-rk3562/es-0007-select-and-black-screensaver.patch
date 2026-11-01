@@ -1,0 +1,118 @@
+dArkOS: Select and the black screensaver.
+- ES starts its screensaver when Select is let go (SystemView), and any input
+  ends it. On a dark screen a press of Select lit it, and its release started
+  the screensaver again: the screen was lit only while Select was held. The
+  release of the press that woke the screen (cancelled the screensaver, or woke
+  ES from sleep) is now part of that wake-up and goes nowhere else.
+- The black screensaver read the brightness back only when it stopped, with the
+  backlight off by then, and put back an older level, if any. It keeps the level
+  it found when it starts now.
+- brightnessctl ran in the background ("&"): the screensaver started and stopped
+  within a fraction of a second, its "0%" could finish after the level put back,
+  and the screen stayed dark with the screensaver over. It runs in the
+  foreground now (-q), so that two in a row are applied in order.
+
+--- a/es-core/src/Window.cpp
++++ b/es-core/src/Window.cpp
+@@ -192,6 +192,37 @@
+ 		peekGui()->textInput(text);
+ }
+ 
++// dArkOS: the press that woke the screen (cancelled the screensaver, or woke ES from sleep).
++// Its release is part of that wake-up and goes nowhere else. Given to the views, Select's
++// release started the screensaver again (SystemView starts it when Select is let go): the
++// screen was lit only while Select was held. One window, so kept here.
++static struct
++{
++	bool active = false;
++	int device = 0;
++	InputType type = TYPE_COUNT;
++	int id = 0;
++} sWakePress;
++
++static void rememberWakePress(const Input& input)
++{
++	if (input.value == 0)
++		return;
++	sWakePress.active = true;
++	sWakePress.device = input.device;
++	sWakePress.type = input.type;
++	sWakePress.id = input.id;
++}
++
++static bool isWakeRelease(const Input& input)
++{
++	if (!sWakePress.active || input.value != 0 || input.device != sWakePress.device ||
++	    input.type != sWakePress.type || input.id != sWakePress.id)
++		return false;
++	sWakePress.active = false;
++	return true;
++}
++
+ void Window::input(InputConfig* config, Input input)
+ {
+ 	if (config->isMappedTo("system_hk", input))
+@@ -238,11 +269,18 @@
+ 		cancelScreenSaver();
+ 		mSleeping = false;
+ 		onWake();
++		rememberWakePress(input);
+ 		return;
+ 	}
+ 
+ 	mTimeSinceLastInput = 0;
+ 	if (cancelScreenSaver())
++	{
++		rememberWakePress(input);
++		return;
++	}
++
++	if (isWakeRelease(input))
+ 		return;
+ 
+ 	if(config->getDeviceId() == DEVICE_KEYBOARD && input.value && input.id == SDLK_g && SDL_GetModState() & KMOD_LCTRL/* && Settings::getInstance()->getBool("Debug")*/)
+--- a/es-app/src/SystemScreenSaver.cpp
++++ b/es-app/src/SystemScreenSaver.cpp
+@@ -37,6 +37,7 @@
+ 	mImagesCounted(false),
+ 	mImageCount(0),
+ 	mState(STATE_INACTIVE),
++	sysbrighttmp(0),
+ 	mOpacity(0.0f),
+ 	mTimer(0),
+ 	mSystemName(""),
+@@ -176,6 +177,9 @@
+         auto sysbright = ApiSystem::getInstance()->getBrightnessLevel();
+         if ( sysbright > 0 )
+ 		{
++		  // dArkOS: kept for stopScreenSaver(). It read the level back only then, and
++		  // with the backlight already off put back an older one, if any.
++		  sysbrighttmp = sysbright;
+ 		  DisplayPanelControl::getInstance()->setBrightnessLevel(0);
+ 		}
+ 		PowerSaver::runningScreenSaver(true);
+@@ -208,7 +212,9 @@
+ 		{
+ 			curBrightnessLevel();
+ 		}
+-		DisplayPanelControl::getInstance()->setBrightnessLevel(sysbrighttmp);
++		// dArkOS: a level of 0 kept no backlight on (sysbrighttmp starts at 0)
++		if (sysbrighttmp > 0)
++			DisplayPanelControl::getInstance()->setBrightnessLevel(sysbrighttmp);
+ 	}
+ 
+ 	if (mLoadingNext)
+--- a/es-core/src/DisplayPanelControl.cpp
++++ b/es-core/src/DisplayPanelControl.cpp
+@@ -141,7 +141,10 @@
+ {
+ 	bool setted = false;
+ 	if (mExistBrightnessctl)
+-		setted = executeSystemScript(std::string(BRIGHTNESSCTL_PATH).append(" s ").append(std::to_string(brightness_level)).append("% &"));
++		// dArkOS: in the foreground, so that two in a row are applied in order (one in
++		// the background could finish after the next: the black screensaver's "0%"
++		// after the level it put back, and the screen stayed dark)
++		setted = executeSystemScript(std::string(BRIGHTNESSCTL_PATH).append(" -q s ").append(std::to_string(brightness_level)).append("%"));
+ 
+ 	if (!setted)
+ 	{
