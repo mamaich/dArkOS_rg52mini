@@ -376,7 +376,8 @@ the power key: a black screen, ES's menu sounds heard as the keys were pressed.
 **What happens.** The console feeds the headset (it is the Type-C source, OTG
 5 V). In deep sleep that 5 V goes away, the HUSB311 sees VBUS drop and wakes
 the system a few seconds in ("Resume caused by IRQ 96, husb311"). The sleep
-hook takes husb311 among the causes for the charger's cable (f5160ac, above)
+hook takes husb311 among the causes for the charger's cable (f5160ac; "Sleep
+emptied the battery", below)
 and puts the device back to sleep, and so on: 49 wakes on the serial console,
 each with `xhci-hcd ... xHC error in resume`. A press of the power key lands in
 one of the short awake windows and goes back to sleep with it; Wi-Fi is never
@@ -993,7 +994,7 @@ it, with perf queries off (their results read 0; with libmali nothing
 changes). On the console: ND Demo 41 fps, Metroid Prime runs and draws right;
 other GameCube games are not tried yet (TODO.md, "Dolphin on malisx2").
 
-**malisx2 0.3.1 (4c91f3c, for 1.5).** Upstream's 0.3.1 advertises dynamic
+**malisx2 0.3.1 (4c91f3c, in 1.5).** Upstream's 0.3.1 advertises dynamic
 rendering (with depth/stencil resolve and render pass 2), timeline semaphores
 and events, and answers occlusion queries for real. A program that takes
 another path when it sees them takes a new one, so on 2026-10-31 everything
@@ -1014,7 +1015,7 @@ that the image was made; malisx2 6405617 lays an image with a zero extent out
 as 1x1, as libmali takes it. Then RetroArch remakes its swapchain, and Mesa's
 display WSI freed the old one with a page flip pending, whose handler read
 freed memory; Mesa 37083d3 waits for the flips first, up to 1 s. Fixed in
-428b5b2, for 1.5; checked on the console (2026-10-31): Hover Racing on
+428b5b2, which 1.5 ships; checked on the console (2026-10-31): Hover Racing on
 RetroArch's Vulkan driver at 50 fps, as on libmali; PPSSPP, flycast, Azahar,
 Dolphin, ARMSX2 and the Mina port start and quit on it, as fast as before.
 
@@ -2523,8 +2524,9 @@ patches did not apply:
 
 Checked on the console (2026-10-31), as ES starts the games, against the
 release: GBA, SNES, Mega Drive, FBNeo 60 fps, PS1 (pcsx_rearmed and the
-DuckStation core) 50, N64 (mupen64plus_next) 50, Azahar's Super Mario 3D
-Land on Vulkan 60; pictures the right way up and colours the same as the
+DuckStation core) 50; N64 (mupen64plus_next) 50 and Azahar's Super Mario
+3D Land on Vulkan 60 not through ES, which offers retroarch-next for neither
+(their commands run `n64.sh` and `/usr/local/bin/retroarch` itself); pictures the right way up and colours the same as the
 release's; RGUI's Quick Menu and main menu (ArkOS, Reboot, Shutdown).
 
 On HDMI (2026-11-01, through the capture card): SNES and GBA at 60 fps, PS1

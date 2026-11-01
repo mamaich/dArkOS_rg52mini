@@ -48,6 +48,15 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
+## For 1.6
+
+- **armGBA in a kept es_systems.cfg.** The update to 1.5 adds armGBA to
+  EMULATOR SETTINGS only with the stock `/etc/emulationstation/es_systems.cfg`;
+  where the owner of a device had edited the file, the update keeps it (the new
+  one beside it as `.ota-new`) and nothing adds `<core>armgba</core>` there, as
+  `1.5-es-retroarch-next.sh` does for retroarch-next. A `1.6-es-armgba.sh` hook
+  doing the same for GBA (after mgba) would close it on the next update.
+
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
 - Done the same day, in 1.5: malisx2 4c91f3c in the recipe (upstream
@@ -90,7 +99,7 @@ it. Confirmed on the device.
     3200.11), and 0dcfa78be makes ALSA's device list open every hw PCM. Not
     moved. 21ac66c8b (SDL_AtomicSet with a full barrier on ARM) is taken as
     sdl2-patch-0009, tried with every 64-bit SDL program and ES on the console;
-    the 32-bit build gets it at the next image build.
+    the 32-bit build has it since 1.5's image.
 
 ## Upstream updates for 1.4 (2026-10-28)
 
@@ -182,8 +191,9 @@ Left, and why:
   SLUS-01251) at 50 fps with the region at auto, the others at 60.
 * **GZDoom on the RG52**: checked with Freedoom, and fixed for LZDoom too
   (KNOWN-ISSUES, "Doom: the player turned by himself").
-* **Dolphin after 2609a**: #14388 and #14853 (JIT) apply with offsets; worth
-  a measurement.
+* **Dolphin after 2609a**: #14388 and #14853 (JIT) apply with offsets;
+  measured with master c4856ead on 2026-10-31 and taken in 1.5 ("After 1.4",
+  above).
 
 ## Check on the device what the upstream sync of 2026-10-05 brought
 
@@ -237,7 +247,7 @@ on the device:
 5. **wifi_importer**: a wifikeyfile.txt in Tools is imported at boot.
 6. Not taken, to be decided on the device: libOpenCL.so symlink (upstream
    says it breaks video previews), Dolphin Stretch option, batteryplus,
-   headphone auto-switch (needs kernel work), bluealsa conf path.
+   headphone auto-switch (done our own way in 1.5: KNOWN-ISSUES, "Headphones"), bluealsa conf path.
 
 ## Left by the patch audit after 1.3 (2026-10-26, to do)
 

@@ -4,8 +4,9 @@ From 1.1 on, dArkOS for the RG52 Mini updates itself over the network
 (Options → Update), without rewriting the card. 1.0 and earlier have the
 upstream updater, so moving from them to 1.1 means writing the card once.
 The first package over the air, 1.1 → 1.2, was published with 1.2 on
-2026-10-18. 1.3 comes with two, 1.2 → 1.3 and 1.1 → 1.3, so a 1.1 card does
-not need 1.2 first.
+2026-10-18. Since 1.3 every release comes with a package from each older
+release that has OTA (1.5: from 1.4, 1.3.1, 1.3, 1.2 and 1.1), so a card
+never needs the releases in between.
 
 The upstream `Update.sh` is not used on this device. It fetches
 christianhaitian/darkos-updates, whose packages are built for RK3326 and
@@ -19,7 +20,7 @@ next one.
 | | |
 |---|---|
 | `ota/make-ota.py` | builds a package from two release images (runs in the build host, as root) |
-| `ota/rg52mini.json` | the feed the devices read: every package published so far (with 1.3: 1.1 → 1.2, 1.2 → 1.3 and 1.1 → 1.3), one entry each; `make-ota.py --feed` adds an entry and replaces one with the same two builds |
+| `ota/rg52mini.json` | the feed the devices read: every package published so far (15 with 1.5), one entry each; `make-ota.py --feed` adds an entry and replaces one with the same two builds |
 | `ota/hooks/<version>[-name].sh` | scripts a release needs run after its files are in place |
 | `ota/hooks/all-<name>.sh` | scripts every package runs, after the release's own, in name order (`all-fix-root-dir.sh`, `all-gpu-links.sh`, `all-keep-quickmode.sh`, `all-ldconfig.sh`, `all-merge-dpkg.sh`) |
 | `scripts/rk3562/darkos-ota` | the client, `/usr/local/sbin/darkos-ota` on the device |
