@@ -281,7 +281,8 @@ it starts, ES when it restarts.
 Checked on the console by the owner: headphones in, the speaker is silent;
 pulled out, the speaker plays; in and out four times, each switched by the
 rule; with kernel d188e7c in and out during a Dreamcast game, the speaker
-silent with the headphones in. HDMI with headphones not checked yet.
+silent with the headphones in. HDMI with headphones, checked by the owner
+the same day: the sound in the headphones while they are in, on HDMI without.
 
 ## ES: no clock, the battery's percent off the screen, a game's logo in the corner — fixed in 1.5
 
