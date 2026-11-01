@@ -859,6 +859,9 @@ sudo git clone --depth=1 https://github.com/Jetup13/es-theme-nes-box.git Arkbuil
 # nes-box has no 3ds or ps2 folder: ours go into both copies of the theme, and
 # into /usr/share/darkos for the OTA hook that adds them to an installed theme.
 sudo cp -r themes/es-theme-nes-box/3ds themes/es-theme-nes-box/ps2 Arkbuild/tempthemes/es-theme-nes-box/
+# its game logo (marquee) into the bar at the bottom, left of ES's clock: it was centred on
+# the screen's corner, three quarters off the screen. The OTA hook does it to an installed copy.
+sudo bash ota/hooks/1.5-nesbox-marquee.sh Arkbuild/tempthemes/es-theme-nes-box
 sudo mkdir -p Arkbuild/usr/share/darkos/themes/es-theme-nes-box
 sudo cp -r themes/es-theme-nes-box/3ds themes/es-theme-nes-box/ps2 Arkbuild/usr/share/darkos/themes/es-theme-nes-box/
 sudo git clone --depth=1 https://github.com/Jetup13/es-theme-switch.git Arkbuild/tempthemes/es-theme-switch
@@ -958,6 +961,7 @@ sudo cp -a scummvm/scripts/menu.scummvm ${fat32_mountpoint}/scummvm/
 # Clone some themes to the roms/themes folder
 sudo git clone --depth=1 https://github.com/Jetup13/es-theme-nes-box.git ${fat32_mountpoint}/themes/es-theme-nes-box
 sudo cp -r themes/es-theme-nes-box/3ds themes/es-theme-nes-box/ps2 ${fat32_mountpoint}/themes/es-theme-nes-box/
+sudo bash ota/hooks/1.5-nesbox-marquee.sh ${fat32_mountpoint}/themes/es-theme-nes-box
 sync
 
 # Create roms.tar for use after exfat partition creation

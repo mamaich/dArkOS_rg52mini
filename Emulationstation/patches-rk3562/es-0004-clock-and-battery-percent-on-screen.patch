@@ -1,0 +1,95 @@
+dArkOS: the clock and the battery's percent on the screen.
+- UI Settings > Show Clock (DrawClock) showed no clock with es-theme-nes-box, the
+  default theme, which has no clock of its own. ES puts one at the bottom right
+  in the theme's help font, in a box 5% of the screen wide and 0 high, which made
+  it multi-line: "00:00" is 66 px there, the box 64 at 1280x720, and
+  Font::wrapText put the time on a second line, below the screen. The box now
+  fits the longest time ("00:00 PM") on one line, its right edge where it was. A
+  theme that places the clock itself still does.
+- The battery indicator was left-aligned in a box 0.033 of the screen wide, at
+  0.955: with "Show battery" as text (the default) the percent ran off the right
+  edge. It is right-aligned in a wider box now, the items ending where the two
+  icons did. A theme that places the indicator itself (es-theme-replica, at the
+  left edge) keeps upstream's left alignment, unless it names one.
+
+diff --git a/es-core/src/Window.cpp b/es-core/src/Window.cpp
+index 5934279..95db44c 100644
+--- a/es-core/src/Window.cpp
++++ b/es-core/src/Window.cpp
+@@ -21,6 +21,20 @@
+ #include "components/VolumeInfoComponent.h"
+ #include "components/BrightnessInfoComponent.h"
+ 
++// dArkOS RG52 Mini: the clock's box. Upstream's is 5% of the screen wide, its right edge at
++// 99%, and 0 high, which makes it multi-line: a time wider than the box was put by
++// Font::wrapText on a second line, below the screen's bottom edge, and no clock was seen
++// (1280x720, es-theme-nes-box's help font: "00:00" is 66 px, the box 64). The box fits the
++// longest time and is one line high; its right edge stays where it was. A theme that places
++// the clock itself still does, by applyTheme after this.
++static void placeClock(const std::shared_ptr<TextComponent>& clock)
++{
++	auto font = clock->getFont();
++	float w = std::max(Renderer::getScreenWidth() * 0.05f, font->sizeText("00:00 PM").x() * 1.2f);
++	clock->setPosition(Renderer::getScreenWidth() * 0.99f - w, Renderer::getScreenHeight() * 0.9965f - font->getHeight());
++	clock->setSize(w, font->getHeight());
++}
++
+ Window::Window() : mNormalizeNextUpdate(false), mFrameTimeElapsed(0), mFrameCountElapsed(0), mAverageDeltaTime(10),
+   mAllowSleep(true), mSleeping(false), mTimeSinceLastInput(0), mScreenSaver(NULL), mRenderScreenSaver(false), mInfoPopup(NULL), mClockElapsed(0),
+   mIgnoreKeys(false)// batocera
+@@ -119,8 +133,7 @@ bool Window::init(bool initRenderer, bool initInputManager)
+ 		mClock->setFont(Font::get(FONT_SIZE_SMALL));
+ 		mClock->setHorizontalAlignment(ALIGN_RIGHT);
+ 		mClock->setVerticalAlignment(ALIGN_TOP);
+-		mClock->setPosition(Renderer::getScreenWidth()*0.94, Renderer::getScreenHeight()*0.9965 - Font::get(FONT_SIZE_SMALL)->getHeight());
+-		mClock->setSize(Renderer::getScreenWidth()*0.05, 0);
++		placeClock(mClock);
+ 		mClock->setColor(0x777777FF);
+ 	}
+ 
+@@ -864,8 +877,7 @@ void Window::onThemeChanged(const std::shared_ptr<ThemeData>& theme)
+ 				mClock->setFont(Font::getFromTheme(elem, ThemeFlags::ALL, Font::get(FONT_SIZE_MEDIUM)));
+ 		}
+ 		
+-		mClock->setPosition(Renderer::getScreenWidth()*0.94, Renderer::getScreenHeight()*0.9965 - mClock->getFont()->getHeight());
+-		mClock->setSize(Renderer::getScreenWidth()*0.05, 0);
++		placeClock(mClock);
+ 
+ 		mClock->applyTheme(theme, "screen", "clock", ThemeFlags::ALL ^ (ThemeFlags::TEXT));
+ 	}
+diff --git a/es-core/src/components/BatteryIndicatorComponent.cpp b/es-core/src/components/BatteryIndicatorComponent.cpp
+index f1a526b..15162c8 100644
+--- a/es-core/src/components/BatteryIndicatorComponent.cpp
++++ b/es-core/src/components/BatteryIndicatorComponent.cpp
+@@ -23,8 +23,13 @@ void BatteryIndicatorComponent::init()
+ 	}
+ 	else
+ 	{
+-		setPosition(Renderer::getScreenWidth() * 0.955, Renderer::getScreenHeight() *0.0125);
+-		setSize(Renderer::getScreenWidth() * 0.033, Renderer::getScreenHeight() *0.033);
++		// dArkOS RG52 Mini: left-aligned in a box 0.033 of the width, the battery's percent ran
++		// off the screen's right edge. Right-aligned in a wider box of the same height, the
++		// items end where the two icons did (0.955 + 2 x (icon + spacing)), and the percent
++		// after the battery icon fits on the screen.
++		setPosition(Renderer::getScreenWidth() * 0.697, Renderer::getScreenHeight() *0.0125);
++		setSize(Renderer::getScreenWidth() * 0.3, Renderer::getScreenHeight() *0.033);
++		mHorizontalAlignment = ALIGN_RIGHT;
+ 	}
+ 
+ 	mView = ActivityView::BATTERY;
+diff --git a/es-core/src/components/ControllerActivityComponent.cpp b/es-core/src/components/ControllerActivityComponent.cpp
+index f27f1f8..8dcae66 100644
+--- a/es-core/src/components/ControllerActivityComponent.cpp
++++ b/es-core/src/components/ControllerActivityComponent.cpp
+@@ -316,6 +316,11 @@ void ControllerActivityComponent::applyTheme(const std::shared_ptr<ThemeData>& t
+ 	if (elem == nullptr)
+ 		return;
+ 
++	// dArkOS RG52 Mini: BatteryIndicatorComponent::init aligns it right; a theme that places
++	// it (es-theme-replica: at the left edge) gets upstream's left alignment unless it names one
++	if (elem->has("pos") || elem->has("size"))
++		mHorizontalAlignment = ALIGN_LEFT;
++
+ 	if (properties & PATH)
+ 	{		
+ 		// Controllers

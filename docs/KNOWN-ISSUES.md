@@ -237,6 +237,41 @@ A side effect seen during the test, not caused by the fix: on the first port
 run `mod_dArkOS.txt` re-points `libEGL`, `libGLESv2`, `libgbm` and `libmali` at
 `libMali.so`. They already point there in the image, so nothing changes.
 
+## ES: no clock, the battery's percent off the screen, a game's logo in the corner — fixed in 1.5
+
+Reported by the owner, 2026-11-01, with es-theme-nes-box, the default theme, at
+1280x720:
+
+- **UI Settings > Show Clock showed no clock.** nes-box has no clock element,
+  so ES puts the clock at the bottom right, in the theme's help font (30 px),
+  in a box 5% of the screen wide (64 px) and 0 high. A box 0 high is
+  multi-line, "00:00" is 66 px in that font, and `Font::wrapText` put the
+  time on a second line, below the screen's bottom edge. Every upstream branch
+  of EmulationStation-fcamod has the same box. es-0004 makes the box fit the
+  longest time ("00:00 PM") on one line, its right edge where it was: the
+  clock is in the help bar's right end, where ES meant it, and Show Clock
+  turns it on and off. A theme with its own clock element (switch, freeplay,
+  minimal-arkos, replica) still places it.
+- **The battery's percent ran off the right edge.** "Show battery" as text is
+  ES's default. The indicator was left-aligned in a box 0.033 of the screen
+  wide at 0.955: the network icon, the battery icon and "100%" are about 95 px,
+  the box 42. es-0004 aligns it right in a wider box, the items ending where
+  the two icons did, so the icons stay put when the percent is off. A theme
+  that places the indicator itself (replica puts it at the left edge) keeps
+  upstream's left alignment, unless it names one.
+- **A game's logo (its marquee) was three quarters off the screen.** nes-box's
+  `main.xml` puts `md_marquee` with its centre on the bottom right corner
+  (`pos 1 1`, `origin 0.5 0.5`). `ota/hooks/1.5-nesbox-marquee.sh` moves it
+  into the help bar, left of the clock (`pos 0.895 0.965`, `origin 1 0.5`,
+  `maxSize 0.12 0.06`: a 400x87 logo comes out 154x33). The build runs it on
+  both copies of the theme it makes, the update on the installed copy in
+  `/roms/themes` (and `/roms2`). A `main.xml` whose marquee is not upstream's
+  is left alone.
+
+Checked on the console: the clock at the bottom right in the system and game
+list views, "100%" whole at the top right, Academy's logo whole in the bar,
+left of the clock. Not checked on HDMI.
+
 ## PortMaster's window had black bars on the sides — fixed in 1.5
 
 Reported by the owner, 2026-11-01: Options > Tools > PortMaster drew a 4:3
