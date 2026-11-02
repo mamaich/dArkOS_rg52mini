@@ -91,6 +91,32 @@ it. Confirmed on the device.
   vifCode_Direct<1> (VIF1 DIRECT, from vifMFIFOInterrupt): GIF data copied
   into the GS ring. Needed as it is; not looked into further.
 
+## Upstream updates seen 2026-11-02 (for 1.6, the owner: take them)
+
+Checked by tools/upstream/check.py, decided by the owner's rule (heavy emulators
+when faster or within the noise, ARMSX2 only when faster, light ones always):
+- **DSperate v3.2.0** (f8a575f) taken, core builds b1de9ae: Diddy Kong Racing
+  59.7 fps (59.4-59.5), its thread 64-65% (67%), GTA Chinatown Wars 59.9 as
+  before; our patch 0001 applies.
+- **Dolphin master e8c4246** taken, core builds 8c18141: the ND Demo 49.1 fps
+  against 49.5, three rounds each, within its spread.
+- **SDL3 shim** from christianhaitian's fork (38199f5): elderica's audio fix,
+  the SDL2 device opened allowing no format change; God of War 37.7-37.8 against
+  37.7-37.9, the sound playing.
+- **ARMSX2 2.9.1 and master f6df1e69** not taken: built with our patches 0001-0007
+  (on master 0005's context ported), the whole /opt/pcsx2 swapped, Guitar Hero
+  from the savestate at 21%: 58.8 and 58.9 against 58.5-58.8 (the second round;
+  the first recompiled every shader). Its six EE recompiler commits of 10-31 do
+  not apply to a7ad453 without the EE cycle charge series before them.
+- christianhaitian's core builds: armGBA we have; his Azahar update is our
+  patches 026-029; yabasanshirosa-pirry we do not build.
+- GammaOS azahar-nano: the 16 commits are its own Android frontend (menus,
+  Restart Game, system language, the right stick, sleep, LiveDisplay); the
+  defaults it seeds are its frontend's, ours are core options (patch 006).
+- Not wanted: openMSX 22, OpenBOR v7533, the U-Boot fork's boot menu; SDL2
+  release-2.32.x stays as decided 2026-10-31; malisx2's upstream commit is for
+  Mali v9.
+
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
 - Done the same day, in 1.5: malisx2 4c91f3c in the recipe (upstream
