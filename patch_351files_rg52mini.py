@@ -99,7 +99,7 @@ rg43h_screen_block = """\
    #define FONT_NAME_MONO           "NotoSansMono-Regular.ttf"
    #define FONT_SIZE                22
    #define LINE_HEIGHT              34
-   #define ICON_SIZE                28
+   #define ICON_SIZE                32
    #define MARGIN_X                 12
    #define KEYBOARD_MARGIN          8
    #define KEYBOARD_KEY_SPACING     4
@@ -115,8 +115,42 @@ defh = defh.replace(
     "   #define SCREEN_WIDTH"
 )
 
+for marker in ("#elif defined(DEVICE_RG56PRO)\n   #define SCREEN_WIDTH",
+               "#elif defined(DEVICE_RG43H)\n   #define SCREEN_WIDTH",
+               "#elif defined(DEVICE_RG56PRO) || defined(DEVICE_RG43H)\n   #define BUTTON_PRESSED_UP"):
+    if marker not in defh:
+        # str.replace() does nothing when upstream changes its text; do not ship a half-patched app
+        raise SystemExit("patch_351files: src/def.h no longer matches what this patch expects: " + marker.splitlines()[0])
+
 with open("src/def.h", "w") as f:
     f.write(defh)
+
+# --- Patch src/sdlutils.cpp ---
+# Upstream a6a3f49 ("add 1.5x scaling above 480p") turned the UI metrics into globals that start at 0 and
+# are filled in only for DEVICE_RG351MP. On every other device, these two included, the icon folder came
+# out as ./res/0/, the font size 0 and the line height 0: the app starts, draws nothing and the screen
+# stays black. Fill them from the def.h macros in the fixed-size branch.
+
+with open("src/sdlutils.cpp") as f:
+    sdlu = f.read()
+
+needle = "      g_screenWidth = SCREEN_WIDTH;\n      g_screenHeight = SCREEN_HEIGHT;\n"
+metrics = (
+    "      g_fontSize            = FONT_SIZE;\n"
+    "      g_lineHeight          = LINE_HEIGHT;\n"
+    "      g_iconSize            = ICON_SIZE;\n"
+    "      g_marginX             = MARGIN_X;\n"
+    "      g_keyboardMargin      = KEYBOARD_MARGIN;\n"
+    "      g_keyboardKeySpacing  = KEYBOARD_KEY_SPACING;\n"
+    "      g_keyboardSymbolSize  = KEYBOARD_SYMBOL_SIZE;\n"
+)
+if needle + "      g_fontSize" not in sdlu:        # not already filled in by upstream
+    if needle not in sdlu:
+        raise SystemExit("patch_351files: src/sdlutils.cpp no longer matches what this patch expects")
+    sdlu = sdlu.replace(needle, needle + metrics, 1)
+
+with open("src/sdlutils.cpp", "w") as f:
+    f.write(sdlu)
 
 # --- Patch build_RG351.sh ---
 # Add RG56PRO and RG43H to the conditional that triggers dual-build
