@@ -77,7 +77,19 @@ it. Confirmed on the device.
   kHz of scattered reads). Reading it once a block (28 samples), invalidated
   when a DMA writes that block, or less work for stopped voices when SPU2
   IRQs cannot fire from them, might bring the heavy parts at 21% from 52-55
-  to 60. Not started.
+  to 60. Tried 2026-11-02: the header kept per voice, read again only when
+  the voice moves to another block, sound RAM is written (a generation bumped
+  by DMA, the data port, a savestate, a reset) or LoopFlags change. Worse, not
+  better: 58.0 vps on average against 58.7, the heavy part 51-52 against
+  52-55, two rounds each; spu2Mix 6.9% of the samples against 7.3%, and
+  DoReverb no longer inlined (1.6%): the header load was not the cost, the
+  per-voice bookkeeping is, and the changed code lost the PGO profile's hold
+  on it. Not kept (the patch: session 81455c62 scratchpad, ghprobe). What
+  would help is mixing the voices together (structure of arrays, NEON across
+  voices), a rewrite of the mixer.
+- **libc memcpy, ~8% of the EE thread in the same heavy part**, is
+  vifCode_Direct<1> (VIF1 DIRECT, from vifMFIFOInterrupt): GIF data copied
+  into the GS ring. Needed as it is; not looked into further.
 
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
