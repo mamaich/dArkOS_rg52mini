@@ -408,6 +408,26 @@ owner's card; nothing in the image (the owner, 2026-11-02). ARMSX2's
 GameIndex.yaml could set `eeCycleRate` for the game, which AutoTune leaves
 alone, if wanted.
 
+**Guitar Hero's speed swung, and the song's tempo with it** (the same day).
+Measured from the owner's savestate in a song, the emulated vsyncs a second
+counted by a uprobe on the function ARMSX2 runs once a vsync (0x4cace0 in
+1.5's stripped binary: the one that ends in the PerfLog code), 60 s per run,
+two rounds each, the console at 61-70 C (no throttling; 2208 MHz, ES's
+`overclock` for PS2). Full speed is 60:
+- EE cycle rate/skip 0/0, -1/1, -2/1: ~36; -3/1 (the image's): 38-40;
+  -4/3 (the owner's): 50-52; -5/3: 54; -6/3 (the menu's lowest): 57, with
+  heavy parts at 49-51;
+- the GS back thread +1; MTVU off -6 (the EE thread at 90%+); Arm's Vulkan
+  driver -2; HWDownloadMode (readbacks) no change;
+- in heavy parts no thread is saturated (EE ~70%, MTVU ~45%): the EE thread
+  waits on a futex ~23% of the time, likely on VU1;
+- NominalScalar 0.85 (51 fps): flat 51 every second but one (47); 0.80: flat
+  48. TimeStretch keeps the pitch, the tempo no longer swings.
+On the owner's card only: `gamesettings/SLUS-21224_B815F724.ini` with
+AutoTune off, -6/3, the GS back thread, NominalScalar 0.85. The owner: steady,
+the tempo a bit low; set aside for now. The owner's own load on the console
+reached 85-86 C on the charger, where throttling adds to the swings.
+
 ## USB devices on the port in sleep: it woke again and again — advice in 1.5, not fixed
 
 Reported by the owner, 2026-11-01, on revision B with 1.4: a USB headset

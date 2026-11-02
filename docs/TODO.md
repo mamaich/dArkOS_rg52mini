@@ -60,6 +60,17 @@ it. Confirmed on the device.
   file (the image's untouched, a 1.5 file without armgba made byte for byte the
   image's, a 1.4 file without retroarch-next, a second run changing nothing).
 
+- **A missing BIOS shows as "the emulator does not work"** (the owner,
+  2026-11-02, to do after Guitar Hero). Some emulators, started without the
+  BIOS they need, write "BIOS not found" to their log and quit with nothing on
+  the screen; the user is back in ES with no idea why. The BIOS cannot ship in
+  the image (copyright). Ideas: when a game ends within a few seconds of its
+  start, show the tail of the emulator's log on the screen (the launcher knows
+  the log's path); or, better, check the system's BIOS files before the start
+  (the names and md5s RetroArch's core info files and the standalone launchers
+  already list) and say which file is missing and where it goes. To try it,
+  rename /roms/bios on the card for a while.
+
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
 - Done the same day, in 1.5: malisx2 4c91f3c in the recipe (upstream
