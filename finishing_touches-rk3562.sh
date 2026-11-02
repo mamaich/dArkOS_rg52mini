@@ -448,11 +448,6 @@ sudo cp -f scripts/10-help-text Arkbuild/etc/update-motd.d/10-help-text
 sudo rm -f Arkbuild/etc/motd
 sudo chmod 777 Arkbuild/etc/update-motd.d/*
 
-# RG43H Pro: low swappiness for eMMC swap (only swap under real memory pressure)
-if [ "$UNIT" == "rg43h" ]; then
-  echo "vm.swappiness=10" | sudo tee Arkbuild/etc/sysctl.d/99-swap.conf
-fi
-
 # Load the WiFi kernel driver matching this device's hardware revision.
 # There are two RG52 Mini hardware revisions with different WiFi chips:
 #   rev A: RK915 (Microchip WILC1000) — SDIO vendor 0x0296
