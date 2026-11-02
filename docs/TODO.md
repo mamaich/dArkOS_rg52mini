@@ -71,6 +71,14 @@ it. Confirmed on the device.
   already list) and say which file is missing and where it goes. To try it,
   rename /roms/bios on the card for a while.
 
+- **ARMSX2's `spu2Mix` takes ~18% of the EE thread** (Guitar Hero's heavy
+  part, KNOWN-ISSUES "Guitar Hero's speed"): every voice, playing or not,
+  reads its ADPCM block's header from SPU2 RAM every sample (48 voices x 48
+  kHz of scattered reads). Reading it once a block (28 samples), invalidated
+  when a DMA writes that block, or less work for stopped voices when SPU2
+  IRQs cannot fire from them, might bring the heavy parts at 21% from 52-55
+  to 60. Not started.
+
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
 - Done the same day, in 1.5: malisx2 4c91f3c in the recipe (upstream

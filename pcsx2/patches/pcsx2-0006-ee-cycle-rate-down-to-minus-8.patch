@@ -1,0 +1,86 @@
+From: dArkOS RG52 Mini port
+Subject: EE Cycle Rate goes down to -8 (21%) for the user to choose
+
+On top of pcsx2-0005 (-4..-6). Guitar Hero (SLUS-21224) is held by its EE on
+an RG52 Mini: measured second by second in a song, the emulated vsyncs a
+second came to 57 on average at -6 (27%), the heavy parts at 49-51, and to 59
+at -8 (21%), the heavy parts at 52-55, the first 40 s a flat 60; the game
+plays right at -8 (the owner, 2026-11-02; dArkOS docs/KNOWN-ISSUES.md,
+"Guitar Hero's speed"). -7 and -8 are offered as 24% and 21% Speed; the
+recompiler's charge is the same formula, (5 - 2 * (rate + 1)) / 32 of a
+block's cycles, and VU0's micro programs are charged the same ratio,
+(5 - 2 * (rate + 1)) / 4. The governor still stops at -3.
+
+diff -ru a/pcsx2/Config.h b/pcsx2/Config.h
+--- a/pcsx2/Config.h
++++ b/pcsx2/Config.h
+@@ -1403,7 +1403,7 @@
+ 	{
+ 		// dArkOS: down to -6 (the EE at 36%, 31%, 27% for -4, -5, -6), for the user to choose.
+ 		// The governor still lowers the rate to -3 at most, as before.
+-		static constexpr s8 MIN_EE_CYCLE_RATE = -6;
++		static constexpr s8 MIN_EE_CYCLE_RATE = -8; // dArkOS: -7, -8 (24%, 21%), pcsx2-0006
+ 		static constexpr s8 MIN_EE_CYCLE_RATE_GOVERNOR = -3;
+ 		static constexpr s8 MAX_EE_CYCLE_RATE = 3;
+ 		static constexpr u8 MAX_EE_CYCLE_SKIP = 3;
+diff -ru a/pcsx2/EECycleRateController.cpp b/pcsx2/EECycleRateController.cpp
+--- a/pcsx2/EECycleRateController.cpp
++++ b/pcsx2/EECycleRateController.cpp
+@@ -9,7 +9,7 @@
+ namespace
+ {
+ 	// The selector range the speedhack has always had, and dArkOS's -4..-6 below it.
+-	constexpr int kMinSelector = -6;
++	constexpr int kMinSelector = -8; // dArkOS: -7, -8, pcsx2-0006
+ 	constexpr int kMaxSelector = 3;
+ 
+ 	// dArkOS: the governor still lowers the rate to -3 at most, as before -4..-6 were allowed.
+diff -ru a/pcsx2/ImGui/FullscreenUI_Settings.cpp b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+--- a/pcsx2/ImGui/FullscreenUI_Settings.cpp
++++ b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+@@ -2646,6 +2646,8 @@
+ 		10.00f,
+ 	};
+ 	static constexpr const char* ee_cycle_rate_settings[] = {
++		FSUI_NSTR("21% Speed"), // dArkOS: -8, -7 (pcsx2-0006)
++		FSUI_NSTR("24% Speed"),
+ 		FSUI_NSTR("27% Speed"), // dArkOS: -6..-4
+ 		FSUI_NSTR("31% Speed"),
+ 		FSUI_NSTR("36% Speed"),
+@@ -2699,7 +2701,7 @@
+ 	MenuHeading(FSUI_CSTR("System Settings"));
+ 
+ 	DrawIntListSetting(bsi, FSUI_ICONSTR(ICON_FA_GAUGE_HIGH, "EE Cycle Rate"), FSUI_CSTR("Underclocks or overclocks the emulated Emotion Engine CPU."),
+-		"EmuCore/Speedhacks", "EECycleRate", 0, ee_cycle_rate_settings, std::size(ee_cycle_rate_settings), true, -6);
++		"EmuCore/Speedhacks", "EECycleRate", 0, ee_cycle_rate_settings, std::size(ee_cycle_rate_settings), true, -8);
+ 	DrawIntListSetting(bsi, FSUI_ICONSTR(ICON_FA_ARROW_TREND_DOWN, "EE Cycle Skipping"),
+ 		FSUI_CSTR("Makes the emulated Emotion Engine skip cycles. Helps a small subset of games like SOTC. Most of the time it's harmful to performance."), "EmuCore/Speedhacks", "EECycleSkip", 0,
+ 		ee_cycle_skip_settings, std::size(ee_cycle_skip_settings), true);
+diff -ru a/pcsx2/VU0microInterp.cpp b/pcsx2/VU0microInterp.cpp
+--- a/pcsx2/VU0microInterp.cpp
++++ b/pcsx2/VU0microInterp.cpp
+@@ -328,6 +328,12 @@
+ 		switch (std::min(static_cast<int>(ee_cycle_rate), static_cast<int>(cycle_change)))
+ 		{
+ 			// dArkOS: -4..-6 charge as the EE's own blocks do at them, (5 - 2 * (rate + 1)) / 4.
++			case -8: // 21% (dArkOS)
++				cycle_change *= 4.75f;
++				break;
++			case -7: // 24% (dArkOS)
++				cycle_change *= 4.25f;
++				break;
+ 			case -6: // 27%
+ 				cycle_change *= 3.75f;
+ 				break;
+diff -ru a/pcsx2/arm64/microVU_Compile-arm64.inl b/pcsx2/arm64/microVU_Compile-arm64.inl
+--- a/pcsx2/arm64/microVU_Compile-arm64.inl
++++ b/pcsx2/arm64/microVU_Compile-arm64.inl
+@@ -510,6 +510,8 @@
+ 		switch (std::min(static_cast<int>(mVUeeCycleRate), static_cast<int>(mVUcycles)))
+ 		{
+ 			// dArkOS: -4..-6 charge as the EE's own blocks do at them, (5 - 2 * (rate + 1)) / 4.
++			case -8: mVUcycles *= 4.75f;      break; // dArkOS
++			case -7: mVUcycles *= 4.25f;      break;
+ 			case -6: mVUcycles *= 3.75f;      break;
+ 			case -5: mVUcycles *= 3.25f;      break;
+ 			case -4: mVUcycles *= 2.75f;      break;

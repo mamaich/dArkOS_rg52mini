@@ -398,7 +398,9 @@ releases at 43% and the axis raises it again on its next event: a release and
 a press in a few ms, worse for a rhythm game. Not done; a patch in ARMSX2 to
 ignore those two buttons is the clean way (not now, the owner, 2026-11-02).
 
-**Guitar Hero's intro movie stopped on a frame** (SLUS-21224, the same day):
+## Guitar Hero (PS2): its movie stopped, its speed swung — for 1.6
+
+**Guitar Hero's intro movie stopped on a frame** (SLUS-21224, 2026-11-02):
 with the image's `EECycleRate = -3`, `EECycleSkip = 1` it stops at once; with
 PCSX2's defaults (0/0) it plays until ARMSX2's AutoTune turns the EE governor
 on for the game (48 s in, saved in its game settings), then stops too; with
@@ -427,6 +429,34 @@ On the owner's card only: `gamesettings/SLUS-21224_B815F724.ini` with
 AutoTune off, -6/3, the GS back thread, NominalScalar 0.85. The owner: steady,
 the tempo a bit low; set aside for now. The owner's own load on the console
 reached 85-86 C on the charger, where throttling adds to the swings.
+
+**For 1.6: the EE down to 21%, and movies at its full rate** (2026-11-02,
+the owner wanted the full tempo). A profile of the heavy part (perf, a
+build with symbols) put the EE thread's time in the game's JIT code, in
+`spu2Mix` (~18% of the thread: the SPU2's 48 voices every sample, each
+voice's ADPCM block header read from the 2 MB sound RAM every sample, cache
+misses), in libc's memcpy (~17%), in the event tests (~8%) and in VIF1
+transfers (~9%). Two ARMSX2 patches, on top of pcsx2-0005:
+- **pcsx2-0006**, the EE Cycle Rate down to -8 (24% and 21% Speed in the
+  menu, the same charge formula). From the same savestate, two rounds:
+  -6: 57 on average, the heavy part 48-51; -7: 57.3; -8: 58.9, the first
+  40 s a flat 60, the heavy part 52-55. The owner played at -8: comfortable.
+- **pcsx2-0007**, Full EE Speed in Movies (`FullEERateForMovies`, on by
+  default, in Settings > Emulation and per game): at any rate below 0 the
+  intro movie stopped on its first frame (-3/0, -3/1, -6/3, -8/0, -8/1, -8/3
+  all tried from boot); it plays at 0. While Counters' FMV detection sees a
+  movie (the IPU decoding video), the effective rate is 0, the set rate again
+  a second after it ends, through EECycleRate::ApplyEffective (the governor's
+  path; its own moves are refused meanwhile). Guitar Hero at -8: full rate at
+  28 s, back to -8 at 64 s, the title screen; the owner: the intro plays.
+Checked on a fresh card's settings (-3/1, AutoTune on), each game from boot
+for 120 s on 1.5's ARMSX2 and on the one with both patches: God of War's
+demo, Jak and Daxter and The Sopranos saw no movie and ran as before;
+Burnout 3's demo has a video behind its title screen, so the EE ran at its
+full rate there, 37-42 vps against 44-46 (by design; the switch turns it off
+per game). Settings for Guitar Hero, per game: EE Cycle Rate 21%, EE Cycle
+Skipping Maximum Underclock, MTVU on, Automatic Performance Tuning off, Full
+EE Speed in Movies on, GS Multi-threading Enabled. `spu2Mix` is next (TODO).
 
 ## USB devices on the port in sleep: it woke again and again — advice in 1.5, not fixed
 

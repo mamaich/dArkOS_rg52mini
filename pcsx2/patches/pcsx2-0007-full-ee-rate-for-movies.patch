@@ -1,0 +1,191 @@
+From: dArkOS RG52 Mini port
+Subject: The EE at its full rate while a movie plays (Full EE Speed in Movies)
+
+Games that need a low EE Cycle Rate to keep their speed can stop their
+movies with it: Guitar Hero's intro stops on its first frame at any rate
+below 0 (-3, -6 and -8 tried, with and without cycle skipping), and plays at
+0. A movie is what the IPU decodes; Counters' FMV detection (DoFMVSwitch,
+once a vsync on the CPU thread) already knows when one starts and ends.
+
+With FullEERateForMovies on (the default; Settings > Emulation, "Full EE
+Speed in Movies", per game too) and a set rate below 0, the effective rate
+is 0 while a movie plays and the set rate again a second after it ends. The
+switch goes through EECycleRate::ApplyEffective like the governor's, which
+patches the recompiler's charges in place; meanwhile the governor's own
+moves are refused. Checked on an RG52 Mini: Guitar Hero at -8 plays its
+intro to the title screen (full rate at 28 s, back to -8 at 64 s).
+
+diff -ru a/pcsx2/Config.h b/pcsx2/Config.h
+--- a/pcsx2/Config.h
++++ b/pcsx2/Config.h
+@@ -1423,7 +1423,11 @@
+ 			// Let the governor lower the EE cycle rate below EECycleRate, by up to two
+ 			// steps, when the host cannot hold the frame deadline. Never above it, and
+ 			// never written back — EECycleRate stays the player's baseline.
+-			DynamicEECycleRate : 1;
++			DynamicEECycleRate : 1,
++			// dArkOS: while a movie plays (the IPU decodes video), the EE at its full rate even
++			// when EECycleRate is below it; back to EECycleRate a second after the movie. Movies
++			// that stop on their first frame at a low rate (Guitar Hero) then play.
++			FullEERateForMovies : 1;
+ 		BITFIELD_END
+ 
+ 		s8 EECycleRate; // EE cycle rate selector (1.0, 1.5, 2.0)
+diff -ru a/pcsx2/Counters.cpp b/pcsx2/Counters.cpp
+--- a/pcsx2/Counters.cpp
++++ b/pcsx2/Counters.cpp
+@@ -7,6 +7,7 @@
+ #include "Common.h"
+ #include "R3000A.h"
+ #include "Counters.h"
++#include "EECycleRate.h"
+ #include "EECycleRateSampler.h"
+ #include "IopCounters.h"
+ #include "IopThread/IopBridge.h"
+@@ -457,6 +458,9 @@
+ 		}
+ 	}
+ 
++	// dArkOS: the EE at its full rate while a movie plays (FullEERateForMovies)
++	EECycleRate::UpdateMovieOverride(new_fmv_state);
++
+ 	if (new_fmv_state == s_last_fmv_state)
+ 		return;
+ 
+diff -ru a/pcsx2/EECycleRate.cpp b/pcsx2/EECycleRate.cpp
+--- a/pcsx2/EECycleRate.cpp
++++ b/pcsx2/EECycleRate.cpp
+@@ -31,6 +31,12 @@
+ 	EECycleRate::ResetGenerations s_generations = {};
+ 	EECycleRate::TransitionCost s_last_cost = {};
+ 	EECycleRate::TransitionPath s_last_path = {};
++
++	// dArkOS: the movie override (UpdateMovieOverride). s_movie_bypass lets its own two
++	// transitions past ApplyEffective's range check; everyone else is refused while it holds.
++	bool s_movie = false;
++	bool s_movie_bypass = false;
++	u32 s_movie_off_vsyncs = 0;
+ } // namespace
+ 
+ namespace
+@@ -56,6 +62,8 @@
+ void EECycleRate::SyncToConfigured()
+ {
+ 	s_effective = GetConfigured();
++	s_movie = false; // dArkOS: the next vsync takes the override again if a movie still plays
++	s_movie_off_vsyncs = 0;
+ }
+ 
+ s8 EECycleRate::GetFloor()
+@@ -68,8 +76,11 @@
+ 	pxAssertMsg(VMManager::Internal::IsOnCPUThread(),
+ 		"EECycleRate::ApplyEffective must run on the CPU thread — it resets code caches.");
+ 
++	if (s_movie && !s_movie_bypass)
++		return false; // dArkOS: a movie holds the full rate
++
+ 	const s8 configured = GetConfigured();
+-	if (selector > configured || selector < GetFloor())
++	if (!s_movie_bypass && (selector > configured || selector < GetFloor()))
+ 	{
+ 		DevCon.WriteLn("EE cycle rate: rejecting effective %d (configured %d, floor %d), reason '%s'",
+ 			static_cast<int>(selector), static_cast<int>(configured), static_cast<int>(GetFloor()),
+@@ -131,6 +142,48 @@
+ 	return true;
+ }
+ 
++void EECycleRate::UpdateMovieOverride(bool fmv_active)
++{
++	const s8 configured = GetConfigured();
++	const bool enabled = EmuConfig.Speedhacks.FullEERateForMovies && configured < 0;
++
++	if (fmv_active && enabled)
++	{
++		s_movie_off_vsyncs = 0;
++		if (!s_movie)
++		{
++			s_movie_bypass = true;
++			const bool applied = ApplyEffective(0, "a movie plays (the IPU decodes video)");
++			s_movie_bypass = false;
++			if (applied)
++			{
++				s_movie = true;
++				Console.WriteLn("EE cycle rate: full rate while a movie plays (set rate %d)", static_cast<int>(configured));
++			}
++		}
++		return;
++	}
++
++	if (!s_movie)
++		return;
++
++	// a second after the movie (at once when the setting goes off), the set rate again
++	if (enabled && ++s_movie_off_vsyncs < 60)
++		return;
++
++	s_movie_bypass = true;
++	ApplyEffective(configured, "the movie ended");
++	s_movie_bypass = false;
++	s_movie = false;
++	s_movie_off_vsyncs = 0;
++	Console.WriteLn("EE cycle rate: back to the set rate %d after the movie", static_cast<int>(configured));
++}
++
++bool EECycleRate::IsMovieOverrideActive()
++{
++	return s_movie;
++}
++
+ EECycleRate::TransitionPath EECycleRate::GetLastTransitionPath()
+ {
+ 	return s_last_path;
+diff -ru a/pcsx2/EECycleRate.h b/pcsx2/EECycleRate.h
+--- a/pcsx2/EECycleRate.h
++++ b/pcsx2/EECycleRate.h
+@@ -61,6 +61,13 @@
+ 	// unpack dynarec. None of them bake the EE selector into generated code.
+ 	bool ApplyEffective(s8 selector, const char* reason);
+ 
++	// dArkOS: movies at the full EE rate. Once a vsync on the CPU thread, with whether a movie
++	// plays (Counters' FMV detection: the IPU decoding video). With FullEERateForMovies on and
++	// a configured rate below 0, the effective rate is 0 while it plays and the configured one
++	// again a second after it ends. Meanwhile ApplyEffective refuses the governor's moves.
++	void UpdateMovieOverride(bool fmv_active);
++	bool IsMovieOverrideActive();
++
+ 	// How many times ApplyEffective has actually moved the selector this session.
+ 	u32 GetTransitionCount();
+ 
+diff -ru a/pcsx2/ImGui/FullscreenUI_Settings.cpp b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+--- a/pcsx2/ImGui/FullscreenUI_Settings.cpp
++++ b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+@@ -2705,6 +2705,10 @@
+ 	DrawIntListSetting(bsi, FSUI_ICONSTR(ICON_FA_ARROW_TREND_DOWN, "EE Cycle Skipping"),
+ 		FSUI_CSTR("Makes the emulated Emotion Engine skip cycles. Helps a small subset of games like SOTC. Most of the time it's harmful to performance."), "EmuCore/Speedhacks", "EECycleSkip", 0,
+ 		ee_cycle_skip_settings, std::size(ee_cycle_skip_settings), true);
++	// dArkOS: EmuConfig.Speedhacks.FullEERateForMovies
++	DrawToggleSetting(bsi, FSUI_ICONSTR(ICON_FA_FILM, "Full EE Speed in Movies"),
++		FSUI_CSTR("While a game plays a movie, runs the Emotion Engine at its normal speed even when EE Cycle Rate is set below it, and goes back to the set rate a second after the movie. Movies that stop on their first frame at a low EE Cycle Rate then play. Turn it off if a game stutters or hangs around its movies."),
++		"EmuCore/Speedhacks", "FullEERateForMovies", true);
+ 	DrawToggleSetting(bsi, FSUI_ICONSTR(ICON_FA_USERS, "Enable Multithreaded VU1 (MTVU)"),
+ 		FSUI_CSTR("Generally a speedup on CPUs with 4 or more cores. Safe for most games, but a few are incompatible and may hang."), "EmuCore/Speedhacks", "vuThread", false);
+ 	DrawToggleSetting(bsi, FSUI_ICONSTR(ICON_FA_USERS, "Enable IOP Thread"),
+diff -ru a/pcsx2/Pcsx2Config.cpp b/pcsx2/Pcsx2Config.cpp
+--- a/pcsx2/Pcsx2Config.cpp
++++ b/pcsx2/Pcsx2Config.cpp
+@@ -408,6 +408,7 @@
+ 	IntcStat = true;
+ 	vuFlagHack = true;
+ 	vu1Instant = true;
++	FullEERateForMovies = true; // dArkOS
+ }
+ 
+ Pcsx2Config::SpeedhackOptions& Pcsx2Config::SpeedhackOptions::DisableAll()
+@@ -438,6 +439,7 @@
+ 	SettingsWrapBitBool(iopThreadLockstep);
+ 	SettingsWrapEntry(iopThreadLag);
+ 	SettingsWrapBitBool(DynamicEECycleRate);
++	SettingsWrapBitBool(FullEERateForMovies);
+ 	SettingsWrapEntry(DynamicEECycleRateTrace);
+ 
+ 	EECycleRate = std::clamp(EECycleRate, MIN_EE_CYCLE_RATE, MAX_EE_CYCLE_RATE);
