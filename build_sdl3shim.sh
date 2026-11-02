@@ -9,6 +9,10 @@
 # Source: https://github.com/bmdhacks/SDL.git branch sdl2-backend
 #         (the same fork referenced as a submodule from /home/bmd/sdl3forsdl2;
 #          we clone it directly so HTTPS users without the wrapper repo can build)
+# Since 1.6: christianhaitian's fork of it, the same branch with one commit on top
+# (0bfb5b8, elderica's audio fix: the SDL2 device is opened allowing no format change,
+# so SDL2 converts when the hardware differs; the shim always queues in its own spec),
+# as rk3566_core_builds' sdl3.sh takes it since ae344eb.
 #
 # RK3562-only — skip on other chipsets.
 
@@ -16,7 +20,7 @@ if [ "$CHIPSET" != "rk3562" ]; then
     return 0
 fi
 
-SDL3_REMOTE="https://github.com/bmdhacks/SDL.git"
+SDL3_REMOTE="https://github.com/christianhaitian/SDL3withSDL2-Backend.git"
 SDL3_BRANCH="sdl2-backend"
 SDL3_SRC="Arkbuild/home/ark/sdl3"
 SDL3_BUILD="/home/ark/sdl3/build"
@@ -33,6 +37,7 @@ if [ ! -d "${SDL3_SRC}/.git" ]; then
     verify_action
     sudo chown -R 1000:1000 "${SDL3_SRC}"
 else
+    git -C "${SDL3_SRC}" remote set-url origin "${SDL3_REMOTE}"
     git -C "${SDL3_SRC}" fetch origin "${SDL3_BRANCH}"
     git -C "${SDL3_SRC}" checkout "${SDL3_BRANCH}"
     git -C "${SDL3_SRC}" reset --hard "origin/${SDL3_BRANCH}"
