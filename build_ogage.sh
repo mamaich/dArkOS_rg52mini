@@ -25,9 +25,12 @@ fi
 
 # Our patches to the branch (ogage/patches): on the RG52 Mini, BTN_MODE is
 # Home, RetroArch's hotkey button, and the rg503 branch toggles Bluetooth on
-# it. The cache holds the branch's commit with the patches' hash after it.
+# it. The RG43V Pro (the rg43h image) has the same button as FN, which its
+# H/V selector makes RetroArch's hotkey too; the RG43H has no BTN_MODE, so
+# for it the patch changes nothing. The cache holds the branch's commit with
+# the patches' hash after it.
 ogage_patches=""
-if [[ "$UNIT" == "rg52mini" ]]; then
+if [[ "$UNIT" == "rg52mini" ]] || [[ "$UNIT" == "rg43h" ]]; then
   ogage_patches=$(ls ogage/patches/*.patch)
 fi
 ogage_suffix=""
