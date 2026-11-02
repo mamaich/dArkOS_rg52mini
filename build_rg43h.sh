@@ -133,6 +133,8 @@ source ./cleanup_filesystem.sh
 source ./write_rootfs-rk3562.sh
 source ./clean_mounts.sh
 source ./create_image.sh
+# The chroot stages this build kept (rootfs_cache.sh) are good to use
+commit_rootfs_cache
 ) 2>&1 | tee -a build.log
 
 echo "RG43H Pro build completed. Final image is ready."
