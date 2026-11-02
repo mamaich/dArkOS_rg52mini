@@ -150,7 +150,7 @@ game) sets the amplifier for the new path at once; before, it was set only at
 the next unmute, so the speaker kept playing beside the headphones.
 KNOWN-ISSUES, "Headphones: the speaker played too".
 
-## Input and sound changes in 1.4 and 1.5
+## Input and sound changes since 1.4
 
 | Kernel | Release | What |
 |---|---|---|
@@ -158,6 +158,7 @@ KNOWN-ISSUES, "Headphones: the speaker played too".
 | d188e7c | 1.5 | the RK817 codec's amplifier follows a playback path switched during playback (above) |
 | 1c9d338 | 1.5 | xpad built in, with LEDs and force feedback, and the init read some Xbox 360 clones wait for before they report (KNOWN-ISSUES, "USB pads in Xbox 360 mode did nothing") |
 | 5a6d2f3 | 1.5 | `rk3562-joystick`: Select's release counts only after 100 ms without an edge, the other keys keep 5 ms (KNOWN-ISSUES, "Select on ES's screen") |
+| 4e1991c | 1.6 | `rk3562-joystick`: the triggers' dead zone at rest 1600 of 32767, was 800 (KNOWN-ISSUES, "L2 pressed by itself") |
 
 ## Babble filter
 

@@ -143,7 +143,12 @@ Dragon 32 and CoCo at BASIC's OK. No crash, the sound playing, the speed the
 same.
 
 In master for 1.6, not released yet (VERSION says 1.6; the image is built
-only when the owner says so): nothing yet.
+only when the owner says so):
+
+| | |
+|---|---|
+| OTA | `1.6-es-armgba.sh`: armGBA offered for GBA in an es_systems.cfg the update to 1.5 kept |
+| Triggers | the dead zone at rest doubled to 1600 of 32767 (kernel 4e1991c): L2 no longer reads as pressed by itself in ARMSX2 ([KNOWN-ISSUES](KNOWN-ISSUES.md#l2-pressed-by-itself-in-armsx2--fixed-for-16)) |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

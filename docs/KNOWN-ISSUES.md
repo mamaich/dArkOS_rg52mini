@@ -367,6 +367,47 @@ restarted, Game Boy with Hermano under the cursor. The default: with no
 `StartupSystem` in `es_settings.cfg` (a user who had NONE) and Game Boy saved,
 the new ES opened on Game Boy; the one before it, on the first system.
 
+## L2 pressed by itself in ARMSX2 — fixed for 1.6
+
+Reported by users through the owner, 2026-11-02: in Guitar Hero (PS2) L2
+was now and then pressed by itself.
+
+The triggers are analog (an ADC each). `rk3562-joystick` maps them to
+ABS_Z/ABS_RZ, 0..32767, with a dead zone at rest: 800, against noise of
+~536 on L2 and ~77 on R2 measured at rest. ARMSX2 binds L2 to the half axis
+(`SDL-0/+LeftTrigger`) and takes any value above 0 as L2 pressed. Logged on the
+console, triggers untouched: 30 s at rest, nothing; 3 min with Guitar Hero
+starting, one L2 value of 878 for 21 ms (at 7 s, while the game loaded); R2
+nothing. Kernel 4e1991c doubles the dead zone to 1600 (~5% of the travel). With
+it: both triggers still reach 32767 and their digital keys (BTN_TL2/BTN_TR2,
+at 64%, released at 43%) latch once a press; 119 s with Guitar Hero starting,
+triggers untouched, no event at all. The sticks' dead zone is separate
+(`STICK_DZ_MARGIN_UV`) and unchanged.
+
+**The trigger's digital key in ARMSX2's binding dialog.** The driver reports
+each trigger as an axis and, past 64%, a key as well (as hid-playstation does),
+which ES and ports use for L2/R2. The SDL mapping ARMSX2's launcher sets binds
+the axes as the triggers and leaves the keys (joystick buttons 6 and 7) to no
+gamepad button, so ARMSX2 sees them as raw `JoyButton6`/`JoyButton7`, and a
+binding made by pressing L2 in its dialog came out as `SDL-0/+LeftTrigger &
+SDL-0/JoyButton6`: L2 then only past 64%. The image's `PCSX2.ini` binds
+`SDL-0/+LeftTrigger` alone; the owner's was put back to that. Mapping the keys
+to the triggers too (`lefttrigger:b6`) hides them from ARMSX2 (the SDL3 shim
+reports the binding), but SDL2 then drops the trigger to 0 when the key
+releases at 43% and the axis raises it again on its next event: a release and
+a press in a few ms, worse for a rhythm game. Not done; a patch in ARMSX2 to
+ignore those two buttons is the clean way (not now, the owner, 2026-11-02).
+
+**Guitar Hero's intro movie stopped on a frame** (SLUS-21224, the same day):
+with the image's `EECycleRate = -3`, `EECycleSkip = 1` it stops at once; with
+PCSX2's defaults (0/0) it plays until ARMSX2's AutoTune turns the EE governor
+on for the game (48 s in, saved in its game settings), then stops too; with
+0/0 and `AutoTune = false` in the game's settings it plays through to the
+title screen (the movie at ~48 fps, EE 99%). Per-game settings only on the
+owner's card; nothing in the image (the owner, 2026-11-02). ARMSX2's
+GameIndex.yaml could set `eeCycleRate` for the game, which AutoTune leaves
+alone, if wanted.
+
 ## USB devices on the port in sleep: it woke again and again — advice in 1.5, not fixed
 
 Reported by the owner, 2026-11-01, on revision B with 1.4: a USB headset
