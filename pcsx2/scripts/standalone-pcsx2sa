@@ -55,14 +55,14 @@ if [ "$DEVICE" = "RG52MINI" ]; then
     sed -i 's/^DisplayRotation = 90$/DisplayRotation = 0/' "/$directory/ps2/pcsx2/inis/PCSX2.ini"
 fi
 
-# RG52 Mini: up to 1.3 the template had DisableFramebufferFetch = true and
-# OverrideTextureBarriers = 0 (set for the bmdhacks fork). On ARMSX2 they force
-# its slowest road on Mali, a copy of the target for every draw that reads it;
-# at their defaults it reads the target in the tile (docs/TODO.md, PS2). An ini
-# made from the old template is put on the defaults once: the flag next to it
-# keeps either value set by hand afterwards.
+# RG52 Mini and RG43H (the same Mali): up to 1.3 the template had
+# DisableFramebufferFetch = true and OverrideTextureBarriers = 0 (set for the
+# bmdhacks fork). On ARMSX2 they force its slowest road on Mali, a copy of the
+# target for every draw that reads it; at their defaults it reads the target in
+# the tile (docs/TODO.md, PS2). An ini made from the old template is put on the
+# defaults once: the flag next to it keeps either value set by hand afterwards.
 selfread_flag="/$directory/ps2/pcsx2/inis/.selfread-defaults"
-if [ "$DEVICE" = "RG52MINI" ] && [ ! -e "$selfread_flag" ]; then
+if { [ "$DEVICE" = "RG52MINI" ] || [ "$DEVICE" = "RG43H" ]; } && [ ! -e "$selfread_flag" ]; then
     sed -i -e 's/^DisableFramebufferFetch = true$/DisableFramebufferFetch = false/' \
            -e 's/^OverrideTextureBarriers = 0$/OverrideTextureBarriers = -1/' \
            "/$directory/ps2/pcsx2/inis/PCSX2.ini" 2>/dev/null
