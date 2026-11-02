@@ -54,8 +54,11 @@ it. Confirmed on the device.
   EMULATOR SETTINGS only with the stock `/etc/emulationstation/es_systems.cfg`;
   where the owner of a device had edited the file, the update keeps it (the new
   one beside it as `.ota-new`) and nothing adds `<core>armgba</core>` there, as
-  `1.5-es-retroarch-next.sh` does for retroarch-next. A `1.6-es-armgba.sh` hook
-  doing the same for GBA (after mgba) would close it on the next update.
+  `1.5-es-retroarch-next.sh` does for retroarch-next. Done for 1.6:
+  `ota/hooks/1.6-es-armgba.sh` adds it after mgba in GBA's `retroarch` and
+  `retroarch-next` emulators of a kept file; tried on copies of the console's
+  file (the image's untouched, a 1.5 file without armgba made byte for byte the
+  image's, a 1.4 file without retroarch-next, a second run changing nothing).
 
 ## After 1.4 (the owner, 2026-10-31: right after the release, with malisx2's update)
 
