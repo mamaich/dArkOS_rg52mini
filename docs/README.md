@@ -147,7 +147,7 @@ only when the owner says so):
 
 | | |
 |---|---|
-| Emulators | DSperate v3.2.0 (PGO profiles refreshed, 3D fixes); Dolphin master e8c4246; the SDL3 shim with elderica's audio fix (PS2's sound when the device opens in another format) |
+| Emulators | ARMSX2 master f6df1e69 with a profile retrained for it: Jak and Daxter +5%, Guitar Hero +6%, Burnout 3 +2%, God of War within the spread; DSperate v3.2.0 (PGO profiles refreshed, 3D fixes); Dolphin master e8c4246; the SDL3 shim with elderica's audio fix (PS2's sound when the device opens in another format) |
 | OTA | `1.6-es-armgba.sh`: armGBA offered for GBA in an es_systems.cfg the update to 1.5 kept |
 | PS2 | ARMSX2's EE Cycle Rate down to 21% (pcsx2-0006), and Full EE Speed in Movies, on by default (pcsx2-0007): movies that stop at a low EE rate play; Guitar Hero at 21% about 59 vps on average ([KNOWN-ISSUES](KNOWN-ISSUES.md#guitar-hero-ps2-its-movie-stopped-its-speed-swung--for-16)) |
 | Triggers | the dead zone at rest doubled to 1600 of 32767 (kernel 4e1991c): L2 no longer reads as pressed by itself in ARMSX2 ([KNOWN-ISSUES](KNOWN-ISSUES.md#l2-pressed-by-itself-in-armsx2--fixed-for-16)) |

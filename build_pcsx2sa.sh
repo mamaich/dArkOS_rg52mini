@@ -23,18 +23,26 @@ fi
 ARMSX2_REMOTE="https://github.com/ARMSX2/ARMSX2"
 # Pinned: upstream moves every day; a newer commit is a deliberate update
 # (patches checked, profile retrained).
-ARMSX2_COMMIT="a7ad4534dcf82f2ff5da0cb24024bc4278be175a"
+# master of 2026-10-31 (f6df1e69, after 2.9.1), the owner's rule of 2026-11-03: taken
+# when no slower. With its profile (below), from the owner's savestates, 3 rounds
+# against a7ad453: God of War within the spread (28.2 against 28.6, 7 and 8
+# rounds; a7ad453 spreads 27.5-29.6), Jak +5% (40.3 / 38.2), Guitar Hero +6%
+# (55.3 / 51.9), Burnout 3 +2% (25.4 / 24.9); a7ad453's savestates load.
+ARMSX2_COMMIT="f6df1e69255544241132d66441f2f1338fd90bfd"
 PCSX2_SRC="Arkbuild/home/ark/armsx2"
 PCSX2_BUILD="/home/ark/armsx2/build-${UNIT}"
-# Profile for clang's profile-guided optimisation: ARMSX2 at the commit above
-# with our patches, instrumented, on an RG52 Mini: Jak and Daxter's intro,
-# its menus and the BIOS screens (2026-10-20), and the owner playing Jak, God
-# of War's demo and Burnout 3's (2026-10-21), merged with weights that give
-# each of the four about the same total count (docs/TODO.md).  Its file-local
+# Profile for clang's profile-guided optimisation: a7ad453's (Jak and Daxter's
+# intro, its menus and the BIOS screens, 2026-10-20, and the owner playing Jak,
+# God of War's demo and Burnout 3's, 2026-10-21) merged, at about the same
+# total count, with the commit above, instrumented with our patches, on an
+# RG52 Mini from boot: Jak (200 s), Guitar Hero and Burnout 3 (120 s each),
+# 2026-11-03. clang takes for each function the record that fits its code, so
+# what master changed gets the new runs. Without the new part master was 2-3%
+# slower in God of War and Burnout 3 (docs/TODO.md).  Its file-local
 # functions are named by the path of their source, so it is made for this
 # tree at /home/ark/armsx2, where the chroot builds it.
-PGO="pcsx2/pgo/armsx2-20261021.profdata.gz"
-PGO_SHA256="3db83b503d541293f9a3d9e92243b1f984eddd2b5847126825b2560b512ecffb"
+PGO="pcsx2/pgo/armsx2-20261103.profdata.gz"
+PGO_SHA256="f1496152104a386f96ffe1e5a98fb96cb12ca9eaba8329dd618e5e6a8d066858"
 
 if [ ! -d "Arkbuild_package_cache/${CHIPSET}" ]; then
   mkdir -p "Arkbuild_package_cache/${CHIPSET}"

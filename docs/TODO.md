@@ -103,11 +103,27 @@ when faster or within the noise, ARMSX2 only when faster, light ones always):
 - **SDL3 shim** from christianhaitian's fork (38199f5): elderica's audio fix,
   the SDL2 device opened allowing no format change; God of War 37.7-37.8 against
   37.7-37.9, the sound playing.
-- **ARMSX2 2.9.1 and master f6df1e69** not taken: built with our patches 0001-0007
-  (on master 0005's context ported), the whole /opt/pcsx2 swapped, Guitar Hero
-  from the savestate at 21%: 58.8 and 58.9 against 58.5-58.8 (the second round;
-  the first recompiled every shader). Its six EE recompiler commits of 10-31 do
-  not apply to a7ad453 without the EE cycle charge series before them.
+- **ARMSX2 master f6df1e69** (2026-10-31) taken, with a profile retrained for
+  it (build_pcsx2sa.sh), by the owner's rule of 2026-11-03: no slower in any
+  game. Our patches 0001-0007 apply (0005's context ported). Measured from the
+  owner's savestates on fresh-card settings, 60 s of play each, the whole
+  /opt/pcsx2 swapped (the build's own `templates` too: without it the launcher
+  seeds no PCSX2.ini and ARMSX2 writes one with `Bios = bios`, which finds no
+  BIOS; it stayed on the card after a reboot), each build's shaders warmed
+  first, fps (emulated vsyncs a second):
+
+  | Game | a7ad453 | master, a7ad453's profile | master, its profile |
+  |---|---|---|---|
+  | God of War (demo) | 28.6 | 27.7 (-3%) | 28.2 (8 and 7 rounds, a7ad453 27.5-29.6) |
+  | Jak and Daxter | 38.8 | 39.8 | 40.3 (+5%) |
+  | Guitar Hero | 51.0 | 51.6 | 55.3 (+6%) |
+  | Burnout 3 (demo) | 24.6 | 24.1 (-2%) | 25.4 (+2%) |
+
+  The new profile is a7ad453's merged, at about the same total count, with
+  master instrumented from boot (Jak 200 s, Guitar Hero and Burnout 3 120 s);
+  the `.backup` savestates were left out, being saved seconds before the
+  measured ones. 2.9.1 was no faster on Guitar Hero (58.8 against 58.5-58.8).
+  God of War's lows are higher on master (24-25 fps against 17-24).
 - christianhaitian's core builds: armGBA we have; his Azahar update is our
   patches 026-029; yabasanshirosa-pirry we do not build.
 - GammaOS azahar-nano: the 16 commits are its own Android frontend (menus,

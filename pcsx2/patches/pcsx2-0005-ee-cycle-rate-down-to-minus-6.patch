@@ -54,7 +54,7 @@ index 10e05b85..ac264821 100644
  
  namespace
  {
--	// The selector range the speedhack has always had.
+-	// Selector range of the EE cycle-rate speedhack.
 -	constexpr int kMinSelector = -3;
 +	// The selector range the speedhack has always had, and dArkOS's -4..-6 below it.
 +	constexpr int kMinSelector = -6;
@@ -63,7 +63,7 @@ index 10e05b85..ac264821 100644
 +	// dArkOS: the governor still lowers the rate to -3 at most, as before -4..-6 were allowed.
 +	constexpr int kGovernorMinSelector = -3;
 +
- 	// Ratios are dimensionless and mostly land under 2. This is not a plausibility
+ 	// Ratios are dimensionless and normally under 2. A ratio past this means a counter
  	// check, it is a "the sampler produced garbage" check: anything past it means a
  	// counter wrapped or a divisor was near zero, and the window is thrown away
 @@ -49,7 +52,7 @@ void EECycleRateController::OnApplied(s8 new_effective)
