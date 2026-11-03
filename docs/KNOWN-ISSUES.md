@@ -458,6 +458,15 @@ per game). Settings for Guitar Hero, per game: EE Cycle Rate 21%, EE Cycle
 Skipping Maximum Underclock, MTVU on, Automatic Performance Tuning off, Full
 EE Speed in Movies on, GS Multi-threading Enabled. `spu2Mix` is next (TODO).
 
+
+**For 1.6: ARMSX2 master, and EE Cycle Skip 4** (2026-11-03). With master
+f6df1e69 and its profile, from the owner's savestate on fresh-card settings
+(-3/1), 55.3 vps against 51.9 for 1.5's ARMSX2 (docs/TODO.md). EE Cycle Skip 4
+("Extreme Underclock", pcsx2-0008, set by hand per game) at the same rate:
+60.8 vps, under 57 in 1 s of 60, the song at its tempo, but 41 frames shown a
+second against 53 at Skip 1; Skip 3: 59.0. AutoTune is off by default in 1.6
+(as in ARMSX2), so it no longer changes the game's settings.
+
 ## USB devices on the port in sleep: it woke again and again — advice in 1.5, not fixed
 
 Reported by the owner, 2026-11-01, on revision B with 1.4: a USB headset
