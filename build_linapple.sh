@@ -4,6 +4,11 @@
 if [ -f "Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/linapplesa.commit)" == "$(curl -s https://api.github.com/repos/christianhaitian/linapple/commits/master | jq -r '.sha')" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz
 else
+	# builds-alt.sh installs what linapple's build needs (imagemagick turns its icons into
+	# headers, and pulls in ghostscript, netpbm and their fonts: 36 packages, ~40 MB), and
+	# nothing takes them out again. The binary needs none of them (libzip, libcurl and
+	# SDL_image are in the image anyway), so what the build added is purged after it.
+	call_chroot "dpkg-query -W -f '\${Package}\n' | sort > /tmp/linapple-pkgs-before"
 	call_chroot "export CCACHE_DISABLE=1 &&
 	  cd /home/ark &&
 	  cd ${CHIPSET}_core_builds &&
@@ -13,6 +18,11 @@ else
 	  make install &&
 	  cp /usr/lib/aarch64-linux-gnu/libSDL_image-1.2.so.0* /usr/lib/.
 	  "
+	verify_action
+	call_chroot "dpkg-query -W -f '\${Package}\n' | sort > /tmp/linapple-pkgs-after &&
+	  added=\$(comm -13 /tmp/linapple-pkgs-before /tmp/linapple-pkgs-after) &&
+	  if [ -n \"\$added\" ]; then echo linapple build packages purged: \$added; apt-get -y purge \$added; fi &&
+	  rm -f /tmp/linapple-pkgs-before /tmp/linapple-pkgs-after"
 	verify_action
 	sudo mkdir -p Arkbuild/opt/linapple
 	sudo cp -a Arkbuild/home/ark/${CHIPSET}_core_builds/linapplesa-64/linapple Arkbuild/opt/linapple/
