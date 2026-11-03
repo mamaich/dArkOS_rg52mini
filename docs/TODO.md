@@ -124,6 +124,29 @@ when faster or within the noise, ARMSX2 only when faster, light ones always):
   the `.backup` savestates were left out, being saved seconds before the
   measured ones. 2.9.1 was no faster on Guitar Hero (58.8 against 58.5-58.8).
   God of War's lows are higher on master (24-25 fps against 17-24).
+- **AutoTune stays off by default** (the owner, 2026-11-03), as ARMSX2 has it
+  since d279a66 (2026-10-21; its message gives no reason, there is no PR or
+  issue). a7ad453 had it on, our template has no key, so with master it is off
+  on a fresh card and after the update alike. Its EE governor never ran here
+  anyway: `EECycleRate.cpp` makes it ineligible while EE Cycle Skip is not 0,
+  and our template sets 1. A governor floor of -5 was built and not taken.
+- **EE Cycle Skip 4** ("Extreme Underclock", pcsx2-0008), by hand only; the
+  default stays 1. After each VU program the EE's cycle counter moves on by
+  min(the program's cycles, 3000) times the setting (MTVU too), so 4 needs only
+  the limit. Master with its profile, from the owner's savestates, rate -3:
+  emulated vsyncs a second (50 is full speed, Guitar Hero 60) and frames shown
+  a second (DRM flips, 10-70 s):
+
+  | Game | Skip 1 | Skip 3 | Skip 4 | frames, Skip 1 / 4 |
+  |---|---|---|---|---|
+  | God of War | 28.3 | 48.6 | 50.6 | 21.3 / 21.2 |
+  | Jak and Daxter | 40.2 | 40.7 | 50.7 | 19.8 / 16.6 |
+  | Guitar Hero | 54.6 | 59.0 | 60.8 | 53.1 / 40.8 |
+  | Burnout 3 | 25.5 | 36.9 | 46.5 | 24.4 / 21.9 |
+
+  It brings the game's own time to full speed, not more frames: God of War
+  gains outright (the same frames of a game at full speed), the others trade
+  frames for the right tempo. Screens at 60 s show nothing broken.
 - christianhaitian's core builds: armGBA we have; his Azahar update is our
   patches 026-029; yabasanshirosa-pirry we do not build.
 - GammaOS azahar-nano: the 16 commits are its own Android frontend (menus,

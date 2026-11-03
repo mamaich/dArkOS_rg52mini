@@ -1,0 +1,41 @@
+ARMSX2: EE Cycle Skip up to 4, "Extreme Underclock" in the menu
+
+Upstream stops at 3 (Maximum Underclock). The skip is a multiplier: after
+each VU program (in the EE thread, or MTVU's) the EE's cycle counter is
+moved on by min(the program's cycles, 3000) times the setting, so 4 needs
+only the limit (Pcsx2Config clamps the ini value to it) and a fifth entry
+in Big Picture's list. Per game, by hand; the default stays 1 (our
+template).
+
+diff -ru a/pcsx2/Config.h b/pcsx2/Config.h
+--- a/pcsx2/Config.h	2026-11-03 16:43:14.179721010 +0300
++++ b/pcsx2/Config.h	2026-11-03 16:43:16.358225207 +0300
+@@ -1414,7 +1414,7 @@
+ 		static constexpr s8 MIN_EE_CYCLE_RATE = -8; // dArkOS: -7, -8 (24%, 21%), pcsx2-0006
+ 		static constexpr s8 MIN_EE_CYCLE_RATE_GOVERNOR = -3;
+ 		static constexpr s8 MAX_EE_CYCLE_RATE = 3;
+-		static constexpr u8 MAX_EE_CYCLE_SKIP = 3;
++		static constexpr u8 MAX_EE_CYCLE_SKIP = 4; // dArkOS: 4, pcsx2-0008
+ 
+ 		BITFIELD32()
+ 		bool
+@@ -1439,7 +1439,7 @@
+ 		BITFIELD_END
+ 
+ 		s8 EECycleRate; // EE cycle rate selector (1.0, 1.5, 2.0)
+-		u8 EECycleSkip; // EE Cycle skip factor (0, 1, 2, or 3)
++		u8 EECycleSkip; // EE Cycle skip factor (0 to 4; 4 is dArkOS's, pcsx2-0008)
+ 
+ 		// The IOP thread's lag bound L, in EE cycles. Clamped by IopThread::ClampLag when it is read
+ 		// from the settings file. An advanced setting: INI only, never in a simple settings view.
+diff -ru a/pcsx2/ImGui/FullscreenUI_Settings.cpp b/pcsx2/ImGui/FullscreenUI_Settings.cpp
+--- a/pcsx2/ImGui/FullscreenUI_Settings.cpp	2026-11-03 16:43:14.183747820 +0300
++++ b/pcsx2/ImGui/FullscreenUI_Settings.cpp	2026-11-03 16:43:16.362252017 +0300
+@@ -2672,6 +2672,7 @@
+ 		FSUI_NSTR("Mild Underclock"),
+ 		FSUI_NSTR("Moderate Underclock"),
+ 		FSUI_NSTR("Maximum Underclock"),
++		FSUI_NSTR("Extreme Underclock"), // dArkOS: 4, pcsx2-0008
+ 	};
+ 	static constexpr const char* queue_entries[] = {
+ 		FSUI_NSTR("0 Frames (Hard Sync)"),
