@@ -2194,8 +2194,8 @@
 		<emulators>
 			<emulator name="retroarch">
 				<cores>
-					<core>freej2me-plus</core>
 					<core>freej2me</core>
+					<core>freej2me-plus</core>
 				</cores>
 			</emulator>
 		</emulators>
