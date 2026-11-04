@@ -58,29 +58,27 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="428b5b2e00fba9e4c0f315a1a22ebae2bd09181d"
+MALISX2_COMMIT="467251ad400a7eab04b2236cc70fc9c7883a6493"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
-# Profile for clang's profile-guided optimisation: trained on 4c91f3c on an
-# RG52 Mini (2026-10-31; 428b5b2 changed only cold paths after it): Azahar's
-# Super Mario 3D Land and Luigi's Mansion
-# from an empty pipeline cache (825 and 288 pipelines); ARMSX2 started as ES
-# does, 90 s each of God of War from a savestate on the ship, Jak and Daxter's
-# intro and Jak and Daxter in game from the owner's save. Castlevania is left
-# out of it, to measure with (docs/TODO.md). Against 2026-10-28's (of 796ca04)
-# on the same code: within the spread (Luigi's Mansion's cold shader preload
-# 100.2 s against 100.6, Castlevania 17.8 fps both, God of War and Jak
-# alike); on this code that one had lost a quarter of its weight, the v7 draw
-# path and bi_allocate_registers having changed in da1e3a2. A profile of
-# older code loses the functions changed since: 2026-10-25's, of 077e853,
-# had no data for fa1831a's draw path, and God of War on fa1831a against
-# b1c114a was 0.7% faster with neither profiled, 4.5% with each on its own
-# profile. Its file-local functions are named by the path of their source
+# Profile for clang's profile-guided optimisation: trained on cd63d7b (the code
+# of 467251a, which adds only docs: upstream's 0.3.2 and four v7 commits of
+# pjperez' fork) on an RG52 Mini (2026-11-04), with 2026-10-31's set: Azahar's
+# Super Mario 3D Land and Luigi's Mansion from an empty pipeline cache; ARMSX2
+# started as ES does, 90 s each of God of War from a savestate on the ship,
+# Jak and Daxter's intro and Jak and Daxter in game from the owner's save.
+# Castlevania is left out of it, to measure with (docs/TODO.md). 2026-10-31's
+# profile (of 4c91f3c) lost 12% of its weight on this code (the v7 draw path,
+# mali_v7_desc_prepare and mali_v7_desc_copy). A profile of older code loses
+# the functions changed since: 2026-10-25's, of 077e853, had no data for
+# fa1831a's draw path, and God of War on fa1831a against b1c114a was 0.7%
+# faster with neither profiled, 4.5% with each on its own profile.
+# Its file-local functions are named by the path of their source
 # (Mesa's reach the compiler by absolute paths), so it is made for this tree
 # at /home/ark/malisx2, where the chroot builds it, with the build directory
 # in it (malisx2's docs/building.md).
-PGO="malisx2/pgo/malisx2-20261031.profdata.gz"
-PGO_SHA256="d5d9dcf1fe51a7e74b893716c020dac624c62c21d9be01d0b0620670e4bb3626"
+PGO="malisx2/pgo/malisx2-20261104.profdata.gz"
+PGO_SHA256="841587982f5227c30fcd5a3493a27750bdd5c95326596cabfb1e06660fef2ace"
 # Meson from its release, run from the tree: Debian trixie's 1.7.0 fails to
 # write the build of the Rust crate Mesa makes of structured sources
 # ("'CustomTargetIndex' object has no attribute 'subdir'"); 1.12.1 builds it.
