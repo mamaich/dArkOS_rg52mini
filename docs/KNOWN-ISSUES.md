@@ -367,7 +367,7 @@ restarted, Game Boy with Hermano under the cursor. The default: with no
 `StartupSystem` in `es_settings.cfg` (a user who had NONE) and Game Boy saved,
 the new ES opened on Game Boy; the one before it, on the first system.
 
-## L2 pressed by itself in ARMSX2 — fixed for 1.6
+## L2 pressed by itself in ARMSX2 — fixed in 1.6
 
 Reported by users through the owner, 2026-11-02: in Guitar Hero (PS2) L2
 was now and then pressed by itself.
@@ -398,7 +398,7 @@ releases at 43% and the axis raises it again on its next event: a release and
 a press in a few ms, worse for a rhythm game. Not done; a patch in ARMSX2 to
 ignore those two buttons is the clean way (not now, the owner, 2026-11-02).
 
-## Guitar Hero (PS2): its movie stopped, its speed swung — for 1.6
+## Guitar Hero (PS2): its movie stopped, its speed swung — in 1.6
 
 **Guitar Hero's intro movie stopped on a frame** (SLUS-21224, 2026-11-02):
 with the image's `EECycleRate = -3`, `EECycleSkip = 1` it stops at once; with

@@ -48,7 +48,7 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
-## For 1.6
+## For 1.6 (released 2026-11-04)
 
 - **armGBA in a kept es_systems.cfg.** The update to 1.5 adds armGBA to
   EMULATOR SETTINGS only with the stock `/etc/emulationstation/es_systems.cfg`;

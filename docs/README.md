@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.5 (build 11012026, 2026-11-02); from 1.1 on, a card
+The current release is 1.6 (build 11032026, 2026-11-04); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -142,16 +142,28 @@ and retroarch-next, GBA in mGBA and armGBA (6% CPU against 8%), N64; XRoar's
 Dragon 32 and CoCo at BASIC's OK. No crash, the sound playing, the speed the
 same.
 
-In master for 1.6, not released yet (VERSION says 1.6; the image is built
-only when the owner says so):
+New in 1.6 (build 11032026, 2026-11-04):
 
 | | |
 |---|---|
 | Emulators | ARMSX2 master f6df1e69 with a profile retrained for it: Jak and Daxter +5%, Guitar Hero +6%, Burnout 3 +2%, God of War within the spread; DSperate v3.2.0 (PGO profiles refreshed, 3D fixes); Dolphin master e8c4246; the SDL3 shim with elderica's audio fix (PS2's sound when the device opens in another format) |
 | OTA | `1.6-es-armgba.sh`: armGBA offered for GBA in an es_systems.cfg the update to 1.5 kept |
+| Apple II | linapple master c984d03 (Slayer366's work: a startup chooser, an on-screen keyboard, SDL2 fullscreen fixes); our joystick-log patch dropped with upstream's 1857f40; the packages its build installs (imagemagick and 35 more) purged after it (2e2d763) |
 | PS2 | AutoTune off by default, as ARMSX2 master has it; EE Cycle Skip up to 4, "Extreme Underclock" (pcsx2-0008), by hand: the game's own speed to full at fewer frames (God of War 28 -> 50 of 50 at the same 21 frames a second) |
-| PS2 | ARMSX2's EE Cycle Rate down to 21% (pcsx2-0006), and Full EE Speed in Movies, on by default (pcsx2-0007): movies that stop at a low EE rate play; Guitar Hero at 21% about 59 vps on average ([KNOWN-ISSUES](KNOWN-ISSUES.md#guitar-hero-ps2-its-movie-stopped-its-speed-swung--for-16)) |
-| Triggers | the dead zone at rest doubled to 1600 of 32767 (kernel 4e1991c): L2 no longer reads as pressed by itself in ARMSX2 ([KNOWN-ISSUES](KNOWN-ISSUES.md#l2-pressed-by-itself-in-armsx2--fixed-for-16)) |
+| PS2 | ARMSX2's EE Cycle Rate down to 21% (pcsx2-0006), and Full EE Speed in Movies, on by default (pcsx2-0007): movies that stop at a low EE rate play; Guitar Hero at 21% about 59 vps on average ([KNOWN-ISSUES](KNOWN-ISSUES.md#guitar-hero-ps2-its-movie-stopped-its-speed-swung--in-16)) |
+| Triggers | the dead zone at rest doubled to 1600 of 32767 (kernel 4e1991c): L2 no longer reads as pressed by itself in ARMSX2 ([KNOWN-ISSUES](KNOWN-ISSUES.md#l2-pressed-by-itself-in-armsx2--fixed-in-16)) |
+
+Checked for 1.6 on the console: the update 1.5 -> 1.6 from `/roms/update` (46
+files, every hook, the 1.5 snapshot kept; the files match the image's), and a
+rollback to 1.5 from that snapshot before it; then each game as ES starts it:
+ARMSX2 (God of War), Dolphin (ND Demo 50.3 fps), DSperate (Diddy Kong 60), GBA,
+SNES, PPSSPP, linapple. No crash, the sound playing. ARMSX2's speed was
+measured before the build, from the owner's savestates in four games
+(TODO.md, "Upstream updates seen 2026-11-02"). The packages from 1.4, 1.3.1,
+1.3, 1.2 and 1.1 were made the same way from the published images and not
+installed.
+
+In master for 1.7, not released yet (VERSION says 1.7): nothing yet.
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
