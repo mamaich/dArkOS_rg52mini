@@ -163,7 +163,11 @@ measured before the build, from the owner's savestates in four games
 1.3, 1.2 and 1.1 were made the same way from the published images and not
 installed.
 
-In master for 1.7, not released yet (VERSION says 1.7): nothing yet.
+In master for 1.7, not released yet (VERSION says 1.7):
+
+| | |
+|---|---|
+| malisx2 | 467251a: upstream's 0.3.2 (a tiler heap ring that grows, linear descriptor pools) and four v7 commits of pjperez' fork (image-only barriers narrowed, by-region barriers inside a pass without a barrier draw, BC1-7 sampled, 37 extensions in place of 28); a profile trained on this code. On the console against 1.6's: God of War and Jak and Daxter from the owner's saves within the spread, Castlevania 3-5% faster (the malisx2 session); a new shader cache ID, so each game compiles its pipelines once more ([KNOWN-ISSUES](KNOWN-ISSUES.md#vulkan-arms-driver-or-malisx2-chosen-per-system-13), "malisx2 0.3.2") |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

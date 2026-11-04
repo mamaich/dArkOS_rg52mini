@@ -1105,6 +1105,19 @@ Atomiswave's KOV7 30 as before, Azahar's Super Mario 3D Land 60, Dolphin's
 ND Demo 46, the Mina the Hollower port 60; no GPU faults. The malisx2
 session checked Luigi's Mansion 2, Castlevania, ARMSX2 and Metroid Prime.
 
+**malisx2 0.3.2 (467251a, for 1.7).** Upstream's 0.3.2 and four v7
+commits of pjperez' fork (malisx2's docs/changes.md). What a user sees: the
+shader cache ID changes (8f2c44eb427e), so every game compiles its pipelines
+once more on its first start after the update, and ARMSX2 keeps the old cache
+files beside the new ones. The tiler heap ring starts at 4 slots and grows to
+16, never shrinking: in God of War it grew to 8, GPU memory 182 MB against
+150 (the malisx2 session). Speed, LTO and PGO against 1.6's library: God of
+War from the owner's save 26.5-27.6 vsyncs a second on 1.6's, 26.2-28.8 on
+this one; Jak and Daxter 40-43 on both (TODO.md, "For 1.7"). As a user who
+picks MALISX2 gets it, on 2026-11-04: Azahar's Castlevania and Super Mario
+3D Land, PPSSPP's Final Fantasy, flycast's Crazy Taxi and Dolphin's ND Demo
+start and draw right, no crash lines, no GPU faults.
+
 **The DuckStation core on RetroArch's Vulkan driver crashed on malisx2**
 (SIGSEGV before its first frame), with 1.4's malisx2 and with 4c91f3c alike;
 on libmali it ran (Hover Racing, 50 fps). RetroArch's driver is `gl`, so it

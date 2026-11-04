@@ -48,6 +48,24 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
+## For 1.7
+
+- malisx2 467251a (2026-11-04, handed over by the malisx2 session with the
+  owner's word) in build_malisx2.sh, with its profile
+  `malisx2/pgo/malisx2-20261104.profdata.gz`; the recipe built it against
+  1.6's rootfs in 36 min (0.3.2, cache ID 8f2c44eb427e). The malisx2 session
+  saw God of War 3% slower and asked for a check here: ARMSX2 1.6 as ES starts
+  it, 1.6's library against this one bound over it, 60 s from 10 s after the
+  first frame, vsyncs a second, a warm-up each then turns in alternation:
+  - God of War from the owner's save: 1.6's 26.5 / 26.5 / 26.5 / 27.6, this
+    one 26.6 / 28.8 / 26.8 / 26.2. Within the spread.
+  - Jak and Daxter from the owner's save: 1.6's 42.9 / 43.2 / 43.1 / 43.0 and
+    40.4 / 42.7 / 40.0; this one 40.5 / 43.4 / 42.5 / 41.0 and 42.8 / 43.0 /
+    40.6; with MALISX2_JM_HEAP_SLOTS=16 42.2 / 42.8 / 43.2, MALISX2_DEBUG=vtcwait
+    43.2 / 40.4 / 40.8, fbbarrier 40.7 / 40.9 / 43.3. The 40s are runs where
+    the game drops to 26-28 for 8-9 s at the same moment; it does so on 1.6's
+    library too (2 of 7 runs, 3 of 7 on this one), so it is the scene's.
+
 ## For 1.6 (released 2026-11-04)
 
 - **armGBA in a kept es_systems.cfg.** The update to 1.5 adds armGBA to
