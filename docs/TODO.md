@@ -65,6 +65,15 @@ it. Confirmed on the device.
     43.2 / 40.4 / 40.8, fbbarrier 40.7 / 40.9 / 43.3. The 40s are runs where
     the game drops to 26-28 for 8-9 s at the same moment; it does so on 1.6's
     library too (2 of 7 runs, 3 of 7 on this one), so it is the scene's.
+- doster00's pull requests #6, #7 and #8 merged (the owner, 2026-11-04),
+  checked on the RG52 Mini first: 1.6's 351Files starts on a blank screen and
+  #6's build (made in 1.6's rootfs, upstream 7888f79) shows the /roms list;
+  #8's patch-freej2me.py on 1.6's freej2me.sh (a second run says "already
+  patched"), then jtReversi 0.87 (MIDP 1.0, SourceForge) and two MIT games of
+  agneay/j2me-100-games on the freej2me core reach their menus on
+  /usr/lib/jvm/java-21-openjdk-arm64, nothing downloaded; #7's zram size on
+  the RG52 Mini's 2012508 kB stays 1536M, lzo-rle first. #7 is not tried on an
+  RG43H here.
 
 ## For 1.6 (released 2026-11-04)
 

@@ -168,6 +168,9 @@ In master for 1.7, not released yet (VERSION says 1.7):
 | | |
 |---|---|
 | malisx2 | 467251a: upstream's 0.3.2 (a tiler heap ring that grows, linear descriptor pools) and four v7 commits of pjperez' fork (image-only barriers narrowed, by-region barriers inside a pass without a barrier draw, BC1-7 sampled, 37 extensions in place of 28); a profile trained on this code. On the console against 1.6's: God of War and Jak and Daxter from the owner's saves within the spread, Castlevania 3-5% faster (the malisx2 session); a new shader cache ID, so each game compiles its pipelines once more ([KNOWN-ISSUES](KNOWN-ISSUES.md#vulkan-arms-driver-or-malisx2-chosen-per-system-13), "malisx2 0.3.2") |
+| 351Files | its file list shows again: since upstream's a6a3f49 its UI sizes were 0 on our devices and the screen stayed blank, 1.6's too (doster00's pull request #6) |
+| J2ME | the freej2me core runs on the image's OpenJDK 21, no JDK 11 download, and is offered first (pull request #8) |
+| RG43H / RG43V Pro | brought up to the RG52 Mini's level: ECWolf's menu, the FN button and Bluetooth, ES's script, zram sized from the RAM, PS2 and N64 settings, the gl4es builds (pull request #7); on the RG52 Mini nothing changes |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
