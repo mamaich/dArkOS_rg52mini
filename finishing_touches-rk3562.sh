@@ -280,6 +280,8 @@ DEV=/dev/zram0
 SIZE=1536M        # a ceiling, not a reservation: RAM is taken as pages arrive.
                   # Bigger means the eMMC tier below is reached later, which is
                   # the only real lever on how much gets written to flash.
+                  # With 1.5 GB of RAM or more (the 2 GB devices) it stays at
+                  # 1536M; below that see the end of this block.
 # Preference order, first one the kernel offers wins. Writing a name that is
 # not in comp_algorithm fails silently and leaves the default in place, so the
 # list is walked against what the kernel actually reports.
@@ -292,6 +294,18 @@ SIZE=1536M        # a ceiling, not a reservation: RAM is taken as pages arrive.
 # further out of reach - move it to the front if RAM turns out to be tighter
 # than CPU.
 ALGO_PREF="lzo-rle lz4 zstd lzo"
+
+# The RG43H comes with 1 GB or 2 GB of RAM, so this is decided here, at boot,
+# not by UNIT at build time. Under 1.5 GB (MemTotal is a bit below the
+# nominal size: about 0.95 GB for the 1 GB one) 1536M of compressed pages
+# at ~2.5:1 would take some 600 MB of the little RAM there is and push the
+# system into thrashing or the OOM killer. There the ceiling is 75% of
+# MemTotal, and RAM is the scarce resource, not CPU, so zstd leads.
+MEMKB=$(awk '/^MemTotal:/ {print $2}' /proc/meminfo 2>/dev/null || true)
+if [ "${MEMKB:-0}" -gt 0 ] && [ "$MEMKB" -lt 1536000 ]; then
+    SIZE="$((MEMKB * 75 / 100 / 1024))M"
+    ALGO_PREF="zstd lzo-rle lz4 lzo"
+fi
 
 [ -e "$DEV" ] || modprobe zram num_devices=1 2>/dev/null || true
 [ -e "$DEV" ] || exit 0
@@ -433,11 +447,6 @@ sudo cp -f scripts/00-header Arkbuild/etc/update-motd.d/00-header
 sudo cp -f scripts/10-help-text Arkbuild/etc/update-motd.d/10-help-text
 sudo rm -f Arkbuild/etc/motd
 sudo chmod 777 Arkbuild/etc/update-motd.d/*
-
-# RG43H Pro: low swappiness for eMMC swap (only swap under real memory pressure)
-if [ "$UNIT" == "rg43h" ]; then
-  echo "vm.swappiness=10" | sudo tee Arkbuild/etc/sysctl.d/99-swap.conf
-fi
 
 # Load the WiFi kernel driver matching this device's hardware revision.
 # There are two RG52 Mini hardware revisions with different WiFi chips:

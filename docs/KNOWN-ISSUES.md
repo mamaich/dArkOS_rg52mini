@@ -2371,7 +2371,10 @@ caught it down for 0.7 s and for 3 s (2026-10-24).
   BTN_MODE press, so each Home+X for RetroArch's menu turned Bluetooth on or
   off: about 15 toggles in the journal of half an hour of play.
   `ogage/patches/0001` removes it. Bluetooth is switched in Options >
-  Bluetooth.
+  Bluetooth. The rg43h image gets the patch too: on the RG43V Pro the FN key is
+  BTN_MODE (button 10) and RetroArch's hotkey enable, so FN+X toggled
+  Bluetooth there in the same way; the RG43H Pro has no BTN_MODE and is not
+  changed by it.
 
 ## GTA San Andreas: the camera turned by itself — fixed in 1.3.1
 

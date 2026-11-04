@@ -116,6 +116,9 @@ source ./build_sdljoytest.sh
 source ./build_controllertester.sh
 source ./build_drastic.sh
 source ./build_dsperate.sh
+source ./build_gl4esfix.sh
+source ./build_trigaxesoff.sh
+source ./build_gl4es.sh
 if [[ "${BUILD_RKMPP_FFMPEG}" == "y" ]]; then
   source ./build_ffmpeg.sh
 fi
@@ -130,6 +133,8 @@ source ./cleanup_filesystem.sh
 source ./write_rootfs-rk3562.sh
 source ./clean_mounts.sh
 source ./create_image.sh
+# The chroot stages this build kept (rootfs_cache.sh) are good to use
+commit_rootfs_cache
 ) 2>&1 | tee -a build.log
 
 echo "RG43H Pro build completed. Final image is ready."
