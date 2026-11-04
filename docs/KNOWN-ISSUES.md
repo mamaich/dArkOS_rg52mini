@@ -2717,6 +2717,30 @@ restarted once at the disconnect. With the PC's cable back, the port was a
 device again, the gadget bound again (umtprd logged one read error and
 carried on), and Windows listed the ROMs.
 
+## 351Files: a black screen on the RG52 Mini and the RG43H
+
+351Files started and showed nothing; the log it writes next to itself
+(`/opt/351Files/351Files.log`) was full of `Unable to load image
+'./res/0/file.png'`. The cause is upstream's: its commit a6a3f49 ("add 1.5x
+scaling above 480p") turned the font size, line height, icon size and margins
+into globals that start at 0 and are filled in only in the `DEVICE_RG351MP`
+branch of `SDLUtils::init`. Every other device, the RG56PRO and RG43H blocks
+of `patch_351files_rg52mini.py` included, kept 0: no icon folder (`res/0`), a
+font of size 0, lines of no height.
+
+`patch_351files_rg52mini.py` now also patches `src/sdlutils.cpp` to fill them
+from the device's macros in the fixed-size branch. The RG43H's icon size is 32
+now (28 had no folder in `res/`, which has 24, 32, 48, 58 and 64). The patch
+stops, with a message, when `def.h` or `sdlutils.cpp` no longer contain what it
+expects: `str.replace` does nothing then, and the image would carry a
+half-patched app.
+
+Checked on an RG43V Pro (built in the aarch64 chroot, installed in
+`/opt/351Files`): the file list is there again. The RG52 Mini's build compiles;
+it was not run on the device. 351Files on the other devices of the project is
+the same upstream code and may show the same black screen when built from
+today's master; they were not looked at.
+
 ## Smaller things
 
 * **No plymouth.** The command line carries `quiet splash` and
