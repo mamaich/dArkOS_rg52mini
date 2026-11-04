@@ -2796,3 +2796,30 @@ carried on), and Windows listed the ROMs.
 * **`libeatmydata.so` from LD_PRELOAD cannot be preloaded** — harmless, and
   the message says `ignored`. `cleanup_filesystem.sh` removes eatmydata while
   `LD_PRELOAD` still names it. The loader carries on with a real `fsync`.
+
+## J2ME: the freej2me core on the system OpenJDK 21
+
+* **What was wrong.** The `freej2me` core runs `freej2me-lr.jar`, which is
+  compiled for Java 21, but `/usr/local/bin/freej2me.sh` (upstream's) downloads
+  Azul Zulu JDK 11 (197 MB, needs Wi-Fi) and runs the core on it: the core
+  dies with `UnsupportedClassVersionError`. The `freej2me-plus` core, the
+  default of the J2ME list, starts on JDK 11 but drew a white, torn picture on
+  this RetroArch build on the RG52 Mini (2026-11-03); the cause was not found.
+* **What the build does.** `scripts/rk3562/patch-freej2me.py` (called from
+  `finishing_touches-rk3562.sh`) makes `freej2me.sh` use the image's
+  `/usr/lib/jvm/java-21-openjdk-arm64` for the `freej2me` core, with
+  `-Dfile.encoding=ISO_8859_1` (under Java 21 the default is UTF-8, which
+  crashed Prince of Persia: Warrior Within with `ArrayIndexOutOfBounds 65533`).
+  No download. `freej2me-plus` keeps the JDK 11 path. If `freej2me.sh` is not
+  the stock one, the script says so and leaves it as it is; if the OpenJDK 21
+  is missing at run time, `freej2me.sh` behaves as before. The J2ME list in
+  `es_systems.cfg.rk3562-64bit_Only` now offers `freej2me` first.
+* **Tested** on an RG52 Mini: Diamond Rush (Gameloft, K790 v1.0.3), Bounce
+  Tales (Nokia v2.0.4) and Prince of Persia: Warrior Within (Gameloft
+  v1.0.7), through the same edit applied to the installed files; the patch
+  script itself was run against the `freej2me.sh` of an rg43h image (applies,
+  second run says "already patched", an unknown script is left alone).
+  Not tested on an RG43. Heavy games get warm (about 75 C).
+* **Known:** Start+Select may not close a J2ME game (cause not found). Some
+  games are not compatible with FreeJ2ME (ViMAP's "Diamonds Duel" needs an XML
+  parser it lacks).
