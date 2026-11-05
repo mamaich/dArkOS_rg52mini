@@ -23,26 +23,26 @@ fi
 ARMSX2_REMOTE="https://github.com/ARMSX2/ARMSX2"
 # Pinned: upstream moves every day; a newer commit is a deliberate update
 # (patches checked, profile retrained).
-# master of 2026-10-31 (f6df1e69, after 2.9.1), the owner's rule of 2026-11-03: taken
-# when no slower. With its profile (below), from the owner's savestates, 3 rounds
-# against a7ad453: God of War within the spread (28.2 against 28.6, 7 and 8
-# rounds; a7ad453 spreads 27.5-29.6), Jak +5% (40.3 / 38.2), Guitar Hero +6%
-# (55.3 / 51.9), Burnout 3 +2% (25.4 / 24.9); a7ad453's savestates load.
-ARMSX2_COMMIT="f6df1e69255544241132d66441f2f1338fd90bfd"
+# master of 2026-11-04 (1049db37, 75 commits after f6df1e69), the owner's rule of
+# 2026-11-03: taken when no slower. With its profile (below), from the owner's
+# savestates, 3 rounds against 1.6's f6df1e69: God of War within the spread
+# (26.5 against 27.0; f6df1e69 spreads 26.2-28.5), Jak +7% (45.1 / 42.0),
+# Guitar Hero +1% (49.9 / 49.5), Burnout 3 +0.5% (24.3 / 24.2); 1.6's
+# savestates load.
+ARMSX2_COMMIT="1049db37fba4a08b9849e0ab061302d563565f7f"
 PCSX2_SRC="Arkbuild/home/ark/armsx2"
 PCSX2_BUILD="/home/ark/armsx2/build-${UNIT}"
-# Profile for clang's profile-guided optimisation: a7ad453's (Jak and Daxter's
-# intro, its menus and the BIOS screens, 2026-10-20, and the owner playing Jak,
-# God of War's demo and Burnout 3's, 2026-10-21) merged, at about the same
-# total count, with the commit above, instrumented with our patches, on an
-# RG52 Mini from boot: Jak (200 s), Guitar Hero and Burnout 3 (120 s each),
-# 2026-11-03. clang takes for each function the record that fits its code, so
-# what master changed gets the new runs. Without the new part master was 2-3%
-# slower in God of War and Burnout 3 (docs/TODO.md).  Its file-local
+# Profile for clang's profile-guided optimisation: 1.6's (a7ad453's runs of
+# 2026-10-20/21 merged with f6df1e69's of 2026-11-03) merged, at about the
+# same total count, with the commit above, instrumented with our patches, on
+# an RG52 Mini from boot: Jak (200 s), Guitar Hero and Burnout 3 (120 s
+# each), 2026-11-05. clang takes for each function the record that fits its
+# code, so what master changed gets the new runs. With 1.6's profile alone
+# 1049db37 was 2% slower in God of War and 1.5% in Burnout 3.  Its file-local
 # functions are named by the path of their source, so it is made for this
 # tree at /home/ark/armsx2, where the chroot builds it.
-PGO="pcsx2/pgo/armsx2-20261103.profdata.gz"
-PGO_SHA256="f1496152104a386f96ffe1e5a98fb96cb12ca9eaba8329dd618e5e6a8d066858"
+PGO="pcsx2/pgo/armsx2-20261105.profdata.gz"
+PGO_SHA256="7a941a04b5b4ce6776c43fab6f3d5fe4c56d440d140a7b6a36d01ef620182bdf"
 
 if [ ! -d "Arkbuild_package_cache/${CHIPSET}" ]; then
   mkdir -p "Arkbuild_package_cache/${CHIPSET}"
