@@ -99,6 +99,7 @@ call_chroot "apt remove -y autotools-dev \
   ninja-build \
   pkg-config \
   premake4 \
+  python3-mako \
   rapidjson-dev \
   zlib1g-dev"
 # Fail the build if the dev-package removal failed (e.g. apt refused the whole

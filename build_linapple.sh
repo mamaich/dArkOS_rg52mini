@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Build and install linapple standalone emulator (on SDL2 since rk3566_core_builds' f24bc2a)
-if [ -f "Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/linapplesa.commit)" == "$(curl -s https://api.github.com/repos/christianhaitian/linapple/commits/master | jq -r '.sha')" ]; then
+# The cache is keyed by linapple's commit and this recipe: the move to SDL2 changed only
+# the recipe, and a key of the commit alone kept 1.6's SDL 1.2 build in the image.
+LINAPPLE_RECIPE_SHA=$(sha1sum build_linapple.sh | cut -c1-12)
+if [ -f "Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/linapplesa.commit)" == "$(curl -s https://api.github.com/repos/christianhaitian/linapple/commits/master | jq -r '.sha')_${LINAPPLE_RECIPE_SHA}" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz
 else
 	# linapple's build needs imagemagick (it turns the icons into headers, and pulls in
@@ -38,7 +41,7 @@ else
 	  sudo rm -f Arkbuild_package_cache/${CHIPSET}/linapplesa.commit
 	fi
 	sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz Arkbuild/opt/linapple/
-	sudo git --git-dir=Arkbuild/home/ark/${CHIPSET}_core_builds/linapple/.git --work-tree=Arkbuild/home/ark/${CHIPSET}_core_builds/linapple rev-parse HEAD > Arkbuild_package_cache/${CHIPSET}/linapplesa.commit
+	sudo git --git-dir=Arkbuild/home/ark/${CHIPSET}_core_builds/linapple/.git --work-tree=Arkbuild/home/ark/${CHIPSET}_core_builds/linapple rev-parse HEAD | sed "s/\$/_${LINAPPLE_RECIPE_SHA}/" | sudo tee Arkbuild_package_cache/${CHIPSET}/linapplesa.commit > /dev/null
 fi
 
 sudo cp linapple/gamecontrollerdb.txt Arkbuild/opt/linapple/
