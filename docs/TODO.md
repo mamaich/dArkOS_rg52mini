@@ -75,6 +75,38 @@ it. Confirmed on the device.
   the RG52 Mini's 2012508 kB stays 1536M, lzo-rle first. #7 is not tried on an
   RG43H here.
 
+- Upstream updates of 2026-11-04 (the owner's word, 2026-11-05), each tried
+  on the RG52 Mini before the build, against 1.6 as ES starts it:
+  - ARMSX2 1049db37 with 1.6's profile alone, from the owner's saves, 3
+    rounds: God of War 26.1 / 26.6 (-2%), Burnout 3 23.9 / 24.2 (-1.5%), Jak
+    45.8 / 42.2, Guitar Hero 49.9 / 49.0. A profile trained on it (1.6's
+    merged with 1049db37 instrumented, from boot: Jak 200 s, Guitar Hero and
+    Burnout 3 120 s each; `pcsx2/pgo/armsx2-20261105.profdata.gz`): God of
+    War 26.8 / 26.0 / 26.6 against 26.4 / 26.2 / 28.5, Jak 44.4 / 47.3 / 43.7
+    against 43.1 / 41.6 / 41.2 (both drop to 26-28 for a while in some runs,
+    the scene's), Guitar Hero 49.3 / 49.5 / 50.9 against 50.3 / 50.0 / 48.2,
+    Burnout 3 24.3 / 24.2 / 24.4 against 24.1 / 24.1 / 24.3. llvm-profdata
+    warns "invalid profile created" for Guitar Hero's run: duplicate targets
+    in its indirect-call value data, a race of the instrumented threads; the
+    counts are kept.
+  - Dolphin 584366c, its binary and Data/Sys bound over /opt/dolphin, DRM
+    flips over 30 s: ND Demo 45.6 / 45.8 / 45.6 against 45.5 / 45.7 / 45.4;
+    Metroid Prime 35.0 / 35.3 / 34.9 run second, 35.4 / 35.3 / 35.3 / 35.3 run
+    first, against 35.5 / 35.3 / 35.3 and 35.2 / 35.1 / 35.3 / 34.9: the one
+    run second is the slower. It writes nothing new to Dolphin.ini.
+  - DSperate v3.3.0: Diddy Kong Racing 59.9 against 59.5. linapple on SDL2:
+    Master.dsk boots to the same screen at 59.9.
+  - Not taken: openMSX 22.0 includes `<format>`, which bookworm's g++ 12 lacks;
+    21.0 builds, but it has only the OpenGL renderer, SDL's KMSDRM cannot make
+    its window ("Can't window GBM/EGL surfaces"), and where 19.1 falls back to
+    the SDL renderer 21.0 crashes (SIGSEGV); it also lacks keyjoystick1 for our
+    commands.txt. OpenBOR v7533 (upstream's master moved to CMake) starts on
+    "No Mods In Paks Folder", but its config differs (bor.cfg 324 bytes
+    against master.cfg's 320) and its menu shows keyboard labels; upstream
+    went back to 7f6f175 on purpose. Both stay as in 1.6 (their package
+    cache). The openMSX launcher moves an older share/scripts aside when the
+    version stamp changes, for a later update.
+
 ## For 1.6 (released 2026-11-04)
 
 - **armGBA in a kept es_systems.cfg.** The update to 1.5 adds armGBA to

@@ -171,6 +171,10 @@ In master for 1.7, not released yet (VERSION says 1.7):
 | 351Files | its file list shows again: since upstream's a6a3f49 its UI sizes were 0 on our devices and the screen stayed blank, 1.6's too (doster00's pull request #6) |
 | J2ME | the freej2me core runs on the image's OpenJDK 21, no JDK 11 download, and is offered first (pull request #8) |
 | RG43H / RG43V Pro | brought up to the RG52 Mini's level: ECWolf's menu, the FN button and Bluetooth, ES's script, zram sized from the RAM, PS2 and N64 settings, the gl4es builds (pull request #7); on the RG52 Mini nothing changes |
+| ARMSX2 | master 1049db37 of 2026-11-04 (75 commits after 1.6's), with a profile retrained for it. From the owner's saves against 1.6: God of War within the spread, Jak and Daxter +7%, Guitar Hero +1%, Burnout 3 the same; 1.6's savestates load (TODO.md, "For 1.7") |
+| Dolphin | 584366c; ND Demo and Metroid Prime as fast as 1.6's (45.7 / 45.5 and 35.2 / 35.2) |
+| DSperate | v3.3.0 |
+| linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
