@@ -12,6 +12,12 @@ else
 	# them (libzip, libcurl and SDL2_image are in the image anyway), so what the build
 	# added is purged after it.
 	call_chroot "dpkg-query -W -f '\${Package}\n' | sort > /tmp/linapple-pkgs-before"
+	# imagemagick pulls in fonts-droid-fallback, which takes over the
+	# DroidSansFallbackFull.ttf that build_emulationstation put in
+	# /usr/share/fonts/truetype/droid, and the purge below then deletes it. So
+	# the fonts are kept from before the window and what the purge took is put
+	# back (1.7's first image lost the font this way).
+	call_chroot "tar -C / -cf /tmp/linapple-fonts.tar usr/share/fonts"
 	# Since rk3566_core_builds' f24bc2a linapple builds on SDL2 (no sdl12-compat), and its
 	# recipe installs nothing: imagemagick (for the icons) is put in here, inside the window
 	# whose packages are purged below, as upstream dArkOS has it in needed_dev_packages.txt.
@@ -28,6 +34,8 @@ else
 	  added=\$(comm -13 /tmp/linapple-pkgs-before /tmp/linapple-pkgs-after) &&
 	  if [ -n \"\$added\" ]; then echo linapple build packages purged: \$added; apt-get -y purge \$added; fi &&
 	  rm -f /tmp/linapple-pkgs-before /tmp/linapple-pkgs-after"
+	verify_action
+	call_chroot "tar -C / -xf /tmp/linapple-fonts.tar --skip-old-files && rm -f /tmp/linapple-fonts.tar"
 	verify_action
 	sudo mkdir -p Arkbuild/opt/linapple
 	sudo cp -a Arkbuild/home/ark/${CHIPSET}_core_builds/linapplesa-64/linapple Arkbuild/opt/linapple/

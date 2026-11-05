@@ -6,6 +6,26 @@
 # ==============================================================================
 
 COMPAT_LIBS_MISSING=""
+# The .debs are kept here, so a build doesn't depend on snapshot.debian.org
+# answering: it often gives "503 first byte timeout", and 1.7's first image
+# lost the armhf libavcodec.so.58 to one.
+COMPAT_DEB_CACHE="Arkbuild_package_cache/compat-debs"
+sudo mkdir -p "${COMPAT_DEB_CACHE}"
+
+# Fetch a .deb into the current directory, from the cache if it has it.
+fetch_deb() {
+    local url="$1"
+    local deb=$(basename "$url")
+    if [ -s "${COMPAT_DEB_CACHE}/${deb}" ] && dpkg-deb --info "${COMPAT_DEB_CACHE}/${deb}" > /dev/null 2>&1; then
+        cp "${COMPAT_DEB_CACHE}/${deb}" "$deb"
+        return 0
+    fi
+    rm -f "$deb"
+    wget -t 6 -T 60 --waitretry=20 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --no-check-certificate "$url"
+    if [ -s "$deb" ] && dpkg-deb --info "$deb" > /dev/null 2>&1; then
+        sudo cp "$deb" "${COMPAT_DEB_CACHE}/${deb}"
+    fi
+}
 
 install_lib() {
     local url="$1"
@@ -16,7 +36,7 @@ install_lib() {
 
     # --- ARM64 ---
     local deb_arm64=$(basename "$url")
-    wget -t 3 -T 60 --no-check-certificate "$url"
+    fetch_deb "$url"
     #verify_action
     dpkg --fsys-tarfile "$deb_arm64" | tar -xO --wildcards "*$wildcard*" > "$lib_name"
     if [ ! -s "$lib_name" ]; then
@@ -38,7 +58,7 @@ install_lib() {
     if [[ "${BUILD_ARMHF}" == "y" ]]; then
         local url_armhf="${url//_arm64/_armhf}"
         local deb_armhf=$(basename "$url_armhf")
-        wget -t 3 -T 60 --no-check-certificate "$url_armhf"
+        fetch_deb "$url_armhf"
         #verify_action
         dpkg --fsys-tarfile "$deb_armhf" | tar -xO --wildcards "*$wildcard*" > "$lib_name"
         if [ ! -s "$lib_name" ]; then
