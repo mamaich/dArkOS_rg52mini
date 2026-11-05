@@ -18,12 +18,12 @@ intro to the title screen (full rate at 28 s, back to -8 at 64 s).
 diff -ru a/pcsx2/Config.h b/pcsx2/Config.h
 --- a/pcsx2/Config.h
 +++ b/pcsx2/Config.h
-@@ -1423,7 +1423,11 @@
- 			// Let the governor lower the EE cycle rate below EECycleRate, by up to two
- 			// steps, when the host cannot hold the frame deadline. Never above it, and
- 			// never written back — EECycleRate stays the player's baseline.
--			DynamicEECycleRate : 1;
-+			DynamicEECycleRate : 1,
+@@ -1431,7 +1431,11 @@
+ 			// With iopThread: EE-started SIF0/SIF1 DMA does not hold the IOP. The EE posts the pump as an item stamped
+ 			// with its cycle, and the IOP runs it when its own clock reaches the stamp (IopThread::DeferSifPump). INI
+ 			// only, no UI, experimental. After DynamicEECycleRate so that no existing bit moves.
+-			iopThreadDeferSif : 1;
++			iopThreadDeferSif : 1,
 +			// dArkOS: while a movie plays (the IPU decodes video), the EE at its full rate even
 +			// when EECycleRate is below it; back to EECycleRate a second after the movie. Movies
 +			// that stop on their first frame at a low rate (Guitar Hero) then play.

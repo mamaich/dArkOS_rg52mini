@@ -1,22 +1,24 @@
 #!/bin/bash
 
-# Build and install linapple standalone emulator along with sdl2-compat
+# Build and install linapple standalone emulator (on SDL2 since rk3566_core_builds' f24bc2a)
 if [ -f "Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/linapplesa.commit)" == "$(curl -s https://api.github.com/repos/christianhaitian/linapple/commits/master | jq -r '.sha')" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz
 else
-	# builds-alt.sh installs what linapple's build needs (imagemagick turns its icons into
-	# headers, and pulls in ghostscript, netpbm and their fonts: 36 packages, ~40 MB), and
-	# nothing takes them out again. The binary needs none of them (libzip, libcurl and
-	# SDL_image are in the image anyway), so what the build added is purged after it.
+	# linapple's build needs imagemagick (it turns the icons into headers, and pulls in
+	# ghostscript, netpbm and their fonts: 36 packages, ~40 MB). The binary needs none of
+	# them (libzip, libcurl and SDL2_image are in the image anyway), so what the build
+	# added is purged after it.
 	call_chroot "dpkg-query -W -f '\${Package}\n' | sort > /tmp/linapple-pkgs-before"
+	# Since rk3566_core_builds' f24bc2a linapple builds on SDL2 (no sdl12-compat), and its
+	# recipe installs nothing: imagemagick (for the icons) is put in here, inside the window
+	# whose packages are purged below, as upstream dArkOS has it in needed_dev_packages.txt.
+	call_chroot "export DEBIAN_FRONTEND=noninteractive && apt-get -y install imagemagick"
+	verify_action
 	call_chroot "export CCACHE_DISABLE=1 &&
 	  cd /home/ark &&
 	  cd ${CHIPSET}_core_builds &&
 	  chmod 777 builds-alt.sh &&
-	  eatmydata ./builds-alt.sh linapplesa &&
-	  cd linapple/sdl12-compat/build &&
-	  make install &&
-	  cp /usr/lib/aarch64-linux-gnu/libSDL_image-1.2.so.0* /usr/lib/.
+	  eatmydata ./builds-alt.sh linapplesa
 	  "
 	verify_action
 	call_chroot "dpkg-query -W -f '\${Package}\n' | sort > /tmp/linapple-pkgs-after &&
@@ -35,7 +37,7 @@ else
 	if [ -f "Arkbuild_package_cache/${CHIPSET}/linapplesa.commit" ]; then
 	  sudo rm -f Arkbuild_package_cache/${CHIPSET}/linapplesa.commit
 	fi
-	sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz Arkbuild/opt/linapple/ Arkbuild/usr/lib/libSDL_image-1.2.so.0* Arkbuild//usr/local/lib/libSDLmain.a Arkbuild/usr/local/lib/libSDL-1.2.so* Arkbuild/usr/local/lib/libSDL.so Arkbuild/usr/local/bin/sdl-config Arkbuild/usr/local/include/SDL/ Arkbuild/usr/local/lib/pkgconfig/sdl12_compat.pc Arkbuild/usr/local/share/aclocal/sdl.m4
+	sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/linapplesa.tar.gz Arkbuild/opt/linapple/
 	sudo git --git-dir=Arkbuild/home/ark/${CHIPSET}_core_builds/linapple/.git --work-tree=Arkbuild/home/ark/${CHIPSET}_core_builds/linapple rev-parse HEAD > Arkbuild_package_cache/${CHIPSET}/linapplesa.commit
 fi
 
