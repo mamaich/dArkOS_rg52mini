@@ -37,7 +37,11 @@
 # 9d239e8, so Luigi's Mansion (3DS) gets past its title and Dark Moon's
 # ghosts draw whole, Azahar's vertex shaders with PICA loops run faster, and
 # MALISX2_NO_PIPELINE_CACHE=1 no longer takes shaders from the app's cache
-# file), and the work on the driver
+# file; bde09ad, with Mesa 81f988c: Bifrost's compiler folds if conditions
+# known from uniforms, computes a loop's "PC == label" flags from one counter
+# and recomputes cheap values where they are used, so Dark Moon's intro runs
+# at libmali's rate; BIFROST_MESA_DEBUG=nofoldif, noloopflags, notreeremat
+# turn the three off), and the work on the driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
@@ -63,17 +67,17 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="fd3408c5c36a18f1324abfd850aea72b0ebff5b6"
+MALISX2_COMMIT="bde09ad38c23810abd51ec7991dedaa58d0ee725"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
-# Profile for clang's profile-guided optimisation: trained on fd3408c (with Mesa
-# 9d239e8) on an RG52 Mini (2026-11-05), with 2026-10-31's set: Azahar's
+# Profile for clang's profile-guided optimisation: trained on bde09ad (with Mesa
+# 81f988c) on an RG52 Mini (2026-11-05), with 2026-10-31's set: Azahar's
 # Super Mario 3D Land and Luigi's Mansion from an empty pipeline cache; ARMSX2
 # started as ES does, 90 s each of God of War from a savestate on the ship,
 # Jak and Daxter's intro and Jak and Daxter in game from the owner's save.
-# Castlevania is left out of it, to measure with (docs/TODO.md). 2026-11-04's
-# profile (of 467251a) would lose 0.6% of its weight on this code (the
-# register allocator, bi_register_allocate). 2026-10-31's
+# Castlevania is left out of it, to measure with (docs/TODO.md). The morning's
+# profile of 2026-11-05 (of fd3408c) would lose 0.1% of its weight on this code,
+# 2026-11-04's (of 467251a) 0.6% (the register allocator). 2026-10-31's
 # profile (of 4c91f3c) lost 12% of its weight on this code (the v7 draw path,
 # mali_v7_desc_prepare and mali_v7_desc_copy). A profile of older code loses
 # the functions changed since: 2026-10-25's, of 077e853, had no data for
@@ -83,8 +87,8 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # (Mesa's reach the compiler by absolute paths), so it is made for this tree
 # at /home/ark/malisx2, where the chroot builds it, with the build directory
 # in it (malisx2's docs/building.md).
-PGO="malisx2/pgo/malisx2-20261105.profdata.gz"
-PGO_SHA256="1ce810f691ac964dfaa3778d872c38cd91f7ca9a05227549a8a5f3fe2e438d2a"
+PGO="malisx2/pgo/malisx2-20261105b.profdata.gz"
+PGO_SHA256="84e2515ebccd7269be615a667c1676329dc51cd523c517d5fb6a587b5e6200ea"
 # Meson from its release, run from the tree: Debian trixie's 1.7.0 fails to
 # write the build of the Rust crate Mesa makes of structured sources
 # ("'CustomTargetIndex' object has no attribute 'subdir'"); 1.12.1 builds it.
