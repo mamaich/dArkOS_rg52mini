@@ -302,7 +302,20 @@ to the `uboot` partition at sector 16384 by `build_kernel-rk3562.sh` from
 `BSP/uboot-rg52mini.img`. The vendor's own U-Boot is kept beside it as
 `.vendor`.
 
-v10052026 ships `uboot-oc-stocktee-shmkept.img`
+From 1.7 the image ships the fork's release `rg52mini-1.5` (tag on
+6e4c1d91cb, `next-dev-g6e4c1d91cb`), its `uboot.img`: md5
+`9409d6dec3be9efc6ca097f258833b28`, the overclocking tables as below, which
+this kernel is fit for (its GPU parks at 300 MHz, KNOWN-ISSUES.md, "v10052026:
+the power button rebooted revision A boards"). Against the build below it
+adds the menu that picks a system on a card with two of them (a card with
+dArkOS alone shows none and boots as before), reads its files from the first
+partition marked bootable, and no longer loses a long press that leaves the
+charge screen when its 15 s blanking falls due at that moment. Its logo and
+charge frames are the ones in `BSP/`, byte for byte. The OTA does not write
+the `uboot` partition: a card updated from 1.6 keeps the one it was made
+with.
+
+From v10052026 up to 1.6 it was `uboot-oc-stocktee-shmkept.img`
 (`next-dev-g6eeb07c058-dirty`, md5 `0e743c774c9892195715251dd2262ade`): the
 stock BL32 v1.07 (`3.13.0-891-g9f2aca7d1`, 473472 bytes in the FIT) and a BL31
 whose frequency tables carry the overclocking entries from `05-разгон.md` in
