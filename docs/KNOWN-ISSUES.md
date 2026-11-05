@@ -1118,6 +1118,17 @@ picks MALISX2 gets it, on 2026-11-04: Azahar's Castlevania and Super Mario
 3D Land, PPSSPP's Final Fantasy, flycast's Crazy Taxi and Dolphin's ND Demo
 start and draw right, no crash lines, no GPU faults.
 
+**malisx2 bde09ad (for 1.7).** 0.3.2 with three changes to Bifrost's shader
+compiler (Mesa 81f988c): spill slots aligned, if conditions known from
+uniforms folded, a loop's "PC == label" flags from one counter, and cheap
+values recomputed where they are used rather than kept in registers. Luigi's
+Mansion 2's intro now runs at libmali's rate (the malisx2 session). The other
+games tried run as on 467251a (TODO.md, "For 1.7").
+`BIFROST_MESA_DEBUG=nofoldif,noloopflags,notreeremat` turns the three passes
+off, for telling whether one of them is behind a wrong picture; the pipeline
+cache does not take that variable into its key, so with it set
+`MALISX2_NO_PIPELINE_CACHE=1` is needed too.
+
 **The DuckStation core on RetroArch's Vulkan driver crashed on malisx2**
 (SIGSEGV before its first frame), with 1.4's malisx2 and with 4c91f3c alike;
 on libmali it ran (Hover Racing, 50 fps). RetroArch's driver is `gl`, so it

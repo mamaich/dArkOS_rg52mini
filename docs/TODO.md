@@ -65,6 +65,32 @@ it. Confirmed on the device.
     43.2 / 40.4 / 40.8, fbbarrier 40.7 / 40.9 / 43.3. The 40s are runs where
     the game drops to 26-28 for 8-9 s at the same moment; it does so on 1.6's
     library too (2 of 7 runs, 3 of 7 on this one), so it is the scene's.
+- malisx2 fd3408c (Mesa 9d239e8: spill slots aligned) and then bde09ad (Mesa
+  81f988c: if conditions known from uniforms folded, a loop's "PC == label"
+  flags from one counter, cheap values recomputed where used), each with a
+  profile trained on it (`malisx2-20261105.profdata.gz`,
+  `malisx2-20261105b.profdata.gz`), handed over by the malisx2 session on
+  2026-11-05 with the owner's word. The malisx2 session: Luigi's Mansion 2's
+  intro 12.6 / 17.1 / 20.8 -> 23.9 / 31.4 / 39.5 fps (libmali 24.9 / 30.4 /
+  37.9), GPU time a frame 58 -> 32 ms, no GPU faults. Here, as above, a
+  warm-up and four turns in alternation:
+  - 467251a against fd3408c: Castlevania 59.5 both, Mario 60, ND Demo 46.7-47.2
+    / 47.1-47.7, Metroid Prime 35.5-35.9 / 35.4-35.8, God of War 26.2-26.6 /
+    26.3-27.7, Jak 41.2 / 41.9 / 43.4 / 40.9 against 43.5 / 43.8 / 43.4 / 43.6.
+  - fd3408c against bde09ad: Castlevania 59.5-59.6 / 59.5-59.7, Mario 60, ND
+    Demo 47.2-47.4 / 47.0-47.5, Metroid Prime 35.0-35.5 / 35.4-35.6, God of
+    War 26.2-26.9 / 26.1-26.9, Jak 41.3 / 41.1 / 40.6 / 43.1 against 43.4 /
+    41.0 / 43.6 / 41.4 (the 26-28 stretch of the scene in 3 and 2 of the 4).
+- 1.7's first full image with bde09ad lost two files and was not used: linapple,
+  built from source for the first time since its cache key took in the recipe,
+  installs imagemagick, whose fonts-droid-fallback takes over
+  /usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf, and the purge of
+  what the build added deleted it; and snapshot.debian.org answered "503 first
+  byte timeout" for the armhf libavcodec.so.58, which `wget -t 3` does not
+  retry. build_linapple.sh now keeps /usr/share/fonts through its window, and
+  fetch_compat_libs.sh retries on 5xx and keeps the .debs in
+  Arkbuild_package_cache/compat-debs. python3-mako (a build dependency of
+  malisx2's Mesa) is purged in cleanup_filesystem.sh.
 - doster00's pull requests #6, #7 and #8 merged (the owner, 2026-11-04),
   checked on the RG52 Mini first: 1.6's 351Files starts on a blank screen and
   #6's build (made in 1.6's rootfs, upstream 7888f79) shows the /roms list;

@@ -167,14 +167,14 @@ In master for 1.7, not released yet (VERSION says 1.7):
 
 | | |
 |---|---|
-| malisx2 | 467251a: upstream's 0.3.2 (a tiler heap ring that grows, linear descriptor pools) and four v7 commits of pjperez' fork (image-only barriers narrowed, by-region barriers inside a pass without a barrier draw, BC1-7 sampled, 37 extensions in place of 28); a profile trained on this code. On the console against 1.6's: God of War and Jak and Daxter from the owner's saves within the spread, Castlevania 3-5% faster (the malisx2 session); a new shader cache ID, so each game compiles its pipelines once more ([KNOWN-ISSUES](KNOWN-ISSUES.md#vulkan-arms-driver-or-malisx2-chosen-per-system-13), "malisx2 0.3.2") |
+| malisx2 | bde09ad: upstream's 0.3.2 (a tiler heap ring that grows, linear descriptor pools) and four v7 commits of pjperez' fork (image-only barriers narrowed, by-region barriers inside a pass without a barrier draw, BC1-7 sampled, 37 extensions in place of 28); in Bifrost's shader compiler (Mesa 81f988c) spill slots aligned, if conditions known from uniforms folded, loop flags from one counter, cheap values recomputed where used; a profile trained on this code. On the console against 1.6's: God of War and Jak and Daxter from the owner's saves within the spread, Castlevania 3-5% faster, Luigi's Mansion 2's intro about twice as fast, at libmali's rate (the malisx2 session); a new shader cache ID, so each game compiles its pipelines once more ([KNOWN-ISSUES](KNOWN-ISSUES.md#vulkan-arms-driver-or-malisx2-chosen-per-system-13), "malisx2 0.3.2") |
 | 351Files | its file list shows again: since upstream's a6a3f49 its UI sizes were 0 on our devices and the screen stayed blank, 1.6's too (doster00's pull request #6) |
 | J2ME | the freej2me core runs on the image's OpenJDK 21, no JDK 11 download, and is offered first (pull request #8) |
 | RG43H / RG43V Pro | brought up to the RG52 Mini's level: ECWolf's menu, the FN button and Bluetooth, ES's script, zram sized from the RAM, PS2 and N64 settings, the gl4es builds (pull request #7); on the RG52 Mini nothing changes |
 | ARMSX2 | master 1049db37 of 2026-11-04 (75 commits after 1.6's), with a profile retrained for it. From the owner's saves against 1.6: God of War within the spread, Jak and Daxter +7%, Guitar Hero +1%, Burnout 3 the same; 1.6's savestates load (TODO.md, "For 1.7") |
 | Dolphin | 584366c; ND Demo and Metroid Prime as fast as 1.6's (45.7 / 45.5 and 35.2 / 35.2) |
 | DSperate | v3.3.0 |
-| linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS |
+| linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS; 1.6 still had the SDL 1.2 build, as the recipe's cache was keyed by linapple's commit alone |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
