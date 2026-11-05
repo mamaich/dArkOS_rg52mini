@@ -13,7 +13,7 @@ fi
 # A newer openMSX brings its own data (Tcl scripts, machines, extensions): put
 # it over what an older one copied, but keep the settings the user saved there
 # and what the user added (system ROMs).
-# openMSX loads every Tcl script in share/scripts, and a newer one drops some (19.1 -> 22.0:
+# openMSX loads every Tcl script in share/scripts, and a newer one drops some (19.1 -> 21.0:
 # eleven, _quitmenu.tcl and _osd_keyboard.tcl among them): the old scripts folder is renamed
 # aside first, so only the new version's scripts load.
 if ! cmp -s /opt/openmsx/backupconfig/openmsx/share/.darkos-version "/$directory/bios/openmsx/share/.darkos-version"; then
