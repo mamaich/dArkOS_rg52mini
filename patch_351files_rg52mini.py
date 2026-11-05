@@ -152,6 +152,168 @@ if needle + "      g_fontSize" not in sdlu:        # not already filled in by up
 with open("src/sdlutils.cpp", "w") as f:
     f.write(sdlu)
 
+# --- A fallback font for the characters NotoSans lacks ---
+# 351Files draws all its text with res/NotoSans-Regular.ttf (and the Mono one), which has Latin, Greek and
+# Cyrillic but no CJK: a Chinese, Japanese or Korean file name came out as a row of boxes. SDL2_ttf has no
+# fallback fonts, so renderText() now splits the text into runs: what NotoSans has it draws as before, the
+# rest it draws with Noto Sans CJK (fonts-noto-cjk, in the image), or DroidSansFallbackFull.ttf (there for
+# EmulationStation, without Hangul) if that is missing, and puts the runs side by side on one baseline. A
+# text NotoSans covers whole goes the old way, pixel for pixel.
+
+with open("src/sdlutils.cpp") as f:
+    sdlu = f.read()
+
+old_render = """SDL_Texture *SDLUtils::renderText(const std::string &p_text, TTF_Font *p_font, const SDL_Color &p_fg, const SDL_Color &p_bg)
+{
+   // Create surface
+   SDL_Surface *surface = TTF_RenderUTF8_Shaded(p_font, p_text.c_str(), p_fg, p_bg);
+"""
+new_render = """static TTF_Font *g_fontFallback = NULL;
+
+// Open the fallback font at the size of the main ones; none is fine (boxes, as before)
+void SDLUtils::loadFallbackFont(const int p_size)
+{
+   static const char *paths[] = {
+      "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+      "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+      "/usr/bin/emulationstation/resources/DroidSansFallbackFull.ttf",
+      NULL };
+   for (int i = 0; paths[i] != NULL && g_fontFallback == NULL; ++i)
+      g_fontFallback = TTF_OpenFont(paths[i], p_size);
+}
+
+void SDLUtils::closeFallbackFont(void)
+{
+   if (g_fontFallback != NULL)
+      TTF_CloseFont(g_fontFallback);
+   g_fontFallback = NULL;
+}
+
+// Next code point of a UTF-8 string; a broken sequence gives its first byte
+static Uint32 nextCodePoint(const std::string &p_text, size_t &p_pos)
+{
+   const unsigned char c = p_text[p_pos];
+   const int n = c < 0x80 ? 0 : (c & 0xE0) == 0xC0 ? 1 : (c & 0xF0) == 0xE0 ? 2 : (c & 0xF8) == 0xF0 ? 3 : -1;
+   if (n <= 0 || p_pos + n >= p_text.size())
+   {
+      ++p_pos;
+      return c;
+   }
+   Uint32 cp = c & (0x3F >> n);
+   for (int i = 1; i <= n; ++i)
+   {
+      const unsigned char cc = p_text[p_pos + i];
+      if ((cc & 0xC0) != 0x80)
+      {
+         ++p_pos;
+         return c;
+      }
+      cp = (cp << 6) | (cc & 0x3F);
+   }
+   p_pos += n + 1;
+   return cp;
+}
+
+SDL_Texture *SDLUtils::renderText(const std::string &p_text, TTF_Font *p_font, const SDL_Color &p_fg, const SDL_Color &p_bg)
+{
+   // Runs of the text by font: p_font where it has the glyph, else the fallback where that has it
+   std::vector<std::pair<TTF_Font *, std::string> > runs;
+   if (g_fontFallback != NULL)
+   {
+      size_t pos = 0;
+      while (pos < p_text.size())
+      {
+         const size_t start = pos;
+         const Uint32 cp = nextCodePoint(p_text, pos);
+         TTF_Font *font = p_font;
+         if (cp >= 0x80 && !TTF_GlyphIsProvided32(p_font, cp) && TTF_GlyphIsProvided32(g_fontFallback, cp))
+            font = g_fontFallback;
+         if (runs.empty() || runs.back().first != font)
+            runs.push_back(std::make_pair(font, std::string()));
+         runs.back().second.append(p_text, start, pos - start);
+      }
+   }
+   if (runs.size() > 1 || (runs.size() == 1 && runs[0].first != p_font))
+   {
+      // Each run drawn alone, then laid side by side on a common baseline
+      int ascent = 0, descent = 0;
+      for (size_t i = 0; i < runs.size(); ++i)
+      {
+         if (TTF_FontAscent(runs[i].first) > ascent) ascent = TTF_FontAscent(runs[i].first);
+         if (-TTF_FontDescent(runs[i].first) > descent) descent = -TTF_FontDescent(runs[i].first);
+      }
+      if (TTF_FontHeight(p_font) > ascent + descent)
+         descent = TTF_FontHeight(p_font) - ascent;
+      std::vector<SDL_Surface *> parts;
+      int width = 0;
+      for (size_t i = 0; i < runs.size(); ++i)
+      {
+         SDL_Surface *part = TTF_RenderUTF8_Shaded(runs[i].first, runs[i].second.c_str(), p_fg, p_bg);
+         parts.push_back(part);
+         if (part != NULL)
+            width += part->w;
+      }
+      SDL_Surface *surface = width > 0 ? SDL_CreateRGBSurfaceWithFormat(0, width, ascent + descent, 32, SDL_PIXELFORMAT_ARGB8888) : NULL;
+      if (surface != NULL)
+      {
+         SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, p_bg.r, p_bg.g, p_bg.b));
+         int x = 0;
+         for (size_t i = 0; i < runs.size(); ++i)
+         {
+            if (parts[i] == NULL)
+               continue;
+            SDL_Rect dst = { x, ascent - TTF_FontAscent(runs[i].first), parts[i]->w, parts[i]->h };
+            SDL_SetSurfaceBlendMode(parts[i], SDL_BLENDMODE_NONE);
+            SDL_BlitSurface(parts[i], NULL, surface, &dst);
+            x += parts[i]->w;
+         }
+      }
+      for (size_t i = 0; i < parts.size(); ++i)
+         if (parts[i] != NULL)
+            SDL_FreeSurface(parts[i]);
+      if (surface != NULL)
+      {
+         SDL_Texture *texture = SDL_CreateTextureFromSurface(g_renderer, surface);
+         SDL_FreeSurface(surface);
+         if (texture == NULL)
+            std::cerr << "Unable to create texture from surface. SDL_Error: " << SDL_GetError() << std::endl;
+         return texture;
+      }
+      // Could not compose: draw it all with p_font, as before
+   }
+   // Create surface
+   SDL_Surface *surface = TTF_RenderUTF8_Shaded(p_font, p_text.c_str(), p_fg, p_bg);
+"""
+if "loadFallbackFont" not in sdlu:
+    if sdlu.count(old_render) != 1:
+        raise SystemExit("patch_351files: src/sdlutils.cpp renderText() no longer matches what this patch expects")
+    sdlu = sdlu.replace(old_render, new_render)
+    sdlu = sdlu.replace('#include "sdlutils.h"\n', '#include "sdlutils.h"\n#include <vector>\n#include <utility>\n', 1)
+    with open("src/sdlutils.cpp", "w") as f:
+        f.write(sdlu)
+
+with open("src/sdlutils.h") as f:
+    sdlh = f.read()
+old_decl = "   TTF_Font *loadFont(const std::string &p_path, const int p_size);\n"
+if "loadFallbackFont" not in sdlh:
+    if sdlh.count(old_decl) != 1:
+        raise SystemExit("patch_351files: src/sdlutils.h no longer matches what this patch expects")
+    sdlh = sdlh.replace(old_decl, old_decl + "   void loadFallbackFont(const int p_size);\n   void closeFallbackFont(void);\n")
+    with open("src/sdlutils.h", "w") as f:
+        f.write(sdlh)
+
+with open("src/main.cpp") as f:
+    mainc = f.read()
+old_load = "   g_fontMono = SDLUtils::loadFont(std::string(RES_PATH) + \"/\" + FONT_NAME_MONO, g_fontSize);\n"
+old_close = "   TTF_CloseFont(g_fontMono);\n   g_fontMono = NULL;\n"
+if "loadFallbackFont" not in mainc:
+    if mainc.count(old_load) != 1 or mainc.count(old_close) != 1:
+        raise SystemExit("patch_351files: src/main.cpp no longer matches what this patch expects")
+    mainc = mainc.replace(old_load, old_load + "   SDLUtils::loadFallbackFont(g_fontSize);\n")
+    mainc = mainc.replace(old_close, old_close + "   SDLUtils::closeFallbackFont();\n")
+    with open("src/main.cpp", "w") as f:
+        f.write(mainc)
+
 # --- Patch build_RG351.sh ---
 # Add RG56PRO and RG43H to the conditional that triggers dual-build
 # (/roms and /roms2)
@@ -167,4 +329,4 @@ buildsh = buildsh.replace(
 with open("build_RG351.sh", "w") as f:
     f.write(buildsh)
 
-print("Patched src/def.h and build_RG351.sh for DEVICE_RG56PRO (1280x720) and DEVICE_RG43H (1024x768)")
+print("Patched src/def.h, src/sdlutils.cpp (fallback font), src/main.cpp and build_RG351.sh for DEVICE_RG56PRO (1280x720) and DEVICE_RG43H (1024x768)")
