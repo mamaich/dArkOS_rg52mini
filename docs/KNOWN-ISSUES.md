@@ -1129,6 +1129,14 @@ off, for telling whether one of them is behind a wrong picture; the pipeline
 cache does not take that variable into its key, so with it set
 `MALISX2_NO_PIPELINE_CACHE=1` is needed too.
 
+**`mali ff320000.gpu: Stride 72 passed to job_submit isn't supported by the
+kernel` in dmesg is harmless.** malisx2 sends one JOB_SUBMIT with 72-byte atoms
+when it opens a kbase context (each start of a game or emulator on it), to
+recognise MediaTek's kbase with its `frame_nr` field; Rockchip's answers
+EINVAL and prints this line, and malisx2 goes on with 64-byte atoms. Upstream's
+probe (bmdhacks 1f0b997, 2026-10-07), in 1.6's 428b5b2 as well: one line a
+start, nothing on screen or in the speed (the malisx2 session, 2026-11-06).
+
 **The DuckStation core on RetroArch's Vulkan driver crashed on malisx2**
 (SIGSEGV before its first frame), with 1.4's malisx2 and with 4c91f3c alike;
 on libmali it ran (Hover Racing, 50 fps). RetroArch's driver is `gl`, so it
