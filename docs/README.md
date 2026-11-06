@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.6 (build 11032026, 2026-11-04); from 1.1 on, a card
+The current release is 1.7 (build 11062026, 2026-11-06); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -163,7 +163,7 @@ measured before the build, from the owner's savestates in four games
 1.3, 1.2 and 1.1 were made the same way from the published images and not
 installed.
 
-In master for 1.7, not released yet (VERSION says 1.7):
+New in 1.7 (build 11062026, 2026-11-06):
 
 | | |
 |---|---|
@@ -178,6 +178,22 @@ In master for 1.7, not released yet (VERSION says 1.7):
 | linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS; 1.6 still had the SDL 1.2 build, as the recipe's cache was keyed by linapple's commit alone |
 | 351Files | Chinese, Japanese and Korean file names drawn with Noto Sans CJK instead of boxes; Latin and Cyrillic ones as before |
 | Bootloader | U-Boot rg52mini-1.5 with the overclocking tables: the system menu on a dual-boot card, a long press that leaves the charge screen no longer lost; the OTA writes it to a card with dArkOS alone ([HARDWARE](HARDWARE.md#the-bootloader)) |
+
+Checked for 1.7: on the owner's new dual-boot card (card v1.5) the update
+1.5 -> 1.7 from `ROMs/update` (73 files, 124 deleted, every hook, the 1.5
+snapshot kept; the files match the image's), U-Boot, `resource` and p5 left
+alone ("dual-boot card ... not touched"), up in 16.9 s with no failed unit, and
+GammaOS boots from the menu after it. On the console the first 1.7 image went
+on over 1.6 by its package (38 files), then the rebuilt image over the test 1.7
+by its own; each engine that changed as ES starts it: ARMSX2 (God of War),
+Dolphin (ND Demo), DSperate (Castlevania DoS), Azahar, openMSX, linapple,
+mupen64plus standalone (Rice, Glide64mk2, GlideN64). No crash, the sound
+playing. malisx2's and ARMSX2's speed was measured before the builds against
+the versions they replace (TODO.md, "For 1.7" and "1.7 rebuilt with malisx2
+083892f"). The packages from 1.6, 1.4, 1.3.1, 1.3, 1.2 and 1.1 were made the
+same way from the published images and not installed.
+
+In master for 1.8, not released yet (VERSION says 1.8): nothing yet.
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

@@ -48,7 +48,7 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
-## 1.7 rebuilt with malisx2 083892f (2026-11-06)
+## 1.7 rebuilt with malisx2 083892f (2026-11-06, released the same day)
 
 - malisx2 083892f (Mesa a63666c: a spilled phi takes its sources' slot, so
   the edges lose their slot-to-slot copies, and a shader spilled in SSA is
@@ -97,7 +97,7 @@ it. Confirmed on the device.
     58, 204, 212, 261 and 269 MiB), and for testers the first and the test
     1.7 -> 1.7 (24 and 22 MiB, not in the feed).
 
-## For 1.7
+## For 1.7 (released 2026-11-06)
 
 - malisx2 467251a (2026-11-04, handed over by the malisx2 session with the
   owner's word) in build_malisx2.sh, with its profile
