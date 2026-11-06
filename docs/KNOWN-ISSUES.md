@@ -1129,6 +1129,15 @@ off, for telling whether one of them is behind a wrong picture; the pipeline
 cache does not take that variable into its key, so with it set
 `MALISX2_NO_PIPELINE_CACHE=1` is needed too.
 
+**malisx2 083892f (after 1.7's image, a test package).** Two more changes to
+how Bifrost's shader compiler spills (Mesa a63666c): a spilled phi takes its
+sources' slot, and a shader that spills is compiled again with more
+registers to spare. Shaders that do not spill come out the same. Luigi's
+Mansion 2 from the malisx2 session's savestate 12.4 -> 13.0 fps, the other
+games tried as on bde09ad (TODO.md, "After 1.7's image"). The shader cache ID
+changes again, so each game compiles its pipelines once more after the
+update.
+
 **`mali ff320000.gpu: Stride 72 passed to job_submit isn't supported by the
 kernel` in dmesg is harmless.** malisx2 sends one JOB_SUBMIT with 72-byte atoms
 when it opens a kbase context (each start of a game or emulator on it), to

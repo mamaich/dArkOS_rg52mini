@@ -48,6 +48,37 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
+## After 1.7's image: malisx2 083892f (2026-11-06, a test package)
+
+- malisx2 083892f (Mesa a63666c: a spilled phi takes its sources' slot, so
+  the edges lose their slot-to-slot copies, and a shader spilled in SSA is
+  compiled again with 12 registers to spare, not 8, when LCRA has to spill)
+  with a profile trained on it (`malisx2-20261106.profdata.gz`), handed over
+  by the malisx2 session. The owner: try it in the emulators that use it and
+  make a test package if it is not worse. On the console over 1.7, its
+  library against 1.7's (bde09ad) by DARKOS_VULKAN, a warm-up and three
+  rounds in alternation, each build with its own Azahar and ARMSX2 pipeline
+  caches (the two have different cache IDs, so taking turns on one cache
+  would make every run compile cold):
+  - Luigi's Mansion 2 from the malisx2 session's savestate 12.42 / 12.44 /
+    12.46 against 13.04 / 13.03 / 13.04 (+5%); Castlevania 59.5 / 60.0 /
+    59.5 against 59.1 / 59.6 / 59.2 (60 at most; the new one's first 5 s at
+    55 against 57, compiling); ND Demo 47.0-47.1 against 46.9-47.5; God of
+    War from the owner's save 26.3 / 26.7 / 26.3 against 26.6 / 26.3 / 26.6;
+    Jak and Daxter 46.3 / 45.7 / 42.9 against 46.8 / 46.9 / 46.2 (the
+    scene's 26-28 stretch in 1.7's third). The pictures the same, no GPU
+    faults.
+  - The recipe's build (28736883...; the malisx2 session's own was 83f8fddd,
+    not the same bytes, as before) in a package 1.7 -> 1.7 (BUILD_ID
+    20261106052439, 2.7 MiB: the library and darkos-release), installed from
+    /roms/update, rc 0, up in 21.6 s. Castlevania 59.7, Luigi's Mansion 2
+    13.03, ND Demo 47.4, God of War 26.5, Jak 45.7 (the 26-28 stretch at the
+    end), the pictures right.
+  - The test image is a copy of 1.7's with the library and BUILD_ID changed.
+    Its btrfs got a new fsid (`btrfstune -u`): make-ota mounts both images,
+    and btrfs refuses a second one with the same fsid ("File exists"). The
+    boot and fstab name /dev/mmcblk1p4, not the UUID.
+
 ## For 1.7
 
 - malisx2 467251a (2026-11-04, handed over by the malisx2 session with the
