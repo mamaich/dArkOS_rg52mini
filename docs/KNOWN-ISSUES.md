@@ -1129,12 +1129,12 @@ off, for telling whether one of them is behind a wrong picture; the pipeline
 cache does not take that variable into its key, so with it set
 `MALISX2_NO_PIPELINE_CACHE=1` is needed too.
 
-**malisx2 083892f (after 1.7's image, a test package).** Two more changes to
+**malisx2 083892f (1.7's image rebuilt with it).** Two more changes to
 how Bifrost's shader compiler spills (Mesa a63666c): a spilled phi takes its
 sources' slot, and a shader that spills is compiled again with more
 registers to spare. Shaders that do not spill come out the same. Luigi's
 Mansion 2 from the malisx2 session's savestate 12.4 -> 13.0 fps, the other
-games tried as on bde09ad (TODO.md, "After 1.7's image"). The shader cache ID
+games tried as on bde09ad (TODO.md, "1.7 rebuilt with malisx2 083892f"). The shader cache ID
 changes again, so each game compiles its pipelines once more after the
 update.
 

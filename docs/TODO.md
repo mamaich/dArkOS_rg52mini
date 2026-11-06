@@ -48,7 +48,7 @@ it. Confirmed on the device.
   found on revision B; confirmed working on a revision A unit by its owner.
   KNOWN-ISSUES has the evidence.
 
-## After 1.7's image: malisx2 083892f (2026-11-06, a test package)
+## 1.7 rebuilt with malisx2 083892f (2026-11-06)
 
 - malisx2 083892f (Mesa a63666c: a spilled phi takes its sources' slot, so
   the edges lose their slot-to-slot copies, and a shader spilled in SSA is
@@ -78,6 +78,24 @@ it. Confirmed on the device.
     Its btrfs got a new fsid (`btrfstune -u`): make-ota mounts both images,
     and btrfs refuses a second one with the same fsid ("File exists"). The
     boot and fstab name /dev/mmcblk1p4, not the UUID.
+- The owner then: rebuild 1.7 with it. The image, BUILD_ID 20261106083357
+  (BUILD_DATE 11062026), built in 114 min with malisx2 from the package
+  cache (the recipe's build above, 28736883...). Against the first 1.7
+  (20261105212915) 12 files differ: the library; mupen64plus standalone's
+  core, rsp-hle, Rice and Glide64mk2, which build upstream's master (of
+  2026-11-06: bounds checks in the video plugins, Rice's texture cache
+  bounded, Game Boy cartridges mirrored and the MBC3 clock started for the
+  Transfer Pak, HVQM's chroma step); and the kernel, uInitrd, gl4es,
+  darkos-release, .VERSION, the boot title and root's crontab, which differ
+  in the build's date and time only (the kernel in 38 bytes, gl4es in 26).
+  - On the console, from the test 1.7 by its package (22 MiB, 11 files)
+    from /roms/update: rc 0, up in 21.5 s, no failed units. Zelda Ocarina
+    of Time's title in mupen64plus standalone as ES starts it, before and
+    after: Rice 20.0 / 20.0, Glide64mk2 20.0 / 19.9, GlideN64 53.4 / 59.5
+    (the first run compiled its shaders), the same picture.
+  - Packages to it: 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 and 1.1 -> 1.7 (42, 45,
+    58, 204, 212, 261 and 269 MiB), and for testers the first and the test
+    1.7 -> 1.7 (24 and 22 MiB, not in the feed).
 
 ## For 1.7
 
