@@ -175,6 +175,8 @@ In master for 1.7, not released yet (VERSION says 1.7):
 | Dolphin | 584366c; ND Demo and Metroid Prime as fast as 1.6's (45.7 / 45.5 and 35.2 / 35.2) |
 | DSperate | v3.3.0 |
 | linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS; 1.6 still had the SDL 1.2 build, as the recipe's cache was keyed by linapple's commit alone |
+| 351Files | Chinese, Japanese and Korean file names drawn with Noto Sans CJK instead of boxes; Latin and Cyrillic ones as before |
+| Bootloader | U-Boot rg52mini-1.5 with the overclocking tables: the system menu on a dual-boot card, a long press that leaves the charge screen no longer lost; the OTA writes it to a card with dArkOS alone ([HARDWARE](HARDWARE.md#the-bootloader)) |
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

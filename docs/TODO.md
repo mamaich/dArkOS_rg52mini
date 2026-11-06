@@ -91,6 +91,17 @@ it. Confirmed on the device.
   fetch_compat_libs.sh retries on 5xx and keeps the .debs in
   Arkbuild_package_cache/compat-debs. python3-mako (a build dependency of
   malisx2's Mesa) is purged in cleanup_filesystem.sh.
+- 1.7's image (BUILD_ID 20261105212915) and its 1.6 -> 1.7 package (41 MiB,
+  38 files, 12 deleted, the boot loader) on the console, 2026-11-06: installed
+  from /roms/update over 1.6, rc 0, every file of the package new afterwards,
+  /var/lib/dpkg/status merged (3 entries from the update, 8 of the device
+  kept), the dual-boot card's U-Boot left alone; up in 21 s, no failed units,
+  no `failed to set power down rate`. The recipe's malisx2 build against the
+  malisx2 session's own: Castlevania 59.5 / 59.5 / 59.5 against 59.6 / 58.2 /
+  59.5, ND Demo 46.8 / 47.0 / 47.5 against 47.1 / 47.5 / 47.4. As ES starts
+  them: ARMSX2 God of War 44.6 at its menu, Dolphin ND 47.3, DSperate
+  Castlevania DoS 59.9, openMSX (C-BIOS, an empty cartridge) and linapple
+  (Master.dsk) 60, all with sound and no crash lines.
 - doster00's pull requests #6, #7 and #8 merged (the owner, 2026-11-04),
   checked on the RG52 Mini first: 1.6's 351Files starts on a blank screen and
   #6's build (made in 1.6's rootfs, upstream 7888f79) shows the /roms list;
