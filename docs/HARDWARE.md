@@ -311,9 +311,11 @@ adds the menu that picks a system on a card with two of them (a card with
 dArkOS alone shows none and boots as before), reads its files from the first
 partition marked bootable, and no longer loses a long press that leaves the
 charge screen when its 15 s blanking falls due at that moment. Its logo and
-charge frames are the ones in `BSP/`, byte for byte. The OTA does not write
-the `uboot` partition: a card updated from 1.6 keeps the one it was made
-with.
+charge frames are the ones in `BSP/`, byte for byte. The 1.6 -> 1.7 OTA
+carries it and writes it to a card with dArkOS alone whose `uboot` partition
+still holds 1.6's loader; a dual-boot card keeps its own, which GammaOS's
+updates write (OTA.md). Checked before 1.7 by the GammaOS session on a card of
+its own (2026-11-05).
 
 From v10052026 up to 1.6 it was `uboot-oc-stocktee-shmkept.img`
 (`next-dev-g6eeb07c058-dirty`, md5 `0e743c774c9892195715251dd2262ade`): the
