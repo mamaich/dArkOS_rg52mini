@@ -199,6 +199,11 @@ In master for 1.8, not released yet (VERSION says 1.8):
   GammaOS the Type-C probe now works, so a revision A board gets its panel kick
   (HARDWARE.md, The bootloader). The OTA packages to 1.8 write it to a card
   with dArkOS alone.
+- Upstreams of 2026-11-07 (docs/TODO.md, "Upstream updates for 1.8"):
+  RetroArch recovers a PCM left in SETUP (HDMI sound on its first start),
+  Hypseus gets per-game -fastboot and DIP banks, ES starts 1.5 s sooner (it no
+  longer waits for the welcome message), DSperate a165843 (menu language,
+  Cyrillic in its menus), Dolphin 4a70679, retrorun 3.2.5.
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
