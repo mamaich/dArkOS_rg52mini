@@ -46,7 +46,13 @@
 # shader spilled in SSA is compiled again with 12 registers to spare, not 8,
 # when LCRA has to spill (a63666c): Dark Moon's intro 2-3% faster, its
 # preload 92.8 -> 90.9 s; shaders that do not spill compile to the same
-# code), and the work on the driver
+# code; 11aba31, with Mesa 3b0e036: upstream 0.3.3 (the v7 tiler heap's Top at
+# the end of its region: ARMSX2 at 3x lost the device, 0x60, in God of War),
+# instanced draws reading per-instance attributes from firstInstance (0a1fe87,
+# from 0.4.0; fitest 7/7, was 3/7) and 0.4.0's three Mesa fixes (two in
+# Bifrost's scheduler and swizzles, vtn's non-uniform access); driverInfo says
+# 0.3.3 and the shader cache ID is new, so emulators rebuild their pipeline
+# caches once), and the work on the driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
@@ -72,7 +78,7 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="083892fce1417c672a6641cb61f9e29197b502fb"
+MALISX2_COMMIT="11aba31bacdc174a89f206e25ce5f5112629cb50"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained on 083892f (with Mesa
@@ -80,7 +86,11 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Super Mario 3D Land and Luigi's Mansion from an empty pipeline cache; ARMSX2
 # started as ES does, 90 s each of God of War from a savestate on the ship,
 # Jak and Daxter's intro and Jak and Daxter in game from the owner's save.
-# Castlevania is left out of it, to measure with (docs/TODO.md). 2026-11-05b's
+# Castlevania is left out of it, to measure with (docs/TODO.md). 11aba31 keeps
+# it: the malisx2 session built 11aba31 with it and measured it against 71341b9
+# on the same profile (2026-11-07: God of War 1x 22.45/21.99/22.65 against
+# 22.02/21.89/21.96, Jak and Daxter 16.84/16.79/16.89 against 16.87/16.82/16.85,
+# Castlevania level, frames right, no GPU fault). 2026-11-05b's
 # profile (of bde09ad) would lose 0.7% of its weight on this code (the register
 # allocator: bi_register_allocate, bi_compile_variant, bi_lower_spill); on
 # bde09ad the morning's profile of 2026-11-05 (of fd3408c) lost 0.1%,
