@@ -114,7 +114,7 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
 | Dolphin | 584366c -> 4a70679 (bounds fixes) | ND Demo 45.6 / 45.6 over 3 rounds |
 | retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
 | ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing). A retrained profile might win it back; not tried |
-| Zeebo | branch `zeebo-wip` (9d52f88), not in master | see below |
+| Zeebo | branch `zeebo-wip` (9d52f88), not in master; the core's fix in master (core_builds 8740005) | see below |
 
 * **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,
   which is gone; ours builds ZeebxTeam/zeebx-emu v0.5.1 (`zeebx-lr.sh`), whose
@@ -125,9 +125,26 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
   zip has it (every file at the root) stops at once: "IMICRO3D failed creation"
   — zeebx finds an extension module only in the console layout,
   `mif/<id>.mif` + `mod/<id>/x.mod` (`library.rs`, `extensoes`). Repacked so
-  (12875 = imicro3d, 274259 = a3d), it runs, but the screen stays black at 18
-  fps with one core at 91% (looked at 40 and 55 s in). Open: whether it is the
-  speed (dynarmic on the A53), the GL path on Mali, or the game waiting.
+  (12875 = imicro3d, 274259 = a3d), it runs, but the screen stayed black.
+  **The black screen** (found 2026-11-07, `patches/zeebx-patch-0001`): with
+  the hardware rasterizer zeebx hands a frame the GPU did not draw — 2D by
+  IDisplay/IBitmap — to RetroArch as pixels, and RetroArch's `gl` driver
+  ignores pixels once a HW framebuffer exists (`gl2_frame` copies a frame only
+  without `GL2_FLAG_HW_RENDER_FBO_INIT`; libretro.h allows only the sentinel or
+  NULL there). Action Hero draws everything that way — title, menus, story and
+  play: an LD_PRELOAD GL tracer (KHR_debug on, glGetError after each call)
+  counted 0 draws and 0 GL errors in 30 s. The core option "Rasterizador =
+  software" showed the picture. The patch uploads such a frame into an RGB565
+  texture, blits it into RetroArch's framebuffer and delivers the sentinel; a
+  repeated frame stays NULL. On the console: title, menu, difficulty, story and
+  the first stage on the panel (webcam) and in kmsgrab, no GL error, ~22 frames
+  a second uploaded in play. A game that draws through the GPU (3D) takes the
+  old path; none was tried (no such ROM here).
+  **Still slow:** the core's own count says it delivers 51-57% of real-time
+  audio (the game at half speed), the same with the software rasterizer and the
+  "portátil" profile (0.5x, MIDI by timbres), one core near 91% — upstream's
+  open issue 67 ("slow in dArkOS", RK3566/RK3326). Where the time goes is not
+  measured yet.
 * **retrorun showed red and blue swapped** (the owner saw a blue Crazy Taxi,
   2026-11-07) — fixed in the kernel (kernel_rk3562 84be12412). retrorun scans
   out RG24, and the RK3562's VOP takes 24-bit RGB with its bytes the other way
