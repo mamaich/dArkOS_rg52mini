@@ -27,8 +27,97 @@ if  [[ $1 == "standalone" ]]; then
     RES="-x 720 -y 600"
   fi
 
+  # Per-game DIP banks and -fastboot from christianhaitian/dArkOS dae9fd9f (2026-11-04).
+  # Upstream stops on a game outside its list; here such a game starts as before.
+  # Its -keymapfile flightkey.ini is left out: neither Hypseus nor dArkOS ships that file
+  # (and its launch line spells the variable $KEINPUT, so it never reached hypseus).
+  case "$basefilename" in
+    ace)
+	FASTBOOT="-fastboot"
+	BANKS="-bank 1 00000001 -bank 0 00000010"
+	;;
+    aceeuro|ace91)
+	;;
+    astron)
+	;;
+    badlands)
+	BANKS="-blank_searches -blank_skips -min_seek_delay 600"
+	;;
+    badlandp)
+	BANKS="-spritelite -preset 1"
+	;;
+    bega)
+	;;
+    blazer)
+	;;
+    cliff|cliffalt|cliffalt2)
+	FASTBOOT="-fastboot"
+	BANKS="-bank 1 00000000 -bank 0 00000000 -cheat"
+	;;
+    cliff_ox)
+	FASTBOOT="-fastboot"
+	;;
+    cobra)
+	;;
+    cobraab)
+	;;
+    cobraconv)
+	;;
+    cobram3)
+	FASTBOOT="-nocrc"
+	;;
+    dle21)
+	FASTBOOT="-fastboot"
+
+	if [ "$PROTOTYPE" ]; then
+		BANKS="-bank 1 10100111 -bank 0 11011000"
+	else
+		BANKS="-bank 1 00110111 -bank 0 11011000"
+	fi
+	;;
+    esh|eshalt|eshalt2|eshfix7|eshfix7alt|eshfix7alt2)
+	;;
+    galaxy|galaxyp)
+	;;
+    gpworld)
+	;;
+    gtg)
+	FASTBOOT="-fastboot"
+	;;
+    interstellar)
+	;;
+    mach3)
+	BANKS="-bank 0 01000001"
+	;;
+    lair)
+	FASTBOOT="-fastboot"
+	BANKS="-bank 1 00110111 -bank 0 10011001"
+	;;
+    laireuro|lair_ita)
+	;;
+    lair2)
+	;;
+    roadblaster)
+	;;
+    sae)
+	FASTBOOT="-fastboot"
+	BANKS="-bank 1 01100111 -bank 0 10011000"
+	;;
+    sdq|sdqshort|sdqshortalt)
+	BANKS="-bank 1 00000000 -bank 0 00000000"
+	;;
+    tq|tq_alt|tq_swear)
+	BANKS=" -bank 0 00010000"
+	;;
+    uvt)
+	BANKS="-bank 0 01000000"
+	;;
+    *)
+	;;
+  esac
+
   #./hypseus-singe "$basefilename" vldp -gamepad ${RES} -framefile "$dir/$basefilename.txt" -fullscreen -useoverlaysb 2 $extraparams
-  ./hypseus-singe "$basefilename" vldp -gamepad -texturestream ${RES} -framefile "$dir/$basefilename.txt" -fullscreen $extraparams
+  ./hypseus-singe "$basefilename" vldp $FASTBOOT -gamepad -texturestream ${RES} $BANKS -framefile "$dir/$basefilename.txt" -fullscreen $extraparams
 
   rm *.csv
 

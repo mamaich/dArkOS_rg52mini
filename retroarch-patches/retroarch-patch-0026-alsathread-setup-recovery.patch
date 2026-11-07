@@ -1,0 +1,57 @@
+From christianhaitian/rk3566_core_builds 6bd22be07 (retroarch-patch-0017-hdmi-audio-workaround,
+"hdmi audio not initializing on initial loading of retroarch", reported by DanielJafari):
+when snd_pcm_writei fails with the PCM still in SETUP, prepare it and go on, up to three
+times in a row. Taken with its retry counter outside the loop: upstream declares it inside
+the loop body, so it starts at 0 on every pass and the limit never applies.
+
+--- a/audio/drivers/alsathread.c
++++ b/audio/drivers/alsathread.c
+@@ -446,6 +446,7 @@
+    alsa_thread_t *alsa = (alsa_thread_t*)data;
+    uint8_t        *buf = (uint8_t *)calloc(1, alsa->info.stream_info.period_size);
+    uintptr_t thread_id = sthread_get_current_thread_id();
++   unsigned setup_retries = 0;
+ 
+    if (!buf)
+    {
+@@ -470,6 +471,8 @@
+       memset(buf + fifo_size, 0, alsa->info.stream_info.period_size - fifo_size);
+ 
+       frames = snd_pcm_writei(alsa->info.pcm, buf, alsa->info.stream_info.period_frames);
++      if (frames >= 0)
++         setup_retries = 0;
+ 
+       if (     frames == -EPIPE
+             || frames == -EINTR
+@@ -487,9 +490,29 @@
+       }
+       else if (frames < 0)
+       {
+-         RARCH_ERR("[ALSA] [playback thread %u] Error writing audio to device: %s.\n",
++         /* A PCM still in SETUP (HDMI on the first start of RetroArch) only
++          * needs a prepare; without it the thread ends and the game is mute. */
++         snd_pcm_state_t pcm_state = snd_pcm_state(alsa->info.pcm);
++
++         if (pcm_state == SND_PCM_STATE_SETUP && setup_retries < 3)
++         {
++            int err;
++
++            setup_retries++;
++            RARCH_WARN("[ALSA] PCM entered SETUP state, recovery attempt %u/3.\n",
++               setup_retries);
++
++            err = snd_pcm_prepare(alsa->info.pcm);
++            if (err >= 0)
++               continue;
++
++            RARCH_ERR("[ALSA] Failed to prepare PCM: %s.\n", snd_strerror(err));
++         }
++
++         RARCH_ERR("[ALSA] [playback thread %u] Error writing audio to device: %s (PCM state: %s).\n",
+             thread_id,
+-            snd_strerror(frames));
++            snd_strerror((int)frames),
++            snd_pcm_state_name(pcm_state));
+          break;
+       }
+    }
