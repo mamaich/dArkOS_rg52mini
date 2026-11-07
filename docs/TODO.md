@@ -97,6 +97,76 @@ it. Confirmed on the device.
     58, 204, 212, 261 and 269 MiB), and for testers the first and the test
     1.7 -> 1.7 (24 and 22 MiB, not in the feed).
 
+## Upstream updates for 1.8 (2026-11-07, the owner: "take what you think is needed")
+
+`tools/upstream/check.py` of 2026-11-07, then each candidate built in the test
+chroot and tried on the owner's dual-boot card (dArkOS 1.7) against 1.7's, bound
+over the installed one. Test games copied to that card for it (it had none):
+PS2 GoW demo, Jak, Burnout 3 demo with the BIOS, GC ND Demo, DC Crazy Taxi, DS
+Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM).
+
+| Component | Taken | On the console |
+|---|---|---|
+| RetroArch | retroarch-patch-0026 (christianhaitian's 0017: a PCM in SETUP is prepared, up to 3 times; his retry counter sat inside the loop) | SNES with sound, PCM RUNNING, as before; the HDMI case itself not tried |
+| Hypseus | daphne.sh: per-game -fastboot and DIP banks (dae9fd9f); an unknown game starts as before; flightkey.ini left out (no such file anywhere) | Dragon's Lair 60 fps with `-fastboot -bank 1 00110111 -bank 0 10011001`; 57.5 without |
+| boot | welcome-message.service without Before=emulationstation (e752dfdb) | ES at 3.0 s of userspace instead of 4.55; no failed units |
+| DSperate | v3.3.0 -> main a165843 | Diddy Kong Racing and Castlevania DoS 59.9 / 59.9 |
+| Dolphin | 584366c -> 4a70679 (bounds fixes) | ND Demo 45.6 / 45.6 over 3 rounds |
+| retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
+| ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing). A retrained profile might win it back; not tried |
+| Zeebo | branch `zeebo-wip` (9d52f88), not in master; the core's fix in master (core_builds 8740005) | see below |
+
+* **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,
+  which is gone; ours builds ZeebxTeam/zeebx-emu v0.5.1 (`zeebx-lr.sh`), whose
+  locked crates want rustc 1.93+ (trixie: 1.85), so the recipe unpacks a pinned
+  official Rust 1.99.1 into the core builds directory (sha256 checked; 48 min
+  under qemu). The core loads in RetroArch and gets GLES 3.2 (its `#version 330`
+  shader is refused and the `300 es` one taken). Action Hero 3D as the owner's
+  zip has it (every file at the root) stops at once: "IMICRO3D failed creation"
+  — zeebx finds an extension module only in the console layout,
+  `mif/<id>.mif` + `mod/<id>/x.mod` (`library.rs`, `extensoes`). Repacked so
+  (12875 = imicro3d, 274259 = a3d), it runs, but the screen stayed black.
+  **The black screen** (found 2026-11-07, `patches/zeebx-patch-0001`): with
+  the hardware rasterizer zeebx hands a frame the GPU did not draw — 2D by
+  IDisplay/IBitmap — to RetroArch as pixels, and RetroArch's `gl` driver
+  ignores pixels once a HW framebuffer exists (`gl2_frame` copies a frame only
+  without `GL2_FLAG_HW_RENDER_FBO_INIT`; libretro.h allows only the sentinel or
+  NULL there). Action Hero draws everything that way — title, menus, story and
+  play: an LD_PRELOAD GL tracer (KHR_debug on, glGetError after each call)
+  counted 0 draws and 0 GL errors in 30 s. The core option "Rasterizador =
+  software" showed the picture. The patch uploads such a frame into an RGB565
+  texture, blits it into RetroArch's framebuffer and delivers the sentinel; a
+  repeated frame stays NULL. On the console: title, menu, difficulty, story and
+  the first stage on the panel (webcam) and in kmsgrab, no GL error, ~22 frames
+  a second uploaded in play. A game that draws through the GPU (3D) takes the
+  old path; none was tried (no such ROM here).
+  **Still slow:** the core's own count says it delivers 51-57% of real-time
+  audio (the game at half speed), the same with the software rasterizer and the
+  "portátil" profile (0.5x, MIDI by timbres), one core near 91% — upstream's
+  open issue 67 ("slow in dArkOS", RK3566/RK3326). Where the time goes is not
+  measured yet.
+* **retrorun showed red and blue swapped** (the owner saw a blue Crazy Taxi,
+  2026-11-07) — fixed in the kernel (kernel_rk3562 84be12412). retrorun scans
+  out RG24, and the RK3562's VOP takes 24-bit RGB with its bytes the other way
+  round from the RK3568, whose order `vop2_win_rb_swap()` encodes; VOP1 keeps
+  the same rule for its full framework in `has_rb_swapped()`. On the RK3562
+  both RGB888 and BGR888 now take the opposite swap. Seen through the webcam on
+  the console: 1.7's kernel shows Crazy Taxi's title cyan, the fixed one yellow
+  as a kmsgrab of the buffer; ES (XR24) unchanged. The 32-bit formats were
+  right before (ES, RetroArch, every emulator); BG24, the 16-bit and the YUV
+  formats were not looked at on the panel (no program here uses them for
+  scanout).
+* **A dumb buffer written by the CPU does not reach the panel** (seen
+  2026-11-07 while checking the formats above): modetest's SMPTE bars are in
+  the buffer (kmsgrab shows them) and VOP2's debugfs has the plane on that
+  buffer, but the panel shows what was in those pages before (fbcon's black,
+  or an earlier pattern written to /dev/fb0); with fbcon unbound the same.
+  Buffers written by the GPU or RGA (ES, retrorun, every emulator) show at
+  once, retrorun's at the very same IOVA. Looks like the CPU's writes through
+  the mmap (write-combined, `vm_map_pages()` of `rk_obj->pages`) and the VOP's
+  reads through its IOMMU not meeting. Nothing we ship draws its frames that
+  way; to look at before trusting modetest on this kernel.
+
 ## For 1.7 (released 2026-11-06)
 
 - malisx2 467251a (2026-11-04, handed over by the malisx2 session with the

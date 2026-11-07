@@ -199,6 +199,19 @@ In master for 1.8, not released yet (VERSION says 1.8):
   GammaOS the Type-C probe now works, so a revision A board gets its panel kick
   (HARDWARE.md, The bootloader). The OTA packages to 1.8 write it to a card
   with dArkOS alone.
+- Upstreams of 2026-11-07 (docs/TODO.md, "Upstream updates for 1.8"):
+  RetroArch recovers a PCM left in SETUP (HDMI sound on its first start),
+  Hypseus gets per-game -fastboot and DIP banks, ES starts 1.5 s sooner (it no
+  longer waits for the welcome message), DSperate a165843 (menu language,
+  Cyrillic in its menus), Dolphin 4a70679, retrorun 3.2.5.
+- malisx2 0.3.3 (11aba31, Mesa 3b0e036; handed over by the malisx2 session on
+  2026-11-07 with the owner's word): ARMSX2 at 3x no longer loses the device in
+  God of War, instanced draws take firstInstance, three Mesa fixes from 0.4.0.
+  Its shader cache ID is new, so emulators on malisx2 rebuild their pipeline
+  caches once.
+- retrorun's games show their colours right: the kernel now swaps red and blue
+  for RGB888 as the RK3562's display controller needs (Crazy Taxi was blue
+  instead of yellow).
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
