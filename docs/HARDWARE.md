@@ -302,7 +302,24 @@ to the `uboot` partition at sector 16384 by `build_kernel-rk3562.sh` from
 `BSP/uboot-rg52mini.img`. The vendor's own U-Boot is kept beside it as
 `.vendor`.
 
-From 1.7 the image ships the fork's release `rg52mini-1.5` (tag on
+From 1.8 (master since 2026-11-07, the owner's word) the image ships the fork's
+`next-dev` at dcf8e77b68 (`next-dev-gdcf8e77b68`), built with the overclocking
+tables like 1.5: `build/uboot-typec-fix-oc.img` of the U-Boot workspace, md5
+`fcfa4acad4cdc873e72b23ac00f5d444`; not a fork release yet. Against
+`rg52mini-1.5` it asks the Type-C chip (HUSB311 at 0x4e) in `rk_board_init()`,
+while the early tree is intact, and the kernel tree's fixup uses that answer.
+Before, the probe ran from `rk_board_fdt_fixup()`, after distro boot had
+loaded the kernel's dtb over the blob the live tree points into. On a card
+with dArkOS alone the two files are the same and nothing changes; on a
+dual-boot card booting GammaOS the probe always failed, `husb311@4e` stayed
+enabled, a revision A board was not recognised and its panel kick never
+happened (black screen). Checked by the owner on revision B (nothing broken);
+revision A not confirmed yet. make-ota compares p1 of the two images, so the
+packages to 1.8 carry it: from 1.7 gated on 1.5's sha256 (ea7794f7...), from
+1.6 and older on the loader below (83422846...). A dual-boot card is still
+left alone by darkos-ota.
+
+In 1.7 the image shipped the fork's release `rg52mini-1.5` (tag on
 6e4c1d91cb, `next-dev-g6e4c1d91cb`), its `uboot.img`: md5
 `9409d6dec3be9efc6ca097f258833b28`, the overclocking tables as below, which
 this kernel is fit for (its GPU parks at 300 MHz, KNOWN-ISSUES.md, "v10052026:
