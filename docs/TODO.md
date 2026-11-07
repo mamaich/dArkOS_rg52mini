@@ -128,13 +128,27 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
   (12875 = imicro3d, 274259 = a3d), it runs, but the screen stays black at 18
   fps with one core at 91% (looked at 40 and 55 s in). Open: whether it is the
   speed (dynarmic on the A53), the GL path on Mali, or the game waiting.
-* **retrorun shows red and blue swapped** (the owner saw a blue Crazy Taxi,
-  2026-11-07): retrorun scans out RG24, and on the RK3562 the panel shows it
-  with R and B exchanged, while a kmsgrab of the same buffer is right (yellow).
-  1.7's retrorun does the same, so it is older than this update; RetroArch,
-  standalone Flycast and ES use other formats. Not fixed: either retrorun asks
-  for BG24 on the RG52 (a patch beside 0002) or VOP2's rb_swap for 24-bit
-  formats is wrong in our kernel.
+* **retrorun showed red and blue swapped** (the owner saw a blue Crazy Taxi,
+  2026-11-07) — fixed in the kernel (kernel_rk3562 84be12412). retrorun scans
+  out RG24, and the RK3562's VOP takes 24-bit RGB with its bytes the other way
+  round from the RK3568, whose order `vop2_win_rb_swap()` encodes; VOP1 keeps
+  the same rule for its full framework in `has_rb_swapped()`. On the RK3562
+  both RGB888 and BGR888 now take the opposite swap. Seen through the webcam on
+  the console: 1.7's kernel shows Crazy Taxi's title cyan, the fixed one yellow
+  as a kmsgrab of the buffer; ES (XR24) unchanged. The 32-bit formats were
+  right before (ES, RetroArch, every emulator); BG24, the 16-bit and the YUV
+  formats were not looked at on the panel (no program here uses them for
+  scanout).
+* **A dumb buffer written by the CPU does not reach the panel** (seen
+  2026-11-07 while checking the formats above): modetest's SMPTE bars are in
+  the buffer (kmsgrab shows them) and VOP2's debugfs has the plane on that
+  buffer, but the panel shows what was in those pages before (fbcon's black,
+  or an earlier pattern written to /dev/fb0); with fbcon unbound the same.
+  Buffers written by the GPU or RGA (ES, retrorun, every emulator) show at
+  once, retrorun's at the very same IOVA. Looks like the CPU's writes through
+  the mmap (write-combined, `vm_map_pages()` of `rk_obj->pages`) and the VOP's
+  reads through its IOMMU not meeting. Nothing we ship draws its frames that
+  way; to look at before trusting modetest on this kernel.
 
 ## For 1.7 (released 2026-11-06)
 

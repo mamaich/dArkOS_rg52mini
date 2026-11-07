@@ -204,6 +204,9 @@ In master for 1.8, not released yet (VERSION says 1.8):
   Hypseus gets per-game -fastboot and DIP banks, ES starts 1.5 s sooner (it no
   longer waits for the welcome message), DSperate a165843 (menu language,
   Cyrillic in its menus), Dolphin 4a70679, retrorun 3.2.5.
+- retrorun's games show their colours right: the kernel now swaps red and blue
+  for RGB888 as the RK3562's display controller needs (Crazy Taxi was blue
+  instead of yellow).
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
