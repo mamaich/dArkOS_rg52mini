@@ -269,7 +269,9 @@ Games are not affected, ES's loop stands still while one runs; the menu costs
 a third less CPU. The whole system is `rq_cpu_time` of /proc/schedstat.
 /proc/stat is no use here: it counts user and system time at the tick, which
 misses most of a load that wakes 60 times a second for a few milliseconds,
-and it put the whole system below ES alone.
+and it put the whole system below ES alone. The black screensaver, which takes
+the level before it darkens the screen and puts it back on waking, gives it
+back as it was (128 of 255: 0, then 128; 2026-11-08).
 
 ## Two emulators were built with no optimisation at all
 

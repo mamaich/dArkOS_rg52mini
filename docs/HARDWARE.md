@@ -501,7 +501,8 @@ user would, every write followed by a restart: removed with the stock loader
 the installer carries (no backup of the tool's yet), 798 MHz; installed, 928;
 removed from the tool's backup, its checksum verified, 798; installed, 928.
 The screens in both languages, a damaged backup and a failed write in the
-tool's dry run (`DDR928_FAKE`, `DDR928_DRYRUN`, see the script).
+tool's dry run (`DDR928_FAKE`, `DDR928_DRYRUN`, see the script). Select+Start
+leaves it as it leaves the other tools, nothing of it left running.
 
 ## Boot logo, kernel side
 
