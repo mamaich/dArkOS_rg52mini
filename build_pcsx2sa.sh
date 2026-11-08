@@ -23,26 +23,33 @@ fi
 ARMSX2_REMOTE="https://github.com/ARMSX2/ARMSX2"
 # Pinned: upstream moves every day; a newer commit is a deliberate update
 # (patches checked, profile retrained).
-# master of 2026-11-04 (1049db37, 75 commits after f6df1e69), the owner's rule of
-# 2026-11-03: taken when no slower. With its profile (below), from the owner's
-# savestates, 3 rounds against 1.6's f6df1e69: God of War within the spread
-# (26.5 against 27.0; f6df1e69 spreads 26.2-28.5), Jak +7% (45.1 / 42.0),
-# Guitar Hero +1% (49.9 / 49.5), Burnout 3 +0.5% (24.3 / 24.2); 1.6's
-# savestates load.
-ARMSX2_COMMIT="1049db37fba4a08b9849e0ab061302d563565f7f"
+# 2.9.2 (ba68927, 2026-11-06), the owner's word of 2026-11-08 (the rule of
+# 2026-11-03: taken when no slower). With its profile (below), 3 rounds after
+# a warm-up against 1.7's 1049db37: Jak from the owner's savestate 35.7 / 34.5
+# / 35.1 against 35.1 / 35.2 / 35.1 (level), Burnout 3 from boot 37.6 / 37.5 /
+# 37.0 against 36.5 / 36.8 / 36.9 (+1.7%); with 1.7's profile Jak was 9%
+# slower. Our patches apply as they are, and of our PCSX2.ini it reads the
+# same keys as 1049db37. Before: master of 2026-11-04 (1049db37, 1.7), from
+# the owner's savestates against 1.6's f6df1e69: God of War within the
+# spread, Jak +7%, Guitar Hero +1%, Burnout 3 +0.5%.
+ARMSX2_COMMIT="ba6892742e357085897d0a151bd8e40485dda968"
 PCSX2_SRC="Arkbuild/home/ark/armsx2"
 PCSX2_BUILD="/home/ark/armsx2/build-${UNIT}"
-# Profile for clang's profile-guided optimisation: 1.6's (a7ad453's runs of
-# 2026-10-20/21 merged with f6df1e69's of 2026-11-03) merged, at about the
-# same total count, with the commit above, instrumented with our patches, on
-# an RG52 Mini from boot: Jak (200 s), Guitar Hero and Burnout 3 (120 s
-# each), 2026-11-05. clang takes for each function the record that fits its
-# code, so what master changed gets the new runs. With 1.6's profile alone
-# 1049db37 was 2% slower in God of War and 1.5% in Burnout 3.  Its file-local
-# functions are named by the path of their source, so it is made for this
-# tree at /home/ark/armsx2, where the chroot builds it.
-PGO="pcsx2/pgo/armsx2-20261105.profdata.gz"
-PGO_SHA256="7a941a04b5b4ce6776c43fab6f3d5fe4c56d440d140a7b6a36d01ef620182bdf"
+# Profile for clang's profile-guided optimisation: 1.7's (below) merged, at
+# about the same total count, with the commit above, instrumented with our
+# patches, on an RG52 Mini (2026-11-08): Jak (200 s) and the God of War demo
+# (120 s) from the owner's savestates, the Burnout 3 demo from boot (120 s).
+# clang takes for each function the record that fits its code, so what
+# upstream changed gets the new runs. llvm-profdata warns "invalid profile
+# created" on the merge, as it did for Guitar Hero's run before; the profile
+# reads whole (29276 functions). 1.7's: 1.6's (a7ad453's runs of 2026-10-20/21
+# merged with f6df1e69's of 2026-11-03) merged with 1049db37 instrumented,
+# from boot: Jak (200 s), Guitar Hero and Burnout 3 (120 s each), 2026-11-05;
+# with 1.6's profile alone 1049db37 was 2% slower in God of War and 1.5% in
+# Burnout 3.  Its file-local functions are named by the path of their source,
+# so it is made for this tree at /home/ark/armsx2, where the chroot builds it.
+PGO="pcsx2/pgo/armsx2-20261108.profdata.gz"
+PGO_SHA256="adb772c76647ca1e50afe28a84b4f063002d316fe897a89064c75da817c3128a"
 
 if [ ! -d "Arkbuild_package_cache/${CHIPSET}" ]; then
   mkdir -p "Arkbuild_package_cache/${CHIPSET}"

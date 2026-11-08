@@ -204,6 +204,10 @@ In master for 1.8, not released yet (VERSION says 1.8):
   Hypseus gets per-game -fastboot and DIP banks, ES starts 1.5 s sooner (it no
   longer waits for the welcome message), DSperate a165843 (menu language,
   Cyrillic in its menus), Dolphin 4a70679, retrorun 3.2.5.
+- ARMSX2 2.9.2 (ba68927 of 2026-11-06) with a profile retrained for it:
+  against 1.7's, Jak and Daxter from the owner's save the same, Burnout 3
+  1.7% faster; the owner's savestate loads, our PCSX2.ini reads as before
+  (TODO.md, "Upstream updates for 1.8").
 - malisx2 0.3.3 (11aba31, Mesa 3b0e036; handed over by the malisx2 session on
   2026-11-07 with the owner's word): ARMSX2 at 3x no longer loses the device in
   God of War, instanced draws take firstInstance, three Mesa fixes from 0.4.0.
