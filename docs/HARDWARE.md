@@ -325,8 +325,12 @@ day, on the build of dcf8e77b68 (no flag in `/chosen` yet): `husb311@4e` goes
 `disabled` there, so the probe reached the bus and the fixup applied, and the
 device starts by itself, the screen on without a press of the power button,
 which 1.5 did not do on such a board. Its raw code (NAK or timeout) is not
-known and not needed: any bus error counts as no chip, for good (i2c2's
-pull-up is external, both pins `bias-disable`). The release itself was also
+known and not needed: any bus error counts as no chip, never narrowed to a NAK
+(i2c2's pull-up is external, both pins `bias-disable`). That holds while
+U-Boot builds no HUSB311 driver: `dm_i2c_probe()` touches 0x4e once, so only
+the bus can fail. With `CONFIG_DM_POWER_DELIVERY` the node becomes a device on
+the bus, `i2c_get_chip()` probes it, and a driver that fails would read as no
+chip on revision B too, Type-C off where it is there. The release itself was also
 checked on another revision B board: `fwver uboot-75043a5f44-11/08/2026`, the
 flag `00 00 00 01 00 00 00 00`, `husb311@4e` okay (the u-boot session; its
 docs at e3e20679a6). On a dual-boot card
