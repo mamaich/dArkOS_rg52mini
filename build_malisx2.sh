@@ -52,7 +52,15 @@
 # from 0.4.0; fitest 7/7, was 3/7) and 0.4.0's three Mesa fixes (two in
 # Bifrost's scheduler and swizzles, vtn's non-uniform access); driverInfo says
 # 0.3.3 and the shader cache ID is new, so emulators rebuild their pipeline
-# caches once), and the work on the driver
+# caches once; 2a2a2cd (0e4732c's code and two commits of docs), with the same
+# Mesa: upstream's 0.4.0 merged whole (63e307e: v7 barriers and CPU-filled
+# descriptor tables as upstream has them, push descriptors, BC, vertex-shader
+# storage-buffer bounds checks, PERMON on every atom, parallel-RDP, indirect
+# draws and dispatches, VkEvent, synchronization2) and our indirect draws
+# through IDVS on top (c04bb70: after the merge alone they were skipped);
+# driverInfo says 0.4.0, a new shader cache ID again; MALISX2_DEBUG (now
+# MALISX2_MEASURE) and MALISX2_V7_GPU_DESC_COPY are gone, MALISX2_V7_FP16 as
+# before), and the work on the driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
@@ -78,20 +86,28 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="11aba31bacdc174a89f206e25ce5f5112629cb50"
+MALISX2_COMMIT="2a2a2cdbd2024a244b67299dd034d08133290f31"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
-# Profile for clang's profile-guided optimisation: trained on 083892f (with Mesa
-# a63666c) on an RG52 Mini (2026-11-06), with 2026-10-31's set: Azahar's
-# Super Mario 3D Land and Luigi's Mansion from an empty pipeline cache; ARMSX2
-# started as ES does, 90 s each of God of War from a savestate on the ship,
-# Jak and Daxter's intro and Jak and Daxter in game from the owner's save.
-# Castlevania is left out of it, to measure with (docs/TODO.md). 11aba31 keeps
-# it: the malisx2 session built 11aba31 with it and measured it against 71341b9
-# on the same profile (2026-11-07: God of War 1x 22.45/21.99/22.65 against
-# 22.02/21.89/21.96, Jak and Daxter 16.84/16.79/16.89 against 16.87/16.82/16.85,
-# Castlevania level, frames right, no GPU fault). 2026-11-05b's
-# profile (of bde09ad) would lose 0.7% of its weight on this code (the register
+# Profile for clang's profile-guided optimisation: trained by the malisx2
+# session on 0e4732c (the code of the commit above, Mesa 3b0e036) on an RG52
+# Mini (2026-11-08), with 2026-10-31's set: Azahar's Super Mario 3D Land and
+# Luigi's Mansion from an empty pipeline cache; ARMSX2 started as ES does,
+# 90 s each of God of War from a savestate on the ship, Jak and Daxter's
+# intro and Jak and Daxter in game from the owner's save. Castlevania is left
+# out of it, to measure with (docs/TODO.md). Against 11aba31 on 2026-11-06's
+# profile, warm and 3 rounds: God of War 22.16/22.44/22.35 against
+# 21.92/22.41/22.11 (+0.8%), Jak and Daxter 16.96/17.11/17.03 against
+# 16.77/16.82/16.90 (+1.2%, every round), Castlevania within the spread,
+# fitest 12/12 (direct and indirect draws, with IDVS and MALISX2_V7_IDVS=0),
+# the same memory, no device lost, no GPU fault. 2026-11-06's profile loses
+# 14% of its weight on this code (55 functions), and God of War is 3% slower
+# with it. 2026-11-06's (trained on 083892f, Mesa a63666c) served 083892f and
+# 11aba31: the malisx2 session measured 11aba31 on it against 71341b9
+# (2026-11-07: God of War 1x 22.45/21.99/22.65 against 22.02/21.89/21.96, Jak
+# and Daxter 16.84/16.79/16.89 against 16.87/16.82/16.85, Castlevania level,
+# frames right, no GPU fault). 2026-11-05b's
+# profile (of bde09ad) would lose 0.7% of its weight on 083892f (the register
 # allocator: bi_register_allocate, bi_compile_variant, bi_lower_spill); on
 # bde09ad the morning's profile of 2026-11-05 (of fd3408c) lost 0.1%,
 # 2026-11-04's (of 467251a) 0.6%. 2026-10-31's
@@ -104,8 +120,8 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # (Mesa's reach the compiler by absolute paths), so it is made for this tree
 # at /home/ark/malisx2, where the chroot builds it, with the build directory
 # in it (malisx2's docs/building.md).
-PGO="malisx2/pgo/malisx2-20261106.profdata.gz"
-PGO_SHA256="39a97ea5f45c5a33000062d789b4b849b2cf0c7e335f9b63bba6a975d62d1f55"
+PGO="malisx2/pgo/malisx2-20261108.profdata.gz"
+PGO_SHA256="ecb83502401001052a27cb624be9026157e4b40c56e969bcbb0fe986e3d64618"
 # Meson from its release, run from the tree: Debian trixie's 1.7.0 fails to
 # write the build of the Rust crate Mesa makes of structured sources
 # ("'CustomTargetIndex' object has no attribute 'subdir'"); 1.12.1 builds it.

@@ -208,11 +208,15 @@ In master for 1.8, not released yet (VERSION says 1.8):
   against 1.7's, Jak and Daxter from the owner's save the same, Burnout 3
   1.7% faster; the owner's savestate loads, our PCSX2.ini reads as before
   (TODO.md, "Upstream updates for 1.8").
-- malisx2 0.3.3 (11aba31, Mesa 3b0e036; handed over by the malisx2 session on
-  2026-11-07 with the owner's word): ARMSX2 at 3x no longer loses the device in
-  God of War, instanced draws take firstInstance, three Mesa fixes from 0.4.0.
-  Its shader cache ID is new, so emulators on malisx2 rebuild their pipeline
-  caches once.
+- malisx2 0.4.0 (2a2a2cd, Mesa 3b0e036; handed over by the malisx2 session on
+  2026-11-08 with the owner's word) with a profile retrained for it:
+  upstream's 0.4.0 merged whole (push descriptors, indirect draws and
+  dispatches, VkEvent, synchronization2, parallel-RDP) and our indirect draws
+  through IDVS on top, with 0.3.3's fixes (master from 2026-11-07: ARMSX2 at
+  3x no longer loses the device in God of War, instanced draws take
+  firstInstance). Against 0.3.3: God of War +0.8%, Jak and Daxter +1.2%,
+  Castlevania the same. Its shader cache ID is new, so emulators on malisx2
+  rebuild their pipeline caches once.
 - Zeebo: ZeebxTeam's zeebx core (v0.5.1) under RetroArch, ES system "zeebo"
   reading /roms/zeebo (a game zip as the console lays it out: `mif/<id>.mif`
   and `mod/<id>/...`; a zip with every file at its root stops at "IMICRO3D
