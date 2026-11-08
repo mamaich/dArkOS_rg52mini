@@ -440,6 +440,56 @@ power for about three seconds to leave it; a short press does nothing. On the
 serial port this shows as `Exit charge animation...`. After leaving charge
 mode the splash is drawn, so the last battery frame does not stay on screen.
 
+## The memory clock: 928 MHz from the eMMC loader
+
+The memory (LPDDR3) runs at 798 MHz with the stock loader, and at 928 MHz it
+is stable on several RG52 Minis of both revisions, A and B (the owner). The
+research and the patch are the GammaOS fork's:
+[doc/rg52mini/04-частота-памяти.md](https://github.com/mamaich/GammaOSNext-RG52mini/blob/develop/doc/rg52mini/04-%D1%87%D0%B0%D1%81%D1%82%D0%BE%D1%82%D0%B0-%D0%BF%D0%B0%D0%BC%D1%8F%D1%82%D0%B8.md).
+The clock is set by the memory loader (DDR init and SPL) in the idblock of the
+internal eMMC, sectors 64-2111, which the boot ROM runs first whatever card is
+in: one install serves dArkOS and GammaOS alike, and an update of either never
+touches it (OTA.md). With it `/sys/class/devfreq/dmc/available_frequencies`
+ends at 928000000 instead of 798000000; perfmax holds the top step in games.
+
+`scripts/rk3562/ddr928/install-ddr928.sh` is that fork's installer byte for
+byte (sha256 840844ab..., made by `device/rg52mini/tools/mk-ddr928-installer.sh`
+there), in the image at `/usr/local/share/ddr928/`. It carries both idblocks,
+the 928 MHz one and the stock one it was made from; it writes the 928 MHz one
+only over that stock one (sha256 of the loader's data), puts the stock one
+back, and reads every write back. `--check` only reads.
+
+**Options -> Tools -> DDR Overclock** (from 1.8, RG52 Mini only;
+`/usr/local/bin/ddr928-tool.sh`, a dialog program like Wifi and Bluetooth):
+
+* installed: says so and offers to remove it or to exit. Removing writes back
+  the loader area the tool saved before installing, while its sha256 matches
+  the one noted then (`/roms/backup/ddr928/pre-install-backup.sha256`), and
+  otherwise the stock loader the installer carries; then it offers a restart;
+* not installed, the stock loader in place: offers to install, behind a
+  warning that has to be accepted (the device may not turn on again, and
+  bringing it back means opening it for MaskROM mode); then a restart;
+* any other loader, or no eMMC: says why, and only exit;
+* a write that fails is followed by an offer to write the stock loader at
+  once (`--restore` of the image the installer carries, whatever the eMMC
+  holds by then).
+
+Before a write it wants 30% of battery or the charger, and while writing it
+holds off the power key, sleep and shutdown (systemd-inhibit). Each write
+leaves the installer's backup of the whole area before the first partition
+(8 MB, vendor storage included) in `/roms/backup/ddr928/`. It speaks Russian
+when ES's language is `ru` (console font Uni2-Terminus, which has Cyrillic),
+English otherwise. The entry in Tools, `/roms/tools/DDR Overclock.sh`, only
+starts the tool: a new image has it, the update to 1.8 adds it
+(`ota/hooks/1.8-ddr-overclock.sh`).
+
+Checked on the owner's RG52 Mini (revision B, 2026-11-08), started from ES as a
+user would, every write followed by a restart: removed with the stock loader
+the installer carries (no backup of the tool's yet), 798 MHz; installed, 928;
+removed from the tool's backup, its checksum verified, 798; installed, 928.
+The screens in both languages, a damaged backup and a failed write in the
+tool's dry run (`DDR928_FAKE`, `DDR928_DRYRUN`, see the script).
+
 ## Boot logo, kernel side
 
 The kernel draws its own logo after U-Boot's — `CONFIG_LOGO` plus

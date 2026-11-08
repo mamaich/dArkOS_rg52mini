@@ -569,6 +569,17 @@ if [ "$UNIT" == "rg52mini" ]; then
       Arkbuild/etc/systemd/system/fan-state.service
   sudo chroot Arkbuild/ bash -c "systemctl enable fan-state"
 fi
+# DDR Overclock (RG52 Mini only: the installer carries its loaders): the 928 MHz
+# memory loader in the internal eMMC, installed or removed (docs/HARDWARE.md, "The
+# memory clock"). Its entry in Options -> Tools goes to the ROMs partition below;
+# the copy here is what the update to 1.8 puts there (ota/hooks/1.8-ddr-overclock.sh).
+if [ "$UNIT" == "rg52mini" ]; then
+  sudo install -D -m 644 scripts/rk3562/ddr928/install-ddr928.sh \
+      Arkbuild/usr/local/share/ddr928/install-ddr928.sh
+  sudo install -m 644 "scripts/rk3562/ddr928/DDR Overclock.sh" \
+      "Arkbuild/usr/local/share/ddr928/DDR Overclock.sh"
+  sudo install -m 755 scripts/rk3562/ddr928/ddr928-tool.sh Arkbuild/usr/local/bin/ddr928-tool.sh
+fi
 # Left stick inversion toggle (RG43H Pro / RG43V Pro -- shared DTB enables
 # inversion to match RG43H wiring; RG43V Pro left stick is wired opposite and
 # needs the inversion disabled at runtime).
@@ -956,6 +967,12 @@ sudo mv -f ${fat32_mountpoint}/tools/ThemeMaster-master/ThemeMaster ${fat32_moun
 sudo mv -f ${fat32_mountpoint}/tools/ThemeMaster-master/ThemeMaster.sh ${fat32_mountpoint}/tools/
 sudo rm -rf ${fat32_mountpoint}/tools/ThemeMaster-master/
 rm -f master.zip
+
+# DDR Overclock's entry in Options -> Tools; the tool itself is in the system (above)
+if [ "$UNIT" == "rg52mini" ]; then
+  sudo cp "scripts/rk3562/ddr928/DDR Overclock.sh" "${fat32_mountpoint}/tools/DDR Overclock.sh"
+  sudo chmod 777 "${fat32_mountpoint}/tools/DDR Overclock.sh"
+fi
 
 # Get some sample pico-8 games
 sudo rm -rf /roms/pico-8/carts/*

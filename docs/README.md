@@ -231,6 +231,10 @@ In master for 1.8, not released yet (VERSION says 1.8):
   (`es-0008`: it reads the backlight's files in sysfs): idle in the menu the
   whole system takes 36% of a core instead of 56%, the CPU's mean clock 719
   MHz instead of 774 (PERFORMANCE.md).
+- Options -> Tools -> DDR Overclock (RG52 Mini): writes the memory loader that
+  runs the memory at 928 MHz instead of 798 to the internal eMMC, after a
+  warning that has to be accepted, or puts the stock one back; English or
+  Russian after ES's language (HARDWARE.md, "The memory clock").
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
