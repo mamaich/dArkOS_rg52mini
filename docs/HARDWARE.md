@@ -320,7 +320,11 @@ leaves its result in the kernel's tree: `od -A n -t x1
 (found, raw code 0); the status of `husb311@4e` in dArkOS says nothing, it is
 `okay` with any loader. The u-boot session wrote 1.6 to the owner's dual-boot
 card (revision B) on 2026-11-08: that answer in both dArkOS and GammaOS, boot
-time 15.6 s against 15.5. Revision A not confirmed yet. make-ota compares p1 of the two images, so the
+time 15.6 s against 15.5. Revision A not confirmed yet. On a dual-boot card
+the loader reads p3's `rk3562-rg52mini.dtb` for either system (p3 is the only
+bootable partition) and dArkOS' update writes that file, so a change to
+`i2c@ffa10000` or `husb311@4e` in our tree changes GammaOS' Type-C probe too.
+make-ota compares p1 of the two images, so the
 packages to 1.8 carry it: from 1.7 gated on 1.5's sha256 (ea7794f7...), from
 1.6 and older on the loader below (83422846...). A dual-boot card is still
 left alone by darkos-ota.

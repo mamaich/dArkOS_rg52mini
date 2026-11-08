@@ -209,6 +209,13 @@ In master for 1.8, not released yet (VERSION says 1.8):
   God of War, instanced draws take firstInstance, three Mesa fixes from 0.4.0.
   Its shader cache ID is new, so emulators on malisx2 rebuild their pipeline
   caches once.
+- Zeebo: ZeebxTeam's zeebx core (v0.5.1) under RetroArch, ES system "zeebo"
+  reading /roms/zeebo (a game zip as the console lays it out: `mif/<id>.mif`
+  and `mod/<id>/...`; a zip with every file at its root stops at "IMICRO3D
+  failed creation"). Two patches of ours: frames drawn in 2D reached a black
+  screen under RetroArch's GL driver, and the 2D blits are cheaper (Action
+  Hero 3D at about 60% of full speed, playable). The update adds the system
+  to a user's own es_systems.cfg (ota/hooks/1.8-zeebo.sh).
 - retrorun's games show their colours right: the kernel now swaps red and blue
   for RGB888 as the RK3562's display controller needs (Crazy Taxi was blue
   instead of yellow).

@@ -113,8 +113,9 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
 | DSperate | v3.3.0 -> main a165843 | Diddy Kong Racing and Castlevania DoS 59.9 / 59.9 |
 | Dolphin | 584366c -> 4a70679 (bounds fixes) | ND Demo 45.6 / 45.6 over 3 rounds |
 | retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
-| ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing). A retrained profile might win it back; not tried |
-| Zeebo | branch `zeebo-wip` (9d52f88), not in master; the core's fix in master (core_builds 8740005) | see below |
+| ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing) |
+| ARMSX2 | **not taken yet** (the owner decides): 2.9.2 with its own profile (2026-11-08: the instrumented build played on Jak and GoW from the owner's saves and Burnout 3 from boot, merged with 1.7's profile at equal weight) | Jak 35.7 / 34.5 / 35.1 against 1.7's 35.1 / 35.2 / 35.1 (level), Burnout 3 37.6 / 37.5 / 37.0 against 36.5 / 36.8 / 36.9 (+1.7%, every round) |
+| Zeebo | in master (merge 1948065): core_builds a900997, `zeebx-patch-0001` (black screen) and `0002` (speed) | see below |
 
 * **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,
   which is gone; ours builds ZeebxTeam/zeebx-emu v0.5.1 (`zeebx-lr.sh`), whose
@@ -140,11 +141,19 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
   the first stage on the panel (webcam) and in kmsgrab, no GL error, ~22 frames
   a second uploaded in play. A game that draws through the GPU (3D) takes the
   old path; none was tried (no such ROM here).
-  **Still slow:** the core's own count says it delivers 51-57% of real-time
-  audio (the game at half speed), the same with the software rasterizer and the
-  "portátil" profile (0.5x, MIDI by timbres), one core near 91% — upstream's
-  open issue 67 ("slow in dArkOS", RK3566/RK3326). Where the time goes is not
-  measured yet.
+  **Speed** (upstream's open issue 67, "slow in dArkOS"): the core's own count
+  of real-time audio was 50% (median, perfmax as ES runs it, one core at
+  91%), the same with the software rasterizer and the "portátil" profile.
+  perf (Debian's linux-perf 6.12 unpacked into /home/ark/comptest with its
+  libraries, not installed): 69% in the core's own code, 18% in dynarmic's
+  JIT. `Machine::transforma` (ITransform blits) 20%: a bounds-checked
+  `get_pixel` and `set_pixel_native` per pixel; `poll_media` 7.8%: every live
+  IMedia walked at each API boundary. `zeebx-patch-0002` copies rows, writes
+  pixels straight (same per-pixel arithmetic, the same pixels) and looks at
+  the media list once per 0.5 ms of the game's clock: 50% -> 59% (median, 2
+  rounds each; mean 53.0 -> 60.6). The owner played it with 0001 alone:
+  "playable". Left: guest byte reads through dynarmic's callbacks (~5%),
+  `retro_run` itself 4%, SipHash maps.
 * **retrorun showed red and blue swapped** (the owner saw a blue Crazy Taxi,
   2026-11-07) — fixed in the kernel (kernel_rk3562 84be12412). retrorun scans
   out RG24, and the RK3562's VOP takes 24-bit RGB with its bytes the other way
