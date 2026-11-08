@@ -97,7 +97,16 @@ it. Confirmed on the device.
     58, 204, 212, 261 and 269 MiB), and for testers the first and the test
     1.7 -> 1.7 (24 and 22 MiB, not in the feed).
 
-## Upstream updates for 1.8 (2026-11-07, the owner: "take what you think is needed")
+## Seen while checking 1.8 (2026-11-08, not new in 1.8)
+
+- **Azahar sometimes crashes when stopped by SIGTERM.** Castlevania ended by
+  `systemctl stop` (as the test scripts end a game) prints dynarmic's
+  "Unhandled SIGSEGV at pc ..." about one stop in two, under 1.7's retroarch
+  as under 1.8's (bound from the OTA snapshot); azahar_libretro.so is the same
+  file in both. Not seen while playing; whether a quit from RetroArch's menu
+  does it too is not known yet.
+
+## Upstream updates for 1.8 (2026-11-07, the owner: "take what you think is needed"; released 2026-11-08)
 
 `tools/upstream/check.py` of 2026-11-07, then each candidate built in the test
 chroot and tried on the owner's dual-boot card (dArkOS 1.7) against 1.7's, bound
@@ -116,7 +125,7 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
 | retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
 | ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing) |
 | ARMSX2 | **taken** (the owner's word, 2026-11-08): 2.9.2 with its own profile (`pcsx2/pgo/armsx2-20261108.profdata.gz`; our patches apply as they are, and of our PCSX2.ini it reads the same keys as 1.7; 2026-11-08: the instrumented build played on Jak and GoW from the owner's saves and Burnout 3 from boot, merged with 1.7's profile at equal weight) | Jak 35.7 / 34.5 / 35.1 against 1.7's 35.1 / 35.2 / 35.1 (level), Burnout 3 37.6 / 37.5 / 37.0 against 36.5 / 36.8 / 36.9 (+1.7%, every round) |
-| ARMSX2 patches.zip | **for the build after 1.8's of 2026-11-08** (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console (bound over the resources, 2026-11-08): the warning gone, Jak and Daxter "Found 3 game patches in SCES-50361_9C712FF0.pnach" |
+| ARMSX2 patches.zip | **for 1.9** (in master after 1.8's build of 2026-11-08) (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console (bound over the resources, 2026-11-08): the warning gone, Jak and Daxter "Found 3 game patches in SCES-50361_9C712FF0.pnach" |
 | Zeebo | in master (merge 1948065): core_builds a900997, `zeebx-patch-0001` (black screen) and `0002` (speed) | see below |
 
 * **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,

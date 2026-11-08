@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.7 (build 11062026, 2026-11-06); from 1.1 on, a card
+The current release is 1.8 (build 11082026, 2026-11-08); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -177,7 +177,7 @@ New in 1.7 (build 11062026, 2026-11-06):
 | DSperate | v3.3.0 |
 | linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS; 1.6 still had the SDL 1.2 build, as the recipe's cache was keyed by linapple's commit alone |
 | 351Files | Chinese, Japanese and Korean file names drawn with Noto Sans CJK instead of boxes; Latin and Cyrillic ones as before |
-| Bootloader | U-Boot rg52mini-1.5 with the overclocking tables (master for 1.8: rg52mini-1.6, the Type-C probe that finds revision A on a dual-boot card): the system menu on a dual-boot card, a long press that leaves the charge screen no longer lost; the OTA writes it to a card with dArkOS alone ([HARDWARE](HARDWARE.md#the-bootloader)) |
+| Bootloader | U-Boot rg52mini-1.6 with the overclocking tables (since 1.8; the Type-C probe that finds revision A on a dual-boot card too): the system menu on a dual-boot card, a long press that leaves the charge screen no longer lost; the OTA writes it to a card with dArkOS alone ([HARDWARE](HARDWARE.md#the-bootloader)) |
 
 Checked for 1.7: on the owner's new dual-boot card (card v1.5) the update
 1.5 -> 1.7 from `ROMs/update` (73 files, 124 deleted, every hook, the 1.5
@@ -193,7 +193,7 @@ the versions they replace (TODO.md, "For 1.7" and "1.7 rebuilt with malisx2
 083892f"). The packages from 1.6, 1.4, 1.3.1, 1.3, 1.2 and 1.1 were made the
 same way from the published images and not installed.
 
-In master for 1.8, not released yet (VERSION says 1.8):
+New in 1.8 (build 11082026, 2026-11-08):
 
 - U-Boot rg52mini-1.6 in place of rg52mini-1.5: on a dual-boot card booting
   GammaOS the Type-C probe now works, so a revision A board gets its panel kick
@@ -236,6 +236,31 @@ In master for 1.8, not released yet (VERSION says 1.8):
   runs the memory at 928 MHz instead of 798 to the internal eMMC, after a
   warning that has to be accepted, or puts the stock one back; English or
   Russian after ES's language (HARDWARE.md, "The memory clock").
+
+Checked for 1.8: on the owner's dual-boot test card (1.7 with malisx2 0.4.0,
+ARMSX2 2.9.2, the DDR tool and a kernel put on by hand) the update 1.7 -> 1.8
+from `ROMs/update` (109 files written, the 3 put on by hand among them, 7
+deleted, every hook, the 1.7 snapshot kept; the files match the image's), p1,
+p2 and p5 left alone ("dual-boot card ... not touched"), up with no failed
+unit and the memory at 928 MHz as before. A first try stopped at the space
+check (19 MiB free on /boot, 43 needed: a spare kernel of ours lay there) and
+changed nothing. Then each as ES starts it: ARMSX2 (God of War), Dolphin (ND
+Demo), DraStic and DSperate (Diddy Kong Racing; DSperate also Castlevania
+DoS), Azahar (Castlevania), PPSSPP, N64 (AeroGauge), Dreamcast (Crazy Taxi),
+Saturn (Resident Evil), Zeebo (Action Hero 3D), GBA, SNES and linapple: the
+picture right, the sound playing, no crash while playing. Not new in 1.8:
+Azahar stopped by SIGTERM sometimes ends in dynarmic's "Unhandled SIGSEGV"
+(one stop in two under 1.7's retroarch as under 1.8's, bound from the OTA
+snapshot; the core is the same file), and AeroGauge's attract mode cuts
+between cameras with a black wedge under both retroarch32 builds. The
+packages from 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 and 1.1 were made the same way
+from the published images and not installed.
+
+In master for 1.9, not released yet (VERSION says 1.9):
+
+- ARMSX2 gets PCSX2's game patch database: `resources/patches.zip` made from
+  PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it; before, every
+  game start logged "Failed to open patches.zip" (TODO.md).
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
