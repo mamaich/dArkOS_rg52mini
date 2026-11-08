@@ -251,6 +251,26 @@ template on the defaults once (TODO.md, 2026-10-23).
 `mupen64plus_next` with `mupen64plus-ThreadedRenderer = "True"`: AeroGauge
 (frames 600-1800) at 57 fps against 54 (KNOWN-ISSUES, smaller things).
 
+### ES at rest: no brightnessctl twenty times a second (1.8)
+
+ES's brightness popup asks for the level every 40 ms while ES is on screen,
+and with brightnessctl installed every ask was a shell, brightnessctl and awk
+through popen(). `es-0008` reads `/sys/class/backlight/backlight/` instead:
+the code ES already had for a device without brightnessctl, which rounds the
+percent as `brightnessctl -m` does. ES idle in the system list, ondemand,
+30 s each, A B A B on 2026-11-08 (shares of one core):
+
+| | ES | what ES started | whole system | CPU clock, mean |
+|---|---|---|---|---|
+| before | 22.5% | 19.8% | 56.5% | 774 MHz |
+| es-0008 | 23.0% | 0.1% | 36.3% | 719 MHz |
+
+Games are not affected, ES's loop stands still while one runs; the menu costs
+a third less CPU. The whole system is `rq_cpu_time` of /proc/schedstat.
+/proc/stat is no use here: it counts user and system time at the tick, which
+misses most of a load that wakes 60 times a second for a few milliseconds,
+and it put the whole system below ES alone.
+
 ## Two emulators were built with no optimisation at all
 
 Worth more than everything else on this page put together, and it was found by
@@ -334,6 +354,10 @@ check above misses because their makefiles do not print compile lines:
   another matter and is shipped (above). Everything is still built with the
   Debian toolchain in the chroot; swapping the toolchain for the whole image
   on the assumption that newer is faster is not an experiment.
+* **The START menu's shell commands.** ES's main menu runs 14 of them as it
+  opens (`systemctl status bluetooth` alone 37 ms, `current_volume` 20 ms)
+  and stands still for 167 ms, 10 frames, every time (2026-11-08). The
+  owner: not noticeable, not worth a patch.
 
 ## If you want to measure
 

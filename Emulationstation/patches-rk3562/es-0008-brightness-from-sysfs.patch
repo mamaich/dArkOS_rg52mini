@@ -1,0 +1,35 @@
+dArkOS: ES reads the backlight level from sysfs, not through brightnessctl.
+BrightnessInfoComponent (the brightness popup) asks DisplayPanelControl for the
+level every 40 ms while ES is on screen, and with brightnessctl installed each
+call went through popen(): a shell, brightnessctl and awk, 20 times a second.
+On the RG52 Mini, ES idle in the system list, those took 19.8% of a core (30 s,
+2026-11-08). The function already read /sys/class/backlight/backlight/
+{brightness,max_brightness} when brightnessctl is missing, and rounds the
+percent as `brightnessctl -m` does; now it reads them whenever they exist, and
+brightnessctl stays for a device without them. Setting the level still goes
+through brightnessctl. ES idle, A B A B of 30 s each: the whole system 56.5%
+of a core before, 36.3% with this; the CPU's mean clock 774 MHz, 719 MHz.
+
+--- a/es-core/src/DisplayPanelControl.cpp
++++ b/es-core/src/DisplayPanelControl.cpp
+@@ -97,11 +97,18 @@
+ 
+ int DisplayPanelControl::getBrightnessLevel()
+ {
+-	if (mExistBrightnessctl)
++	// dArkOS: the backlight's own files first, brightnessctl only without them.
++	// BrightnessInfoComponent asks for the level every 40 ms while ES is on
++	// screen, and through brightnessctl each call started a shell, brightnessctl
++	// and awk: a fifth of a core on the RG52 Mini with ES idle. brightnessctl -m
++	// rounds its percent as the code below does.
++	static const bool sysfs = Utils::FileSystem::exists(BACKLIGHT_BRIGHTNESS_NAME) &&
++		Utils::FileSystem::exists(BACKLIGHT_BRIGHTNESS_MAX_NAME);
++	if (mExistBrightnessctl && !sysfs)
+ 		return std::atoi( getShOutput(std::string(BRIGHTNESSCTL_PATH).append(" -m | awk -F',|%' '{print $4}'")).c_str() );
+ 
+ 
+-	int value,
++	int value = 0,
+ 			fd,
+ 			max = 255;
+ 	char buffer[BACKLIGHT_BUFFER_SIZE + 1];

@@ -227,6 +227,10 @@ In master for 1.8, not released yet (VERSION says 1.8):
 - retrorun's games show their colours right: the kernel now swaps red and blue
   for RGB888 as the RK3562's display controller needs (Crazy Taxi was blue
   instead of yellow).
+- ES no longer runs brightnessctl 20 times a second to watch the brightness
+  (`es-0008`: it reads the backlight's files in sysfs): idle in the menu the
+  whole system takes 36% of a core instead of 56%, the CPU's mean clock 719
+  MHz instead of 774 (PERFORMANCE.md).
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
