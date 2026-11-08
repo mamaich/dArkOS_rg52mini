@@ -214,6 +214,30 @@ if [ ! -f "Arkbuild/opt/pcsx2/bin/armsx2-sdl" ]; then
     echo "${CACHE_KEY}" > "Arkbuild_package_cache/${CHIPSET}/pcsx2sa_${UNIT}.commit"
 fi
 
+# PCSX2's game patch database, which ARMSX2 reads as resources/patches.zip: widescreen,
+# no-interlace and 60 fps patches and per-game fixes, offered in a game's properties.
+# Without it every game start logged "Failed to open patches.zip. Built-in game patches
+# are not available." Upstream publishes it only as a moving "latest" release, so it is
+# made here as their CI makes it (`7z a -r patches.zip ./patches/*`: the .pnach files at
+# the zip's root) from a pinned commit of PCSX2/pcsx2_patches, and kept in the package
+# cache under that commit. Outside ARMSX2's own cache, whose key it leaves alone.
+PCSX2_PATCHES_COMMIT="192ee9b5d081d23d358c5c9aa6f80eb2ec677fe9"   # 2026-10-31, 4719 patches
+PATCHES_ZIP="Arkbuild_package_cache/${CHIPSET}/pcsx2-patches-${PCSX2_PATCHES_COMMIT:0:12}.zip"
+if [ ! -s "${PATCHES_ZIP}" ]; then
+    rm -rf pcsx2_patches.tmp "${PATCHES_ZIP}.new"
+    git init -q pcsx2_patches.tmp &&
+    git -C pcsx2_patches.tmp fetch -q --depth 1 https://github.com/PCSX2/pcsx2_patches "${PCSX2_PATCHES_COMMIT}" &&
+    git -C pcsx2_patches.tmp checkout -q FETCH_HEAD &&
+    (cd pcsx2_patches.tmp/patches &&
+     find . -maxdepth 1 -name '*.pnach' -printf '%P\n' | LC_ALL=C sort | zip -q -X -D -@ "${PWD%/pcsx2_patches.tmp/patches}/${PATCHES_ZIP}.new") &&
+    [ "$(unzip -Z1 "${PATCHES_ZIP}.new" | grep -c '\.pnach$')" -gt 1000 ] &&
+    mv "${PATCHES_ZIP}.new" "${PATCHES_ZIP}"
+    verify_action
+    rm -rf pcsx2_patches.tmp
+fi
+sudo install -m 644 "${PATCHES_ZIP}" Arkbuild/opt/pcsx2/share/PCSX2/resources/patches.zip
+verify_action
+
 # Install the per-UNIT PCSX2.ini template — the launcher copies it into
 # /roms/ps2/pcsx2/inis/PCSX2.ini on first run (PPSSPP convention: all per-
 # system writeable data lives on the ROMs partition, not in the rootfs).

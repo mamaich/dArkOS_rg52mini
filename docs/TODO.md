@@ -116,6 +116,7 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
 | retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
 | ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing) |
 | ARMSX2 | **taken** (the owner's word, 2026-11-08): 2.9.2 with its own profile (`pcsx2/pgo/armsx2-20261108.profdata.gz`; our patches apply as they are, and of our PCSX2.ini it reads the same keys as 1.7; 2026-11-08: the instrumented build played on Jak and GoW from the owner's saves and Burnout 3 from boot, merged with 1.7's profile at equal weight) | Jak 35.7 / 34.5 / 35.1 against 1.7's 35.1 / 35.2 / 35.1 (level), Burnout 3 37.6 / 37.5 / 37.0 against 36.5 / 36.8 / 36.9 (+1.7%, every round) |
+| ARMSX2 patches.zip | **for the build after 1.8's of 2026-11-08** (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console not yet |
 | Zeebo | in master (merge 1948065): core_builds a900997, `zeebx-patch-0001` (black screen) and `0002` (speed) | see below |
 
 * **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,
