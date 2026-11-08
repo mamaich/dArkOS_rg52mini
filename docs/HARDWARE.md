@@ -320,7 +320,16 @@ leaves its result in the kernel's tree: `od -A n -t x1
 (found, raw code 0); the status of `husb311@4e` in dArkOS says nothing, it is
 `okay` with any loader. The u-boot session wrote 1.6 to the owner's dual-boot
 card (revision B) on 2026-11-08: that answer in both dArkOS and GammaOS, boot
-time 15.6 s against 15.5. Revision A not confirmed yet. On a dual-boot card
+time 15.6 s against 15.5. Revision A was confirmed by a check outside the same
+day, on the build of dcf8e77b68 (no flag in `/chosen` yet): `husb311@4e` goes
+`disabled` there, so the probe reached the bus and the fixup applied, and the
+device starts by itself, the screen on without a press of the power button,
+which 1.5 did not do on such a board. Its raw code (NAK or timeout) is not
+known and not needed: any bus error counts as no chip, for good (i2c2's
+pull-up is external, both pins `bias-disable`). The release itself was also
+checked on another revision B board: `fwver uboot-75043a5f44-11/08/2026`, the
+flag `00 00 00 01 00 00 00 00`, `husb311@4e` okay (the u-boot session; its
+docs at e3e20679a6). On a dual-boot card
 the loader reads p3's `rk3562-rg52mini.dtb` for either system (p3 is the only
 bootable partition) and dArkOS' update writes that file, so a change to
 `i2c@ffa10000` or `husb311@4e` in our tree changes GammaOS' Type-C probe too.
