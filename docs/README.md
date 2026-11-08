@@ -202,8 +202,9 @@ In master for 1.8, not released yet (VERSION says 1.8):
 - Upstreams of 2026-11-07 (docs/TODO.md, "Upstream updates for 1.8"):
   RetroArch recovers a PCM left in SETUP (HDMI sound on its first start),
   Hypseus gets per-game -fastboot and DIP banks, ES starts 1.5 s sooner (it no
-  longer waits for the welcome message), DSperate a165843 (menu language,
-  Cyrillic in its menus), Dolphin 4a70679, retrorun 3.2.5.
+  longer waits for the welcome message), DSperate ff08a3c (v3.4.0 and after:
+  a menu language and Cyrillic in its menus, filters and colour correction on
+  the GPU, less CPU in Diddy Kong Racing), Dolphin 4a70679, retrorun 3.2.5.
 - ARMSX2 2.9.2 (ba68927 of 2026-11-06) with a profile retrained for it:
   against 1.7's, Jak and Daxter from the owner's save the same, Burnout 3
   1.7% faster; the owner's savestate loads, our PCSX2.ini reads as before
