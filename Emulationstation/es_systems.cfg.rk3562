@@ -2586,6 +2586,25 @@
 		<hardware>console</hardware>
 	</system>
 	<system>
+		<name>zeebo</name>
+		<fullname>Zeebo</fullname>
+		<path>/roms/zeebo/</path>
+		<extension>.mod .MOD .zip .ZIP .7z .7Z</extension>
+		<command>sudo perfmax %GOVERNOR% %ROM%; nice -n -19 /usr/local/bin/%EMULATOR% -L /home/ark/.config/%EMULATOR%/cores/%CORE%_libretro.so %ROM%; sudo perfnorm</command>
+		<emulators>
+			<emulator name="retroarch">
+				<cores>
+					<core>zeebx</core>
+				</cores>
+			</emulator>
+		</emulators>
+		<platform>zeebo</platform>
+		<theme>zeebo</theme>
+		<manufacturer>Tectoy</manufacturer>
+		<release>2009</release>
+		<hardware>console</hardware>
+	</system>
+	<system>
 		<name>videos</name>
 		<fullname>Movies</fullname>
 		<path>/roms/movies/</path>

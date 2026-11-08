@@ -303,6 +303,9 @@ if [ "$CHIPSET" == "rk3562" ]; then
   build_a53_core armgba pinned armgba
   # Nintendo 3DS: not in rg503's set at all, built here from a pinned release
   build_a53_core azahar pinned azahar
+  # Zeebo: zeebx (ZeebxTeam/zeebx-emu), a Rust core, not in rg503's set; its recipe fetches a
+  # pinned official Rust toolchain into the core builds directory (~50 min under qemu, cached)
+  build_a53_core zeebx-lr pinned zeebx
   # and its cheat database: GammaOS's cheats3ds.zip (CTRPF, 60FPS and Sharkive Action Replay
   # codes, one <title id>.txt per game, 752 games), which the core merges into the cheats folder
   # shared with GammaOS when a game starts (azahar-patch-017)

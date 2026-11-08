@@ -129,6 +129,7 @@ wonderswan
 wonderswancolor
 x1
 x68000
+zeebo
 zx81
 zxspectrum
 shutdownimages
