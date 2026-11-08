@@ -302,10 +302,11 @@ to the `uboot` partition at sector 16384 by `build_kernel-rk3562.sh` from
 `BSP/uboot-rg52mini.img`. The vendor's own U-Boot is kept beside it as
 `.vendor`.
 
-From 1.8 (master since 2026-11-07, the owner's word) the image ships the fork's
-`next-dev` at dcf8e77b68 (`next-dev-gdcf8e77b68`), built with the overclocking
-tables like 1.5: `build/uboot-typec-fix-oc.img` of the U-Boot workspace, md5
-`fcfa4acad4cdc873e72b23ac00f5d444`; not a fork release yet. Against
+From 1.8 the image ships the fork's release `rg52mini-1.6` (2026-11-08; tag on
+092ec0c465, code 75043a5f44), its `uboot.img` with the overclocking tables like
+1.5: md5 `cb302b1ced6787d9bec431616fbe6456` (master had next-dev dcf8e77b68,
+md5 `fcfa4aca...`, from 2026-11-07 on the owner's word, the same probe without
+the two additions below). Against
 `rg52mini-1.5` it asks the Type-C chip (HUSB311 at 0x4e) in `rk_board_init()`,
 while the early tree is intact, and the kernel tree's fixup uses that answer.
 Before, the probe ran from `rk_board_fdt_fixup()`, after distro boot had
@@ -313,8 +314,13 @@ loaded the kernel's dtb over the blob the live tree points into. On a card
 with dArkOS alone the two files are the same and nothing changes; on a
 dual-boot card booting GammaOS the probe always failed, `husb311@4e` stayed
 enabled, a revision A board was not recognised and its panel kick never
-happened (black screen). Checked by the owner on revision B (nothing broken);
-revision A not confirmed yet. make-ota compares p1 of the two images, so the
+happened (black screen). 1.6 also tries the probe up to three times and
+leaves its result in the kernel's tree: `od -A n -t x1
+/proc/device-tree/chosen/rg52,typec-probe` gives `00 00 00 01 00 00 00 00`
+(found, raw code 0); the status of `husb311@4e` in dArkOS says nothing, it is
+`okay` with any loader. The u-boot session wrote 1.6 to the owner's dual-boot
+card (revision B) on 2026-11-08: that answer in both dArkOS and GammaOS, boot
+time 15.6 s against 15.5. Revision A not confirmed yet. make-ota compares p1 of the two images, so the
 packages to 1.8 carry it: from 1.7 gated on 1.5's sha256 (ea7794f7...), from
 1.6 and older on the loader below (83422846...). A dual-boot card is still
 left alone by darkos-ota.
