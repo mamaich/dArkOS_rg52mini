@@ -12,6 +12,11 @@ PathChanged=/opt/system/Tools/PortMaster/pugwash
 PathChanged=/roms/ports/PortMaster/pugwash
 PathChanged=/roms2/ports/PortMaster/pugwash
 PathChanged=/roms/tools/PortMaster/pugwash
+# control.txt (get_controls): the same, an update replaces it
+PathChanged=/opt/system/Tools/PortMaster/control.txt
+PathChanged=/roms/ports/PortMaster/control.txt
+PathChanged=/roms2/ports/PortMaster/control.txt
+PathChanged=/roms/tools/PortMaster/control.txt
 Unit=portmaster-e2big.service
 
 [Install]

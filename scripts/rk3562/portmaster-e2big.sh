@@ -10,6 +10,14 @@
 # control.txt. SDL still gets the mappings, including the one mapper.py adds
 # for this joystick, through SDL_GAMECONTROLLERCONFIG_FILE.
 #
+# Not every port sources mod_dArkOS.txt (GTA San Andreas sources control.txt,
+# calls get_controls and exports SDL_GAMECONTROLLERCONFIG itself). Up to
+# PortMaster 2026.06 that did no harm: for a pad it does not know, get_controls
+# started the file empty and mapper.py added this joystick's line. 2026.11
+# starts it from all of gamecontrollerdb.txt, so such a port failed with
+# "Argument list too long" on every program it ran. So get_controls in
+# control.txt gets the guard too, keeping mapper.py's lines for this pad.
+#
 # It also points gl4es at the render-target fix (LIBGL_GLES), and lets the Vulkan driver chosen in
 # ES (DARKOS_VULKAN) through to a port run with $ESUDO, see below. And it keeps libgl_dArkOS.txt,
 # which gl4es ports source instead of libgl_default.txt: the same, and the image's gl4es
@@ -27,6 +35,33 @@ MARK="# dArkOS RG52 Mini: E2BIG guard"
 MARK_GL4ES="# dArkOS RG52 Mini: gl4es render-target fix"
 MARK_VULKAN="# dArkOS RG52 Mini: Vulkan driver through sudo"
 MARK_LIBGL="# dArkOS RG52 Mini: the image's gl4es"
+
+# control.txt: get_controls keeps sdl_controllerconfig small. Prints "patched" when it did;
+# exit 2 when the line it follows is not there, and then it leaves the file alone.
+control_e2big() {
+  python3 - "$1" <<'PY'
+import sys
+MARK = "# dArkOS RG52 Mini: E2BIG guard in get_controls"
+OLD = '  sdl_controllerconfig="$(< "${SDL_GAMECONTROLLERCONFIG_FILE}")"\n'
+NEW = OLD + '''  # dArkOS RG52 Mini: E2BIG guard in get_controls (added by /usr/local/bin/portmaster-e2big.sh)
+  # For a pad PortMaster does not know, 2026.11 starts the file from all of gamecontrollerdb.txt;
+  # a port that exports SDL_GAMECONTROLLERCONFIG itself then cannot run anything (E2BIG).
+  # Only the lines mapper.py added for this pad, as up to 2026.06; SDL reads the whole file.
+  if [ "${#sdl_controllerconfig}" -gt 100000 ]; then
+    sdl_controllerconfig="$(sed -n '/^# Custom Entries/,$p' "${SDL_GAMECONTROLLERCONFIG_FILE}" | grep -v '^#')"
+  fi
+'''
+p = sys.argv[1]
+s = open(p, encoding="utf-8", newline="").read()
+if MARK in s:
+    sys.exit(0)
+if s.count(OLD) != 1:
+    sys.exit(2)
+# in place: the file keeps its owner, mode and ACL
+open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD, NEW))
+print("patched")
+PY
+}
 
 # pugwash: a device PortMaster's HW_INFO lacks gets the screen's own size, as "default" does.
 # Prints what it did; exit 2 when the code it patches is not there (a PortMaster that changed
@@ -107,6 +142,12 @@ if [ ! -d "$PWD/gl4es.$DEVICE_ARCH" ] && [ ! -d "$PWD/gl4es" ] && [ -f /usr/lib/
 fi
 LIBGL
     logger -t portmaster-e2big "image gl4es fallback added to $lg"
+  fi
+  ct="$dir/control.txt"
+  if [ -f "$ct" ]; then
+    r=$(control_e2big "$ct"); rc=$?
+    [ "$r" = patched ] && logger -t portmaster-e2big "E2BIG guard added to get_controls in $ct"
+    [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, left as it is"
   fi
   pw="$dir/pugwash"
   if [ -f "$pw" ]; then

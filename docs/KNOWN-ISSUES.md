@@ -3288,6 +3288,16 @@ ES is unchanged (TODO.md).
     in /root, and A/B and X/Y came out swapped. `runport.sh` now runs scripts
     that source `pm_launch.txt` as ark too.
   - NFSU's port.json (version 8) is newer than this PortMaster reads as well.
+  - GTA San Andreas failed at once with "Argument list too long". For a pad it
+    does not know, 2026.11's `get_controls` starts the controller file from all
+    of gamecontrollerdb.txt (470 KB) where 2026.06 started it empty, and that
+    port exports `SDL_GAMECONTROLLERCONFIG` itself without sourcing
+    `mod_dArkOS.txt`, where our E2BIG guard was. `portmaster-e2big.sh` now puts
+    the guard into `get_controls` in `control.txt` too: when the variable is
+    over 100 KB it keeps only the lines mapper.py added for this pad (338
+    characters here), and SDL still reads the whole file. Its path unit watches
+    `control.txt`. With it GTA SA starts, at 1280x720 ("drawable size 1280x720"
+    in its log).
 * **Postal 2 itself** (Westonpack: box86, Weston headless, crusty GLX on gl4es)
   runs at the menu at 33–51 fps. Two things to know about it:
   - Its picture is not scaled. The game's 800x600 sat in the bottom-left
