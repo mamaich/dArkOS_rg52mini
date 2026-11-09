@@ -3248,6 +3248,16 @@ ES is unchanged (TODO.md).
     five, demuxes and decodes 300 frames of H.264 in 1.5 s (64-bit 1.2 s).
   - 32-bit RetroArch unchanged: PS1 (pcsx_rearmed) and N64 (parallel_n64) at
     60 fps.
+* **As built** (test build 20261109210946, installed by OTA over the first
+  test build, 2026-11-10). The image has the ICD file, both loaders (the arm64
+  one marked manual), 299 armhf packages and both libx264 without the flag.
+  The update merged the package database with the 27 packages that had been
+  installed by hand (`dpkg --audit` and `dpkg -V` clean, no `.ota-new` left).
+  On the console the same checks pass with the image's own files: the GPU
+  kernel through the loader in both arches, 300 H.264 frames by the 32-bit
+  FFmpeg 4 libraries. The usual smoke set of 16 games and five ports (GTA SA,
+  Postal 2, Doom 3, Mina the Hollower, PortMaster's window) started, with the
+  right picture and the usual frame rates.
 
 ## PortMaster: the latest version, and ports copied by hand — in master for 1.9
 
