@@ -286,6 +286,16 @@ In master for 1.9, not released yet (VERSION says 1.9):
   CD, PS2 (in Russian), Atomiswave and Lynx boxes, the second start's box with
   the core's own line, no box with the owner's BIOS, the switch both ways.
 
+- Opera (3DO) and SwanStation (PS1) are built from upstream, pinned 595fd1d
+  and 631f0fb, instead of rg503's builds of 2024. Both now start a game
+  without a BIOS file: Opera on its built-in Opera Boot (its default even with
+  a file; Core Options -> BIOS (rom1) picks the file), SwanStation on
+  OpenBIOS. SwanStation's RK3566 rumble patch is dropped: it wrote to PWMs that
+  are the fan and the backlight here, and never could. Checked on 1.8
+  (2026-11-09): Opera Boot's screen with and without files; Double Dragon at
+  60 fps on both SwanStation builds, the new one also with no BIOS
+  (KNOWN-ISSUES.md).
+
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
 Yabasanshiro was in the same state until 2026-10-24, when the one game tried

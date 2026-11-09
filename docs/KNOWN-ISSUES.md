@@ -3033,7 +3033,7 @@ ES is unchanged (TODO.md).
   failed" to its emulog.txt. The player is back in ES with no word of why (TODO,
   the owner 2026-11-02). Some cores load anyway and stay on a black or error
   screen: FreeIntv, Mini vMac, Beetle Lynx, PX68k, fMSX, blueMSX without its
-  machine, the image's Opera. The BIOS cannot ship in the image (copyright).
+  machine, 1.8's Opera. The BIOS cannot ship in the image (copyright).
 * **What happens now** (`scripts/rk3562/darkos-bios-check`). Before a game
   starts, the retroarch, retroarch32 and retroarch-next wrappers and the
   ARMSX2, Mednafen, NAOMI and Atomiswave launchers ask it for the files the
@@ -3069,8 +3069,8 @@ ES is unchanged (TODO.md).
   | Neo Geo CD: FBNeo | neocdz.zip or neogeo.zip, the same places | |
   | Neo Geo: Geolith | aes.zip (its default AES) or neogeo.zip; neocdz.zip for discs | .neo; chd, cue |
   | NAOMI, Atomiswave: flycast (RetroArch, standalone, retrorun) | dc/naomi.zip (naomi2.zip, a few games' own), dc/awbios.zip, or in the game's folder | the game's zip without the BIOS ROMs |
-  | 3DO: Opera | any 3DO BIOS | builds without the built-in Opera Boot (the image's is of 2024-10) |
-  | PS1: SwanStation, DuckStation | any file of a PS1 BIOS's size | SwanStation without its built-in OpenBIOS (the image's is of 2024-06); PCSX ReARMed has HLE |
+  | 3DO: Opera | any 3DO BIOS | builds without the built-in Opera Boot: 1.8's (2024-10), not 1.9's (below) |
+  | PS1: SwanStation, DuckStation | any file of a PS1 BIOS's size | SwanStation builds without the built-in OpenBIOS: 1.8's (2024-06), not 1.9's; PCSX ReARMed has HLE |
   | PS2: ARMSX2 | a PS2 BIOS under any name: 4 to 8 MiB with a ROMDIR, as ARMSX2 finds one | |
   | Saturn: YabaSanshiro | saturn_bios.bin, sega_101.bin or mpr-17933.bin | even with its HLE option on; Yabause does without |
   | Intellivision: FreeIntv | exec.bin and grom.bin | |
@@ -3092,7 +3092,7 @@ ES is unchanged (TODO.md).
   | Enterprise: ep128emu | ep128emu/roms/ide12.rom | .vhd |
 
   Not asked for, the cores do without: gpSP, NeoCD (the image's has the
-  built-in BIOS), FreeChaF, PUAE and UAE4ARM for floppies and hard disks
+  built-in BIOS), Opera and SwanStation as 1.9 builds them, FreeChaF, PUAE and UAE4ARM for floppies and hard disks
   (AROS), Atari800 and a5200 (Altirra), X1, NP2kai, Yabause, flycast's
   Dreamcast (Dreamcast's launcher is not hooked), PCSX ReARMed.
 * **The switch.** Options -> Advanced -> Disable BIOS Check (a flag,
@@ -3116,3 +3116,45 @@ ES is unchanged (TODO.md).
   - With the owner's BIOS: the Sega CD BIOS screen and ARMSX2's game, no box.
   - The switch both ways: off, the same start went back to ES in silence as
     before; on again, the box.
+
+## Opera (3DO) and SwanStation (PS1) from upstream — in master for 1.9
+
+* **Why.** The image downloaded rg503's builds of both: Opera 67a29e6
+  (2024-10-25) and SwanStation 7a27436 (2024-06-07). Both cores have since got
+  a built-in BIOS. Opera has Opera Boot, its maintainer's open boot ROM, the
+  default since 684926fe20 (2026-10-13). SwanStation has a copy of OpenBIOS,
+  used when no PS1 BIOS is found (7bd9645, 2026-03-28). Without a BIOS file,
+  the old Opera stayed on a black screen ("no BIOS ROM found") and the old
+  SwanStation did not load the game. The owner, 2026-11-09: update them if it
+  is not much work. SwanStation is not PS1's default; PCSX ReARMed is, with its
+  HLE BIOS.
+* **What the build does** (`build_retroarch.sh`): `build_a53_core opera pinned
+  opera` and `build_a53_core swanstation pinned swanstation` over the
+  downloaded cores. Our recipes pin 595fd1d and 631f0fb (rk3566_core_builds).
+  SwanStation's recipe looked for `swanstation-libretro/` and cloned into
+  `swanstation/`, so a second run failed. christianhaitian's RK3566 rumble
+  patch for it is dropped: it no longer applied, and it wrote the motor's duty
+  cycle to `/sys/class/pwm/pwmchip0` or `1`. On the RG52 Mini those are the fan
+  and the backlight, held by the kernel and not exported, so it never wrote
+  anything. The pad rumbles through RetroArch's rumble interface (the joystick's
+  force feedback), which the core calls as it is. Built under qemu in the arm64
+  chroot: Opera in 1 minute, SwanStation in 6.
+* **What changes for a player.**
+  - 3DO: Opera Boot is the BIOS by default, even with a BIOS file in
+    /roms/bios. This is upstream's choice, kept. Quick Menu -> Core Options ->
+    BIOS (rom1) picks a file instead. States of the old build (version 1)
+    should load: the new one writes V4 and its loader still takes V1 to V3
+    (read in its source; not tried, there is no 3DO game on the card).
+  - SwanStation: with a BIOS file nothing changes. Its states: the old build
+    wrote version 55, the new one writes 57 and loads down to 42.
+  - The BIOS check passes both by itself: Opera's file carries
+    `opera-boot-internal`, and SwanStation's lacks "Failed to load %s BIOS"
+    (above).
+* **Checked** on 1.8 (2026-11-09), the new cores bound over the image's:
+  - Opera with no game: the old build stays black without a BIOS and boots
+    panafz1.bin with the owner's files. The new one shows Opera Boot's screen
+    both ways.
+  - SwanStation, Double Dragon as ES starts it, with the owner's BIOS: the old
+    build 60.0 fps at 12% of the four cores, the new one 60.0 at 13%. With an
+    empty folder over /roms/bios, the new one started the game on OpenBIOS
+    (60.0, title screen).

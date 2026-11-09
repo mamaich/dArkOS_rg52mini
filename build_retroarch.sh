@@ -295,6 +295,11 @@ if [ "$CHIPSET" == "rk3562" ]; then
   build_a53_core flycast pinned flycast flycast_rumble
   build_a53_core puzzlescript https://github.com/nwhitehead/pzretro.git puzzlescript
   build_a53_core samecdi https://github.com/libretro/same_cdi.git same_cdi
+  # Opera (3DO) and SwanStation (PS1): rg503's builds are of 2024, from before the cores got a
+  # built-in BIOS (Opera Boot 2026-10, OpenBIOS 2026-03). Without a BIOS file the one stayed on a
+  # black screen and the other did not load the game; these start it. Pinned in their recipes.
+  build_a53_core opera pinned opera
+  build_a53_core swanstation pinned swanstation
   # rg503's is -O0 since upstream dropped its Makefile for a CMakeLists with no
   # build type; onscripter.sh now asks for Release
   build_a53_core onscripter https://github.com/iyzsong/onscripter-libretro.git onscripter
