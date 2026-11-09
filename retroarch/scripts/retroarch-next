@@ -19,7 +19,25 @@ if [ ! -f "$N/retroarch.cfg" ]; then
 fi
 [ -e "$N/cores" ] || ln -s "$R/cores" "$N/cores"
 
+# the BIOS files the core cannot start the game without, listed before RetroArch starts
+# (darkos-bios-check; Options > Advanced > Disable BIOS Check turns it off)
+bioscheck=/usr/local/bin/darkos-bios-check
+if [ -x "$bioscheck" ] && ! "$bioscheck" ra retroarch-next "$@"; then
+  exit 0
+fi
+
 # USB pads first, the console's own controls last (ra-extpads.py, as for the release)
 ext=""
 [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "$N")
+start=$SECONDS
 /opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" ${ext:+"--appendconfig=$ext"} "$@"
+rc=$?
+# status 1 within seconds: the game did not load; started again with the log on, says why (as the
+# release's wrapper)
+if [ $rc -eq 1 ] && [ $((SECONDS - start)) -lt 10 ] && [ -x "$bioscheck" ] && "$bioscheck" enabled; then
+  log=$(mktemp /tmp/retroarch-failed.XXXXXX)
+  /opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" ${ext:+"--appendconfig=$ext"} --verbose "$@" 2>&1 | tail -n 300 > "$log"
+  [ "${PIPESTATUS[0]}" -eq 1 ] && "$bioscheck" failed retroarch-next "$log" "$@"
+  rm -f "$log"
+fi
+exit $rc

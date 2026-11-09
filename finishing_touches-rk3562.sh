@@ -569,6 +569,13 @@ if [ "$UNIT" == "rg52mini" ]; then
       Arkbuild/etc/systemd/system/fan-state.service
   sudo chroot Arkbuild/ bash -c "systemctl enable fan-state"
 fi
+# Before a game starts, the BIOS files its emulator cannot start it without, listed on the
+# screen with the folder they go to (KNOWN-ISSUES, "BIOS check before a game starts"): run by
+# the retroarch, retroarch32 and retroarch-next wrappers and by the ARMSX2, Mednafen, NAOMI and
+# Atomiswave launchers. On by default; Options > Advanced > "Disable BIOS Check" turns it off.
+sudo install -m 755 scripts/rk3562/darkos-bios-check Arkbuild/usr/local/bin/darkos-bios-check
+sudo cp "dArkOS_Tools/rk3562/Disable BIOS Check.sh" Arkbuild/opt/system/Advanced/
+sudo cp "dArkOS_Tools/rk3562/Disable BIOS Check.sh" "dArkOS_Tools/rk3562/Enable BIOS Check.sh" Arkbuild/usr/local/bin/
 # DDR Overclock (RG52 Mini only: the installer carries its loaders): the 928 MHz
 # memory loader in the internal eMMC, installed or removed (docs/HARDWARE.md, "The
 # memory clock"). Its entry in Options -> Tools goes to the ROMs partition below;

@@ -1,0 +1,890 @@
+#!/usr/bin/python3 -IS
+# darkos-bios-check (dArkOS, RG52 Mini): before a game starts, the BIOS files its emulator
+# cannot start it without, said on the screen with the folder they go to. Without them most
+# emulators quit at once and leave the player back in EmulationStation with no word of why
+# (docs/KNOWN-ISSUES.md, "BIOS check before a game starts").
+#
+#   darkos-bios-check ra <emulator> <RetroArch's arguments>
+#       the retroarch, retroarch32 and retroarch-next wrappers, before RetroArch starts
+#   darkos-bios-check run <emulator> <core or -> <game>
+#       other launchers: pcsx2 (ARMSX2), mednafen, flycast (standalone), retrorun, retrorun32
+#   darkos-bios-check failed <emulator> <log> <RetroArch's arguments>
+#       RetroArch quit at once with status 1: the errors from the log of its second start
+#   darkos-bios-check missing <emulator> <core or -> <game>
+#       what is missing, printed: no screen, no switch (for tests)
+#   darkos-bios-check enabled
+#       status 0 unless Options > Advanced > Disable BIOS Check turned the check off
+#
+# ra and run exit 1 when the game must not start (the player chose Back), else 0. Anything
+# that goes wrong here starts the game: the check must never be the reason a game does not run.
+#
+# The rules ask only for what makes a game fail to load, as the cores' sources have it (read
+# 2026-11-09). Files a core can do without (an HLE or built-in BIOS, a better but optional
+# one) are not asked for. Where the right file depends on the disc (its region) or on a core
+# option, any one of them passes; RetroArch's own error, shown after a failed start ("failed"
+# above), then names the one it wanted.
+
+# The check runs before every game: python3 -IS (no site: 48 ms to start on the RG52 Mini
+# against 70), only os and sys at the start (re and subprocess load when a box is shown), and
+# zips read by zip_dir below (zipfile took 80 ms to import). About 0.1 s a game in all.
+import os
+import sys
+
+FLAG = "/home/ark/.config/.NOBIOSCHECK"
+W = 76                      # the box's width, as the DDR tool's (Terminus 22x11 on the 1280 px console)
+LIBRETRO = {"retroarch", "retroarch32", "retroarch-next", "retrorun", "retrorun32"}
+
+
+def need(en, ru, *alts, show=None):
+    """A file the game needs: any one of alts is enough. A path is under the BIOS folder, or
+    under the game's own folder when it starts with @rom/. en and ru say what it is; show is
+    how the names are written on the screen (alts[0] when there is one)."""
+    return {"alts": alts, "en": en, "ru": ru, "show": show or alts[0]}
+
+
+def rule(front, needs, cores=None, dirs=None, exts=None, when=None):
+    """needs (a list, or a function of the game and the BIOS folder giving one) apply when the emulator is in
+    front, the core in cores, the game's system folder (/roms/<dir>/...) in dirs, its
+    extension (or that of a file in its zip) in exts and when(game) is true. None matches
+    anything."""
+    return {"front": front, "cores": cores, "dirs": dirs, "exts": exts, "when": when, "needs": needs}
+
+
+class Game:
+    """The game being started: its path and folders, extension, zip entries and first bytes,
+    and the emulator and core it starts with."""
+
+    def __init__(self, front, core, rom, core_path=None):
+        self.front, self.core, self.rom = front, core, rom
+        path = os.path.abspath(rom)
+        parts = path.split("/")
+        under = len(parts) > 3 and parts[1].startswith("roms")
+        self.root = parts[1] if under else "roms"       # the ROMs partition: roms, or roms2
+        self.sysdir = parts[2] if under else ""         # the system's folder: segacd in /roms/segacd/x/y.cue
+        self.romdir = os.path.dirname(path)
+        self.ext = os.path.splitext(rom)[1][1:].lower()
+        self.core_path = core_path or "/home/ark/.config/%s/cores/%s_libretro.so" % (
+            "retroarch32" if front in ("retroarch32", "retrorun32") else "retroarch", core)
+        self._zip = False          # not read yet
+
+    def zip_entries(self):
+        """[(name, crc)] of a zipped game, [] for any other game, None for a zip that could not
+        be read."""
+        if self._zip is False:
+            self._zip = zip_dir(self.rom) if self.ext == "zip" else []
+        return None if self._zip is None else [(e[0], e[1]) for e in self._zip]
+
+    def exts(self):
+        return {self.ext} | {os.path.splitext(n)[1][1:].lower() for n, _ in self.zip_entries() or ()}
+
+    def head(self, n):
+        try:
+            with open(self.rom, "rb") as f:
+                return f.read(n)
+        except OSError:
+            return b""
+
+    def data_head(self, n):
+        """The first bytes of the game: of a zip's first file, as RetroArch hands it to a core
+        that does not open zips itself."""
+        if self.ext != "zip":
+            return self.head(n)
+        self.zip_entries()
+        files = [e for e in self._zip or () if not e[0].endswith("/")]
+        return zip_head(self.rom, files[0], n) if files else b""
+
+    def option(self, key, default):
+        """A core option's value as RetroArch gives it to the core: the options file, then the
+        core's own file, its folder's and its game's (game-specific options); the last one found."""
+        ra = ra_dir(self.front, "retroarch-core-options.cfg")
+        files = [ra + "/retroarch-core-options.cfg"]
+        name = None
+        try:
+            for line in open(os.path.splitext(self.core_path)[0] + ".info", errors="replace"):
+                k, eq, v = line.partition("=")
+                if eq and k.strip() == "corename":
+                    name = v.strip().strip('"')
+        except OSError:
+            pass
+        if name:
+            files += ["%s/config/%s/%s.opt" % (ra, name, x) for x in
+                      (name, os.path.basename(self.romdir), os.path.splitext(os.path.basename(self.rom))[0])]
+        value = default
+        for f in files:
+            try:
+                for line in open(f, errors="replace"):
+                    k, eq, v = line.partition("=")
+                    if eq and k.strip() == key:
+                        value = v.strip().strip('"')
+            except OSError:
+                pass
+        return value
+
+
+def zip_dir(path):
+    """[(name, crc, method, compressed size, local header offset)] from a zip's central
+    directory; None when it cannot be read."""
+    import struct
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            tail = min(size, 65557)     # the end record and a comment of up to 64 KiB
+            f.seek(size - tail)
+            data = f.read(tail)
+            i = data.rfind(b"PK\x05\x06")
+            if i < 0:
+                return None
+            cd_size, cd_off = struct.unpack_from("<II", data, i + 12)
+            f.seek(cd_off)
+            cd = f.read(cd_size)
+        out, p = [], 0
+        while p + 46 <= len(cd) and cd[p:p + 4] == b"PK\x01\x02":
+            flags, method = struct.unpack_from("<HH", cd, p + 8)
+            crc, csize, _, nlen, xlen, clen = struct.unpack_from("<IIIHHH", cd, p + 16)
+            off = struct.unpack_from("<I", cd, p + 42)[0]
+            name = cd[p + 46:p + 46 + nlen].decode("utf-8" if flags & 0x800 else "cp437", "replace")
+            out.append((name, crc, method, csize, off))
+            p += 46 + nlen + xlen + clen
+        return out
+    except (OSError, ValueError, struct.error):
+        return None
+
+
+def zip_head(path, entry, n):
+    # the first n bytes of a stored or deflated file in a zip
+    import struct
+    import zlib
+    _, _, method, csize, off = entry
+    try:
+        with open(path, "rb") as f:
+            f.seek(off)
+            h = f.read(30)
+            if h[:4] != b"PK\x03\x04":
+                return b""
+            nlen, xlen = struct.unpack_from("<HH", h, 26)
+            f.seek(off + 30 + nlen + xlen)
+            data = f.read(min(csize, 65536))
+        if method == 0:
+            return data[:n]
+        if method == 8:
+            return zlib.decompressobj(-15).decompress(data, n)
+    except (OSError, ValueError, struct.error, zlib.error):
+        pass
+    return b""
+
+
+def ra_dir(front, name):
+    # RetroArch's folder for front; retroarch-next's has its files after its first start only,
+    # and they are copies of the release's
+    d = "/home/ark/.config/" + ("retroarch32" if front in ("retroarch32", "retrorun32") else
+                                "retroarch-next" if front == "retroarch-next" else "retroarch")
+    if front == "retroarch-next" and not os.path.exists(os.path.join(d, name)):
+        d = "/home/ark/.config/retroarch"
+    return d
+
+
+# ---------------------------------------------------------------- conditions
+
+def sega_cd(g):
+    """A Sega CD disc as Genesis Plus GX and PicoDrive tell one: a cue or chd (an m3u lists
+    them), or an image that starts with SEGADISCSYSTEM (cooked, or raw after 16 bytes)."""
+    if g.ext in ("cue", "chd", "m3u"):
+        return True
+    h = g.head(32)
+    return h.startswith(b"SEGADISCSYSTEM") or h[16:30] == b"SEGADISCSYSTEM"
+
+
+def pico_cd(g):
+    # PicoDrive: a disc with a cartridge of its name beside it is an MSU-MD game, no BIOS needed
+    if not sega_cd(g):
+        return False
+    base = os.path.splitext(g.rom)[0]
+    return not any(os.path.exists(base + e) for e in (".gen", ".smd", ".md", ".32x"))
+
+
+def fds(g):
+    return g.sysdir == "fds" or "fds" in g.exts()
+
+
+def zip_lacks(crcs=(), prefixes=()):
+    """A game that does not carry these BIOS ROMs in its own zip (by CRC, or a name's start):
+    FBNeo and flycast look there too. A 7z is not looked into, so not checked either."""
+    def f(g):
+        if g.ext == "7z":
+            return False
+        if g.ext != "zip":
+            return True
+        entries = g.zip_entries()
+        if entries is None:
+            return False
+        have = {c for _, c in entries}
+        names = [n.lower().rsplit("/", 1)[-1] for n, _ in entries]
+        if crcs and all(c in have for c in crcs):
+            return False
+        if prefixes and any(n.startswith(prefixes) for n in names):
+            return False
+        return True
+    return f
+
+
+def core_has(marker, has=True):
+    # marker is (or, has=False, is not) in the core's file: builds before and after a core got a
+    # built-in BIOS tell apart by a message of theirs. A core that cannot be read is not checked.
+    def f(g):
+        try:
+            with open(g.core_path, "rb") as fh:
+                return (marker in fh.read()) == has
+        except OSError:
+            return False
+    return f
+
+
+def core_lacks(marker):
+    return core_has(marker, False)
+
+
+def lynx_cart(g):
+    # a cartridge (a LYNX header, or raw), not homebrew in BS93 form, which starts without the
+    # boot ROM: only the boot ROM decrypts and loads a cartridge. A file not read is not checked.
+    h = g.data_head(10)
+    return len(h) == 10 and h[6:10] != b"BS93"
+
+
+def sufami_cart(g):
+    # a Sufami Turbo cartridge, as snes9x tells one (and not the BIOS itself)
+    h = g.data_head(32)
+    return h[:14] == b"BANDAI SFC-ADX" and h[16:30] != b"SFC-ADX BACKUP"
+
+
+def pce_cd_needs(g, bios):
+    # the System Card the core option names; Beetle PCE (not fast) is not read: any one passes
+    cards = {"System Card 3": "syscard3.pce", "System Card 2": "syscard2.pce", "System Card 1": "syscard1.pce",
+             "Games Express": "gexpress.pce", "System Card 3 US": "syscard3u.pce", "System Card 2 US": "syscard2u.pce"}
+    key = {"mednafen_pce_fast": "pce_fast_cdbios", "mednafen_supergrafx": "sgx_cdbios"}.get(g.core)
+    card = cards.get(g.option(key, "System Card 3")) if key else None
+    what = ("PC Engine CD System Card, as the core options name it",
+            "System Card для PC Engine CD, как выбрано в настройках ядра")
+    if card:
+        return [need(*what, card)]
+    return [need(*what, *cards.values(), show="syscard3.pce")]
+
+
+def ps1_needs(g, bios):
+    # SwanStation before its built-in OpenBIOS and the old DuckStation find a PS1 BIOS by its
+    # size (and MD5), under any name
+    try:
+        for f in os.listdir(bios):
+            if os.path.getsize(os.path.join(bios, f)) in (524288, 4194304, 4089584):
+                return []
+    except OSError:
+        pass
+    return [need("a PS1 BIOS: any name, 512 KB, such as scph5501.bin (USA), scph5502.bin (Europe), "
+                 "scph5500.bin (Japan)",
+                 "BIOS PS1: с любым именем, 512 КБ, например scph5501.bin (США), scph5502.bin (Европа), "
+                 "scph5500.bin (Япония)", "scph5501.bin", show="scph5501.bin / scph5502.bin / scph5500.bin")]
+
+
+def hatari_needs(g, bios):
+    # the old port in the image (c605d3a): its option names a TOS in hatari/tos, else tos.img
+    v = g.option("hatari_tosimage", "default")
+    return [need("Atari ST TOS, as the core options name it", "TOS Atari ST, как выбрано в настройках ядра",
+                 "tos.img" if v == "default" else "hatari/tos/" + v)]
+
+
+def hatarib_needs(g, bios):
+    # hatariB carries EmuTOS; a file is needed only when its options name one
+    v = g.option("hatarib_tos", "")
+    if v == "<tos.img>" or v.startswith("hatarib/"):
+        return [need("Atari ST TOS, as the core options name it", "TOS Atari ST, как выбрано в настройках ядра",
+                     "tos.img" if v == "<tos.img>" else v)]
+    return []
+
+
+def mu_needs(g, bios):
+    roms = {"Palm m515/Palm OS 4.1": "palmos41-en-m515.rom", "Tungsten T3/Palm OS 5.2.1": "palmos52-en-t3.rom",
+            "Tungsten T3/Palm OS 6.0": "palmos60-en-t3.rom", "Palm m500/Palm OS 4.0": "palmos40-en-m500.rom"}
+    rom = roms.get(g.option("palm_emu_os_version", "Palm m515/Palm OS 4.1"))
+    return [need("Palm OS ROM of the model in the core options", "ROM Palm OS модели из настроек ядра", rom)] if rom else []
+
+
+def fmsx_needs(g, bios):
+    files = {"MSX2+": ("MSX2P.ROM", "MSX2PEXT.ROM"), "MSX1": ("MSX.ROM",),
+             "MSX2": ("MSX2.ROM", "MSX2EXT.ROM")}.get(g.option("fmsx_mode", "MSX2+"), ())
+    out = [need("MSX BIOS of the model in the core options", "BIOS MSX модели из настроек ядра", f) for f in files]
+    if g.exts() & {"dsk", "fdi", "m3u"}:
+        out.append(need("MSX disk drive ROM, for disks", "ROM дисковода MSX, для дискет", "DISK.ROM"))
+    return out
+
+
+def bluemsx_needs(g, bios):
+    """The machine blueMSX starts (its option, or by the game's extension): its folder from the
+    core's system pack and the ROMs its config.ini lists. The image's build has no C-BIOS
+    fallback: without them it stays on a black screen, or does not load at all."""
+    import re
+    v = g.option("bluemsx_msxtype", "Auto")
+    if v == "Auto":
+        e = (g.exts() - {"zip"}) or {g.ext}
+        machine = ("MSX2+" if e & {"rom", "mx1", "mx2", "dsk", "m3u", "cas"} else
+                   "COL - ColecoVision" if "col" in e else "SEGA - SG-1000" if "sg" in e else
+                   "SEGA - SF-7000" if "sf" in e else "SEGA - SC-3000")
+    else:
+        machine = {"ColecoVision": "COL - ColecoVision",
+                   "Coleco (Spectravideo SVI-603)": "COL - Spectravideo SVI-603 Coleco"}.get(v, v)
+    what = ("blueMSX's %s machine, from the core's system pack (the Machines folder)" % machine,
+            "машина %s для blueMSX, из системного пакета ядра (папка Machines)" % machine)
+    if os.path.exists(os.path.join(bios, "Machines", machine + ".zip")):
+        return []
+    try:
+        with open(os.path.join(bios, "Machines", machine, "config.ini"), errors="replace") as f:
+            roms = sorted(set(re.findall(r'"(Machines/[^"]+)"', f.read())))
+    except OSError:
+        return [need(*what, "Machines/%s/config.ini" % machine)]
+    return [need(*what, r) for r in roms]
+
+
+# PUAE's names for a Kickstart: the usual one, Amiga Forever's, TOSEC's (libretro-core.h)
+PUAE_CD32 = ("kick40060.CD32", "amiga-os-310-cd32.rom", "Kickstart v3.1 rev 40.60 (1993)(Commodore)(CD32).rom")
+PUAE_CD32_EXT = ("kick40060.CD32.ext", "amiga-os-310-cd32-ext.rom",
+                 "CD32 Extended-ROM rev 40.60 (1993)(Commodore)(CD32).rom")
+PUAE_KS13 = ("kick34005.A500", "amiga-os-130.rom",
+             "Kickstart v1.3 rev 34.5 (1987)(Commodore)(A500-A1000-A2000-CDTV)[!].rom",
+             "Kickstart v1.3 rev 34.5 (1987)(Commodore)(A500-A1000-A2000-CDTV).rom")
+PUAE_CDTV_EXT = ("kick34005.CDTV", "amiga-os-130-cdtv-ext.rom", "CDTV Extended-ROM v1.0 (1991)(Commodore)(CDTV)[!].rom",
+                 "CDTV Extended-ROM v1.0 (1992)(Commodore)(CDTV).rom")
+
+
+def amiga_cd_needs(g, bios):
+    """A CD32 or CDTV disc in PUAE or UAE4ARM: the real Kickstart and its extension ROM. Both
+    cores fall back to AROS without a Kickstart, which starts floppies and hard disks but not
+    these. Only with the cores' default model options: a model or Kickstart of the player's
+    own choice is left alone."""
+    cdtv = "cdtv" in g.rom.lower()
+    if g.core == "uae4arm":
+        if g.option("uae4arm_model", "Auto") != "Auto" or g.ext not in ("cue", "ccd", "iso"):
+            return []
+        main, ext = (("kick34005.A500",), ("kick34005.CDTV",)) if cdtv else (("kick40060.CD32",), ("kick40060.CD32.ext",))
+    else:
+        if g.option("puae_kickstart", "auto") != "auto":
+            return []
+        model = g.option("puae_model", "auto")
+        if model == "auto":
+            model = "CDTV" if cdtv else g.option("puae_model_cd", "CD32")
+        if model.startswith("CD32"):
+            main, ext = PUAE_CD32, PUAE_CD32_EXT
+        elif model == "CDTV":
+            main, ext = PUAE_KS13, PUAE_CDTV_EXT
+        else:
+            return []
+    name = "CDTV" if main[0] == "kick34005.A500" else "CD32"
+    out = [need("Amiga %s Kickstart" % name, "Kickstart Amiga %s" % name, *main)]
+    # a 1 MiB CD32 Kickstart carries its extension already
+    if not any(os.path.isfile(os.path.join(bios, m)) and os.path.getsize(os.path.join(bios, m)) > 524288
+               for m in main):
+        out.append(need("Amiga %s extension ROM" % name, "ROM расширения Amiga %s" % name, *ext))
+    return out
+
+
+def mednafen_setting(key, default):
+    try:
+        for line in open("/home/ark/.mednafen/mednafen.cfg", errors="replace"):
+            if line.startswith(key + " "):
+                return line[len(key) + 1:].strip() or default
+    except OSError:
+        pass
+    return default
+
+
+# ---------------------------------------------------------------- the rules
+
+GPGX = {"genesis_plus_gx", "genesis_plus_gx_EX", "genesis_plus_gx_wide"}
+PCE = {"mednafen_pce_fast", "mednafen_supergrafx", "mednafen_pce"}
+PCE_DIRS = {"pcengine", "pcenginecd", "turbografx", "tg16", "turbografxcd", "tg-cd", "supergrafx"}
+PCE_CD = {"cue", "ccd", "chd", "toc", "m3u"}
+FBNEO = {"fbneo", "km_fbneo_xtreme_amped"}
+# sp-s3.sp1, sm1.sm1, sfix.sfix and 000-lo.lo: the Neo Geo BIOS ROMs every game needs in FBNeo
+NEOGEO_CRCS = (0x91b64be3, 0x94416d67, 0xc2ea0cfd, 0x5a86cff2)
+# PicoDrive's Sega CD BIOS names, each as .bin or .zip (platform/libretro/libretro.c, find_bios)
+PICO_CD = tuple("%s.%s" % (n, e) for n in (
+    "us_scd2_9306", "SegaCDBIOS9303", "us_scd1_9210", "bios_CD_U", "eu_mcd2_9306", "eu_mcd2_9303",
+    "eu_mcd1_9210", "bios_CD_E", "jp_mcd2_921222", "jp_mcd1_9112", "jp_mcd1_9111", "bios_CD_J")
+    for e in ("bin", "zip"))
+OPERA = ("panafz10.bin", "panafz1.bin", "panafz1j.bin", "panafz10-norsa.bin", "panafz1j-norsa.bin",
+         "panafz10e-anvil.bin", "panafz10e-anvil-norsa.bin", "goldstar.bin", "sanyotry.bin",
+         "3do_arcade_saot.bin")
+
+SEGA_CD = ("Sega CD BIOS: USA / Europe / Japan, the disc's region",
+           "BIOS Sega CD: США / Европа / Япония, по региону диска")
+
+RULES = [
+    # Sega CD in Genesis Plus GX: the BIOS of the disc's region and no other (the region is not
+    # read here: any one passes, and a failed start then names the right one)
+    rule(LIBRETRO, [need(*SEGA_CD, "bios_CD_U.bin", "bios_CD_E.bin", "bios_CD_J.bin",
+                         show="bios_CD_U.bin / bios_CD_E.bin / bios_CD_J.bin")],
+         cores=GPGX, when=sega_cd),
+    # PicoDrive: the same, under its other names too
+    rule(LIBRETRO, [need(*SEGA_CD, *PICO_CD, show="bios_CD_U.bin / bios_CD_E.bin / bios_CD_J.bin")],
+         cores={"picodrive"}, when=pico_cd),
+    # PC Engine CD: the System Card the core option names, System Card 3 unless changed
+    rule(LIBRETRO, pce_cd_needs, cores=PCE, exts=PCE_CD),
+    # Famicom Disk System
+    rule(LIBRETRO, [need("Famicom Disk System BIOS", "BIOS Famicom Disk System", "disksys.rom")],
+         cores={"nestopia", "fceumm"}, when=fds),
+    # Neo Geo in FBNeo, unless the game's zip carries the BIOS ROMs itself (it shows its own
+    # error screen then, but not where the file goes)
+    rule(LIBRETRO, [need("Neo Geo BIOS; bios/fbneo or the game's folder will do too",
+                         "BIOS Neo Geo; подойдёт и bios/fbneo или папка игры",
+                         "neogeo.zip", "neogeo.7z", "fbneo/neogeo.zip", "fbneo/neogeo.7z",
+                         "fbneo/patched/neogeo.zip", "@rom/neogeo.zip", "@rom/neogeo.7z")],
+         cores=FBNEO, dirs={"neogeo"}, when=zip_lacks(crcs=NEOGEO_CRCS)),
+    # Neo Geo CD in FBNeo: neocd.bin and 000-lo.lo, from neocdz.zip or neogeo.zip
+    rule(LIBRETRO, [need("Neo Geo CD BIOS; bios/fbneo or the game's folder will do too",
+                         "BIOS Neo Geo CD; подойдёт и bios/fbneo или папка игры",
+                         "neocdz.zip", "neocdz.7z", "neogeo.zip", "neogeo.7z", "fbneo/neocdz.zip",
+                         "fbneo/neocdz.7z", "fbneo/neogeo.zip", "fbneo/neogeo.7z",
+                         "@rom/neocdz.zip", "@rom/neocdz.7z", "@rom/neogeo.zip", "@rom/neogeo.7z",
+                         show="neocdz.zip / neogeo.zip")],
+         cores=FBNEO, dirs={"neogeocd", "neogeocdjp"}),
+    # Geolith: aes.zip (AES, its default) or neogeo.zip (MVS, Universe BIOS) for cartridges,
+    # neocdz.zip for every kind of Neo Geo CD
+    rule(LIBRETRO, [need("Neo Geo BIOS: aes.zip for the core's default AES, neogeo.zip for MVS",
+                         "BIOS Neo Geo: aes.zip для AES (так по умолчанию в ядре), neogeo.zip для MVS",
+                         "aes.zip", "neogeo.zip", show="aes.zip / neogeo.zip")],
+         cores={"geolith"}, exts={"neo"}),
+    rule(LIBRETRO, [need("Neo Geo CD BIOS", "BIOS Neo Geo CD", "neocdz.zip")],
+         cores={"geolith"}, exts={"chd", "cue"}),
+    # 3DO in Opera builds without the built-in "Opera Boot" (upstream since 2026-10): any BIOS.
+    # Without one such a build starts with a black screen that stays.
+    rule(LIBRETRO, [need("a 3DO BIOS, any of them", "BIOS 3DO, любой", *OPERA,
+                         show="panafz10.bin / panafz1.bin / goldstar.bin / ...")],
+         cores={"opera"}, when=core_lacks(b"opera-boot-internal")),
+    # NAOMI and Atomiswave in flycast (libretro and standalone) and Reicast: the board's BIOS
+    # in bios/dc or the game's folder, unless the game's zip carries it. Which of NAOMI's
+    # (naomi2.zip for NAOMI 2, a few games their own) is not told here.
+    rule(None, [need("NAOMI BIOS (naomi2.zip for NAOMI 2 games); the game's folder will do too",
+                     "BIOS NAOMI (naomi2.zip для игр NAOMI 2); подойдёт и папка игры",
+                     "dc/naomi.zip", "dc/naomi.7z", "dc/naomi2.zip", "dc/naomi2.7z", "dc/hod2bios.zip",
+                     "dc/f355bios.zip", "dc/f355dlx.zip", "dc/airlbios.zip", "@rom/naomi.zip",
+                     "@rom/naomi.7z", "@rom/naomi2.zip", "@rom/naomi2.7z")],
+         dirs={"naomi"}, when=zip_lacks(prefixes=("epr-2157", "epr-2360"))),
+    rule(None, [need("Atomiswave BIOS; the game's folder will do too",
+                     "BIOS Atomiswave; подойдёт и папка игры",
+                     "dc/awbios.zip", "dc/awbios.7z", "@rom/awbios.zip", "@rom/awbios.7z")],
+         dirs={"atomiswave"}, when=zip_lacks(crcs=(0x719b2b0b,), prefixes=("bios0.ic23",))),
+    # Mednafen (standalone): a PC Engine CD's System Card as mednafen.cfg names it, the FDS
+    # BIOS, the Lynx boot ROM for a cartridge
+    rule({"mednafen"}, lambda g, b: [need("PC Engine CD System Card (pce_fast.cdbios in mednafen.cfg)",
+                                       "System Card для PC Engine CD (pce_fast.cdbios в mednafen.cfg)",
+                                       mednafen_setting("pce_fast.cdbios", "syscard3.pce"),
+                                       mednafen_setting("pce.cdbios", "syscard3.pce"))],
+         dirs=PCE_DIRS, exts=PCE_CD),
+    rule({"mednafen"}, [need("Famicom Disk System BIOS", "BIOS Famicom Disk System", "disksys.rom")],
+         when=fds),
+    rule({"mednafen"}, [need("Atari Lynx boot ROM", "загрузочный ROM Atari Lynx", "lynxboot.img")],
+         dirs={"atarilynx"}, when=lynx_cart),
+    # Intellivision: FreeIntv loads without them but cannot run a game
+    rule(LIBRETRO, [need("Intellivision Executive ROM", "Executive ROM Intellivision", "exec.bin"),
+                    need("Intellivision Graphics ROM", "Graphics ROM Intellivision", "grom.bin")],
+         cores={"freeintv"}),
+    rule(LIBRETRO, [need("PC-FX BIOS", "BIOS PC-FX", "pcfx.rom")], cores={"mednafen_pcfx"}),
+    # Lynx in Beetle Lynx: a cartridge stays on a black screen without the boot ROM
+    rule(LIBRETRO, [need("Atari Lynx boot ROM", "загрузочный ROM Atari Lynx", "lynxboot.img")],
+         cores={"mednafen_lynx"}, when=lynx_cart),
+    rule(LIBRETRO, hatari_needs, cores={"hatari"}),
+    rule(LIBRETRO, hatarib_needs, cores={"hatarib"}),
+    # Mac II in Mini vMac: without the ROM it stays on its "Unable to locate ROM" alert
+    rule(LIBRETRO, [need("Mac II ROM", "ROM Mac II", "MacII.ROM", "MacIIx.ROM",
+                         "/home/ark/.gryphel/mnvm_rom/MacII.ROM")], cores={"minivmac"}),
+    rule(LIBRETRO, [need("X68000 IPL ROM", "IPL ROM X68000", "keropi/iplrom.dat", "keropi/iplrom30.dat",
+                         "keropi/iplromco.dat", "keropi/iplromxv.dat"),
+                    need("X68000 font ROM", "ROM шрифтов X68000", "keropi/cgrom.dat", "keropi/cgrom.tmp")],
+         cores={"px68k"}),
+    # CD-i in SAME CDi (MAME's cdimono1 set: a zip, a 7z or a folder)
+    rule(LIBRETRO, [need("CD-i BIOS; the game's folder will do too", "BIOS CD-i; подойдёт и папка игры",
+                         "same_cdi/bios/cdimono1.zip", "same_cdi/bios/cdimono1.7z", "same_cdi/bios/cdimono1",
+                         "@rom/cdimono1.zip", "@rom/cdimono1.7z", "@rom/cdimono1")],
+         cores={"same_cdi"}),
+    rule(LIBRETRO, mu_needs, cores={"mu"}),
+    # Odyssey 2 / Videopac in O2EM: the BIOS of the console chosen in its options
+    rule(LIBRETRO, lambda g, b: [need("Odyssey 2 / Videopac BIOS of the console in the core options",
+                                      "BIOS Odyssey 2 / Videopac приставки из настроек ядра",
+                                      g.option("o2em_bios", "o2rom.bin"))],
+         cores={"o2em"}),
+    # ColecoVision in Gearcoleco (the image's build: colecovision.rom or coleco.rom; later ones
+    # also os7.u2 and a gearcoleco folder)
+    rule(LIBRETRO, [need("ColecoVision BIOS", "BIOS ColecoVision", "colecovision.rom", "coleco.rom",
+                         "os7.u2", "gearcoleco/colecovision.rom", "gearcoleco/coleco.rom", "gearcoleco/os7.u2")],
+         cores={"gearcoleco"}),
+    rule(LIBRETRO, bluemsx_needs, cores={"bluemsx"}),
+    rule(LIBRETRO, fmsx_needs, cores={"fmsx"}),
+    # PS1 in SwanStation builds without the built-in OpenBIOS (upstream since 2026-03-28) and in
+    # the old DuckStation
+    rule(LIBRETRO, ps1_needs, cores={"swanstation"}, when=core_has(b"Failed to load %s BIOS")),
+    rule(LIBRETRO, ps1_needs, cores={"duckstation"}),
+    # Saturn in YabaSanshiro: a real BIOS, even with its HLE option on (Yabause does without)
+    rule(LIBRETRO, [need("Saturn BIOS", "BIOS Saturn", "saturn_bios.bin", "sega_101.bin", "mpr-17933.bin")],
+         cores={"yabasanshiro"}),
+    rule(LIBRETRO, amiga_cd_needs, cores={"puae", "puae2021", "uae4arm"},
+         exts={"cue", "ccd", "nrg", "mds", "iso", "chd"}),
+    # 64DD disks in parallel_n64 builds without the built-in IPL (upstream since 2026-10-25)
+    rule(LIBRETRO, [need("64DD IPL ROM", "IPL ROM 64DD", "64DD_IPL.bin")], cores={"parallel_n64"},
+         exts={"ndd"}, when=core_lacks(b"built-in IPL")),
+    # Super Cassette Vision in EmuSCV: without it, "BIOS not found" over noise
+    rule(LIBRETRO, [need("Super Cassette Vision BIOS", "BIOS Super Cassette Vision", "upd7801g.s01",
+                         "upd7801g.bin", "upd7801g.bios", "bios.rom", "bios.bin")], cores={"emuscv"}),
+    # snes9x: Sufami Turbo cartridges and Satellaview games
+    rule(LIBRETRO, [need("Sufami Turbo BIOS; the game's folder will do too",
+                         "BIOS Sufami Turbo; подойдёт и папка игры", "STBIOS.bin", "@rom/STBIOS.bin")],
+         cores={"snes9x"}, when=sufami_cart),
+    rule(LIBRETRO, [need("Satellaview (BS-X) BIOS; the game's folder will do too",
+                         "BIOS Satellaview (BS-X); подойдёт и папка игры", "BS-X.bin", "@rom/BS-X.bin")],
+         cores={"snes9x"}, exts={"bs"}),
+    # Enterprise hard disk images in ep128emu: the one ROM it does not carry
+    rule(LIBRETRO, [need("Enterprise IDE ROM, for hard disk images", "ROM IDE Enterprise, для образов жёстких дисков",
+                         "ep128emu/roms/ide12.rom")], cores={"ep128emu_core"}, exts={"vhd"}),
+]
+
+
+# ---------------------------------------------------------------- PS2 (ARMSX2)
+
+def ps2_bios_ok(root):
+    """As ARMSX2 (pcsx2/ps2/BiosTools.cpp): the BIOS named in PCSX2.ini when it exists, else
+    any file of 4 to 8 MiB in the BIOS folder whose ROMDIR has RESET and ROMVER, whatever its name."""
+    bios, name = "/%s/bios" % root, ""
+    section = ""
+    try:
+        for line in open("/%s/ps2/pcsx2/inis/PCSX2.ini" % root, errors="replace"):
+            line = line.strip()
+            if line.startswith("["):
+                section = line
+            elif "=" in line:
+                k, v = (x.strip() for x in line.split("=", 1))
+                if section == "[Folders]" and k == "Bios" and v:
+                    bios = v
+                elif section == "[Filenames]" and k == "BIOS":
+                    name = v
+    except OSError:
+        pass
+    if name and os.path.isfile(os.path.join(bios, name)):
+        return True, bios
+    try:
+        files = os.listdir(bios)
+    except OSError:
+        return False, bios
+    for f in files:
+        p = os.path.join(bios, f)
+        try:
+            if os.path.isfile(p) and 4 << 20 <= os.path.getsize(p) <= 8 << 20 and ps2_romdir(p):
+                return True, bios
+        except OSError:
+            pass
+    return False, bios
+
+
+def ps2_romdir(path):
+    # The ROMDIR, 16-byte entries (name[10], extinfo size, file size) from a "RESET" one on,
+    # sits near the start of every PS2 BIOS (0x2700); ARMSX2 reads the whole file for it.
+    with open(path, "rb") as f:
+        data = f.read(0x40000)
+    i = data.find(b"RESET\0")
+    while i >= 0 and i % 16:
+        i = data.find(b"RESET\0", i + 1)
+    if i < 0:
+        return False
+    for o in range(i, len(data) - 15, 16):
+        n = data[o:o + 10].split(b"\0")[0]
+        if not n:
+            break
+        if n == b"ROMVER":
+            return True
+    return False
+
+
+# ---------------------------------------------------------------- the check
+
+def ra_system_dir(emulator, romdir):
+    # RetroArch's system_directory; "default" (or none) is the game's own folder
+    v = None
+    try:
+        for line in open(ra_dir(emulator, "retroarch.cfg") + "/retroarch.cfg", errors="replace"):
+            k, eq, val = line.partition("=")
+            if eq and k.strip() == "system_directory":
+                v = val.strip().strip('"')
+    except OSError:
+        pass
+    if not v or v == "default":
+        return romdir
+    if v.startswith("~"):
+        v = "/home/ark" + v[1:]
+    return v
+
+
+def missing(front, core, rom, core_path=None):
+    """(the BIOS folder, [(need, (found, wanted) or None)]) for what the game lacks; the pair
+    is a file whose name differs from a wanted one only in upper/lower case."""
+    g = Game(front, core, rom, core_path)
+    if front == "pcsx2":
+        ok, bios = ps2_bios_ok(g.root)
+        return bios, [] if ok else [(need("a PS2 BIOS: the dump of a PS2 console's, any name, 4 MB",
+                                          "BIOS PS2: дамп BIOS консоли PS2, с любым именем, 4 МБ",
+                                          "SCPH-xxxxx.bin"), None)]
+    if front in ("retroarch", "retroarch32", "retroarch-next"):
+        bios = ra_system_dir(front, g.romdir)
+    else:
+        bios = "/%s/bios" % g.root      # retrorun's -d, Mednafen's firmware, flycast's data folder
+    out = []
+    for r in RULES:
+        if r["front"] is not None and front not in r["front"]:
+            continue
+        if r["cores"] is not None and core not in r["cores"]:
+            continue
+        if r["dirs"] is not None and g.sysdir not in r["dirs"]:
+            continue
+        if r["exts"] is not None and not g.exts() & r["exts"]:
+            continue
+        if r["when"] is not None and not r["when"](g):
+            continue
+        for n in (r["needs"](g, bios) if callable(r["needs"]) else r["needs"]):
+            paths = [os.path.join(g.romdir, a[5:]) if a.startswith("@rom/") else os.path.join(bios, a)
+                     for a in n["alts"]]
+            if any(os.path.exists(p) for p in paths):
+                continue
+            out.append((n, twin(paths)))
+    return bios, out
+
+
+def twin(paths):
+    # A file that differs from a wanted name only in upper/lower case: exFAT finds it, ext4 (the
+    # ROMs folder of a card shared with GammaOS) does not, so it is worth saying.
+    for p in paths:
+        d, n = os.path.split(p)
+        try:
+            for f in os.listdir(d):
+                if f.lower() == n.lower() and f != n:
+                    return os.path.join(d, f), p
+        except OSError:
+            pass
+    return None
+
+
+# ---------------------------------------------------------------- the screen
+
+def lang():
+    if os.environ.get("DARKOS_LANG"):
+        return os.environ["DARKOS_LANG"]
+    try:
+        with open("/home/ark/.emulationstation/es_settings.cfg", errors="replace") as f:
+            if '<string name="Language" value="ru"' in f.read():
+                return "ru"
+    except OSError:
+        pass
+    return "en"
+
+
+def shared_card():
+    # A card shared with GammaOS: /roms is the ROMs folder of Android's internal storage
+    try:
+        for line in open("/proc/self/mountinfo"):
+            f = line.split()
+            if f[4] == "/roms":
+                return f[3].endswith("/ROMs")
+    except (OSError, IndexError):
+        pass
+    return False
+
+
+T = {
+    "back": ("dArkOS: BIOS check", "dArkOS: проверка BIOS"),
+    "title": ("BIOS files missing", "Нет файлов BIOS"),
+    "head": ('"%s" (%s) needs these BIOS files to start, and they are not in %s:',
+             "Для запуска «%s» (%s) нужны эти файлы BIOS, а в %s их нет:"),
+    "found": ("there is %s: rename it to %s", "есть %s: переименуйте его в %s"),
+    "where": ("Copy them into the bios folder of the games partition: EASYROMS/bios with the card "
+              "in a PC, ROMs/bios over USB file transfer. The names must match exactly, upper and "
+              "lower case included.",
+              "Скопируйте их в папку bios раздела с играми: EASYROMS/bios, если карта в ПК, или "
+              "ROMs/bios по USB. Имена должны совпадать в точности, вплоть до больших и маленьких букв."),
+    "where2": ("Copy them into ROMs/bios: in the internal storage under GammaOS, or over USB file "
+               "transfer. The names must match exactly, upper and lower case included.",
+               "Скопируйте их в ROMs/bios: во внутреннюю память под GammaOS или по USB. Имена "
+               "должны совпадать в точности, вплоть до больших и маленьких букв."),
+    "off": ("Games start without this check after Options > Advanced > Disable BIOS Check.",
+            "Чтобы игры запускались без этой проверки: Options > Advanced > Disable BIOS Check."),
+    "goback": ("Back", "Назад"),
+    "anyway": ("Start anyway", "Всё равно запустить"),
+    "ftitle": ("The game did not start", "Игра не запустилась"),
+    "fhead": ('RetroArch could not start "%s" with %s. Its log says:',
+              "RetroArch не смог запустить «%s» в ядре %s. В его журнале:"),
+    "fwhy": ("The usual causes: a BIOS file missing or not the right one, a damaged game file, "
+             "or a game this core does not run.",
+             "Обычно причина в том, что нет нужного файла BIOS или он не тот, файл игры повреждён "
+             "или это ядро такую игру не запускает."),
+    "foff": ("Options > Advanced > Disable BIOS Check turns these messages off.",
+             "Выключить эти сообщения: Options > Advanced > Disable BIOS Check."),
+}
+
+
+def t(key):
+    return T[key][1 if lang() == "ru" else 0]
+
+
+def height(text, extra):
+    import textwrap
+    n = sum(max(1, len(textwrap.wrap(line, W - 6))) for line in text.split("\n"))
+    return min(n + extra, 30)
+
+
+def run_quiet(*cmd):
+    import subprocess
+    subprocess.run(list(cmd), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def screen(title, text, yes=None, no=None):
+    """A dialog box on the console (tty1), the pad turned into keys by gptokeyb. True for the
+    yes (or OK) button. None when no box could be shown: the caller starts the game then."""
+    import subprocess
+    import time
+    tty = "/dev/tty1"
+    env = dict(os.environ, TERM="linux", LC_ALL="C.UTF-8", DIALOGRC="/opt/inttools/noshadows.dialogrc")
+    run_quiet("sudo", "chmod", "666", tty, "/dev/uinput")
+    # a port stopped before its end leaves the console unbound: the box would be drawn on nothing
+    try:
+        with open("/sys/class/vtconsole/vtcon1/bind") as f:
+            if f.read().strip() == "0":
+                run_quiet("sudo", "sh", "-c", "echo 1 > /sys/class/vtconsole/vtcon1/bind")
+    except OSError:
+        pass
+    run_quiet("sudo", "setfont", "/usr/share/consolefonts/Uni2-TerminusBold22x11.psf.gz")
+    pad = None
+    try:
+        with open(tty, "w") as f:
+            f.write("\033c\033%G\033[?25l")   # cleared, UTF-8 for the Russian text, no cursor
+        if subprocess.run(["pgrep", "-f", "gptokeyb"], stdout=subprocess.DEVNULL).returncode != 0:
+            pad = subprocess.Popen(["/opt/inttools/gptokeyb", "-1", "dialog", "-c", "/opt/inttools/keys.gptk"],
+                                   env=dict(env, SDL_GAMECONTROLLERCONFIG_FILE="/opt/inttools/gamecontrollerdb.txt"),
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cmd = ["dialog", "--backtitle", t("back"), "--title", title, "--no-collapse"]
+        if yes:
+            cmd += ["--yes-label", yes, "--no-label", no, "--yesno", text, str(height(text, 6)), str(W)]
+        else:
+            cmd += ["--ok-label", "OK", "--msgbox", text, str(height(text, 6)), str(W)]
+        start = time.monotonic()
+        with open(tty, "r") as i, open(tty, "w") as o:
+            rc = subprocess.run(cmd, stdin=i, stdout=o, env=env).returncode
+        if rc not in (0, 1) and time.monotonic() - start < 1:
+            return None     # dialog could not run at all
+        return rc == 0
+    except OSError:
+        return None
+    finally:
+        if pad:
+            pad.kill()
+            pad.wait()
+        try:
+            with open(tty, "w") as f:
+                f.write("\033c")
+        except OSError:
+            pass
+        run_quiet("sudo", "setfont", "/usr/share/consolefonts/Lat7-Terminus20x10.psf.gz")
+
+
+def report(front, core, rom, bios, lacks):
+    lines = []
+    ru = lang() == "ru"
+    for n, tw in lacks[:8]:
+        lines.append("  - " + n["show"])
+        lines.append("    " + n["ru" if ru else "en"])
+        if tw:
+            lines.append("    " + t("found") % (os.path.basename(tw[0]), os.path.basename(tw[1])))
+    if len(lacks) > 8:
+        lines.append("  ... +%d" % (len(lacks) - 8))
+    who = core if core and core != "-" else {"pcsx2": "ARMSX2", "mednafen": "Mednafen", "flycast": "Flycast"}.get(front, front)
+    text = "\n".join([t("head") % (os.path.basename(rom), who, bios), ""] + lines +
+                     ["", t("where2") if shared_card() else t("where"), "", t("off")])
+    return screen(t("title"), text, t("goback"), t("anyway"))
+
+
+def check(front, core, rom, core_path=None):
+    """0: start the game; 1: do not."""
+    if not enabled() or not rom or not os.path.exists(rom):
+        return 0
+    try:
+        bios, lacks = missing(front, core, rom, core_path)
+    except Exception:
+        return 0
+    if not lacks:
+        return 0
+    return 1 if report(front, core, rom, bios, lacks) else 0
+
+
+def ra_args(args):
+    # (core, its path, game) from RetroArch's arguments as ES gives them: -L <core>_libretro.so <game>
+    path = rom = None
+    for i, a in enumerate(args):
+        if a in ("-L", "--libretro") and i + 1 < len(args):
+            path = args[i + 1]
+        elif a.startswith("--libretro="):
+            path = a.split("=", 1)[1]
+    if path and args and not args[-1].startswith("-") and args[-1] != path:
+        rom = args[-1]
+    core = None
+    if path:
+        core = os.path.basename(path)
+        core = core[:-len("_libretro.so")] if core.endswith("_libretro.so") else os.path.splitext(core)[0]
+    return core, path, rom
+
+
+def failed(front, log, args):
+    import re
+    core, _, rom = ra_args(args)
+    try:
+        with open(log, errors="replace") as f:
+            text = f.read()
+    except OSError:
+        return
+    text = re.sub(r"\x1b\[[0-9;]*m", "", text)
+    lines, seen = [], set()
+    for line in text.splitlines():
+        line = line.strip()
+        if "ERROR]" in line and line not in seen:
+            seen.add(line)
+            lines.append(line)
+    if not lines:
+        lines = [x.strip() for x in text.splitlines() if x.strip()][-5:]
+    msg = "\n".join([t("fhead") % (os.path.basename(rom or "?"), core or front), ""] + lines[-8:] +
+                    ["", t("fwhy"), "", t("foff")])
+    screen(t("ftitle"), msg)
+
+
+def enabled():
+    return not os.path.exists(FLAG)
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else ""
+    if cmd == "enabled":
+        return 0 if enabled() else 1
+    if cmd == "ra" and len(argv) >= 3:
+        core, path, rom = ra_args(argv[3:])
+        return check(argv[2], core, rom, path) if core and rom else 0
+    if cmd == "run" and len(argv) >= 5:
+        return check(argv[2], argv[3], argv[4])
+    if cmd == "failed" and len(argv) >= 4:
+        if enabled():
+            failed(argv[2], argv[3], argv[4:])
+        return 0
+    if cmd == "missing" and len(argv) >= 5:
+        bios, lacks = missing(argv[2], argv[3], argv[4])
+        for n, tw in lacks:
+            print("%s\t%s\t%s%s" % (bios, n["show"], n["en"], "\t(there is %s)" % tw[0] if tw else ""))
+        return 1 if lacks else 0
+    sys.exit("darkos-bios-check: ra|run|failed|missing|enabled, see the head of this file")
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv))
+    except SystemExit:
+        raise
+    except BaseException:
+        sys.exit(0)     # a failure here must not keep the game from starting

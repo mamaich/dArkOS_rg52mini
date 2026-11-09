@@ -6,6 +6,13 @@ dialog --clear
 
 emulator=$(basename "$0")
 
+# dArkOS RG52 Mini: the BIOS files the core cannot start the game without, listed on the screen
+# before RetroArch starts (darkos-bios-check; Options > Advanced > Disable BIOS Check turns it off)
+bioscheck=/usr/local/bin/darkos-bios-check
+if [ -x "$bioscheck" ] && ! "$bioscheck" ra "$emulator" "$@"; then
+  exit 0
+fi
+
 . /usr/local/bin/buttonmon.sh
 
 Test_Button_X
@@ -70,5 +77,17 @@ else
   # retroarch.cfg.ext does (ra-extpads.py; only in the RG52 Mini's image)
   ext=""
   [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "/home/ark/.config/${emulator}")
+  start=$SECONDS
   /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} "$@"
+  rc=$?
+  # Status 1 within seconds: RetroArch could not load the game (a BIOS the check does not know of,
+  # a damaged file). Started again with its log on, it says why on the screen rather than drop
+  # back to ES in silence; a game that does load this time just runs.
+  if [ $rc -eq 1 ] && [ $((SECONDS - start)) -lt 10 ] && [ -x "$bioscheck" ] && "$bioscheck" enabled; then
+    log=$(mktemp /tmp/retroarch-failed.XXXXXX)
+    /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} --verbose "$@" 2>&1 | tail -n 300 > "$log"
+    [ "${PIPESTATUS[0]}" -eq 1 ] && "$bioscheck" failed "$emulator" "$log" "$@"
+    rm -f "$log"
+  fi
+  exit $rc
 fi

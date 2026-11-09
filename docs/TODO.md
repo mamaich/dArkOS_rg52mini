@@ -302,7 +302,10 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
   image's, a 1.4 file without retroarch-next, a second run changing nothing).
 
 - **A missing BIOS shows as "the emulator does not work"** (the owner,
-  2026-11-02, to do after Guitar Hero). Some emulators, started without the
+  2026-11-02, to do after Guitar Hero). **Done for 1.9** (2026-11-09, the
+  owner: "да, возьмись", with a switch to turn it off): `darkos-bios-check`
+  before the start, RetroArch's log after a failed one (KNOWN-ISSUES, "BIOS
+  check before a game starts"). Some emulators, started without the
   BIOS they need, write "BIOS not found" to their log and quit with nothing on
   the screen; the user is back in ES with no idea why. The BIOS cannot ship in
   the image (copyright). Ideas: when a game ends within a few seconds of its

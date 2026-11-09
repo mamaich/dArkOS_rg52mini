@@ -276,6 +276,16 @@ In master for 1.9, not released yet (VERSION says 1.9):
   enabled and the picture 16:9 across the whole panel; No-Interlacing enabled
   from the game's settings; the speed the same in all three (KNOWN-ISSUES.md).
 
+- Before a game starts, the BIOS files its emulator cannot start it without
+  are listed on the screen with the folder they go to, instead of a silent
+  return to ES; when RetroArch still fails at once, it starts again with its
+  log on and its error lines are shown (`darkos-bios-check`, KNOWN-ISSUES.md
+  "BIOS check before a game starts"). The rules come from the cores' sources,
+  not their .info lists. Options -> Advanced -> Disable BIOS Check turns both
+  off. Checked on 1.8 with an empty folder over /roms/bios (2026-11-09): Sega
+  CD, PS2 (in Russian), Atomiswave and Lynx boxes, the second start's box with
+  the core's own line, no box with the owner's BIOS, the switch both ways.
+
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
 Yabasanshiro was in the same state until 2026-10-24, when the one game tried

@@ -3024,3 +3024,95 @@ ES is unchanged (TODO.md).
   in all three. A widescreen patch draws more of the scene, so a heavy game can
   run slower with it; PCSX2 warns that these patches "can cause issues".
 
+## BIOS check before a game starts — in master for 1.9
+
+* **What it was.** Most emulators started without a BIOS they need quit at
+  once and say nothing on the screen. RetroArch exits with status 1 and logs
+  nothing without `--verbose` (with it, Genesis Plus GX says `Unable to open
+  CD BIOS: "/roms/bios/bios_CD_U.bin"`); ARMSX2 writes "VMManager::Initialize
+  failed" to its emulog.txt. The player is back in ES with no word of why (TODO,
+  the owner 2026-11-02). Some cores load anyway and stay on a black or error
+  screen: FreeIntv, Mini vMac, Beetle Lynx, PX68k, fMSX, blueMSX without its
+  machine, the image's Opera. The BIOS cannot ship in the image (copyright).
+* **What happens now** (`scripts/rk3562/darkos-bios-check`). Before a game
+  starts, the retroarch, retroarch32 and retroarch-next wrappers and the
+  ARMSX2, Mednafen, NAOMI and Atomiswave launchers ask it for the files the
+  chosen core or emulator cannot start the game without. When one is missing, a
+  box lists them, says what each is and where they go: EASYROMS/bios with the
+  card in a PC, ROMs/bios over USB file transfer; on a card shared with GammaOS,
+  ROMs/bios in the internal storage. Back (the default) returns to ES, Start
+  anyway starts the game. A file whose name differs only in upper/lower case is
+  named as well ("there is Bios_cd_u.BIN: rename it to bios_CD_U.bin"): exFAT
+  finds it, the ext4 ROMs folder of a shared card does not. The text is Russian
+  when ES is.
+* **When RetroArch quits anyway** with status 1 within 10 s (a BIOS of another
+  region or a bad dump, a damaged game file, a core the check knows nothing of),
+  the wrapper starts it again with `--verbose`, keeps the last 300 lines of its
+  output and shows their ERROR lines. A game that loads on the second try just
+  runs.
+* **What it asks for.** Only what makes a load fail or leaves the game unable
+  to run, read from each core's source on 2026-11-09 and, where the image ships
+  an older prebuilt core, from that core's commit. The firmware lists of the
+  cores' .info files are no guide: FreeChaF has HLE yet lists all three of its
+  files as required, O2EM, fMSX and blueMSX list every model's files,
+  Gearcoleco misses names it takes. Where the right file depends on the disc's
+  region, any one passes, and a failed start then names the right one. Where
+  it depends on a core option, the value RetroArch gives the core is read
+  (retroarch-core-options.cfg, then the core's, folder's and game's .opt).
+
+  | System and core | Files (in /roms/bios) | When |
+  |---|---|---|
+  | Sega CD: Genesis Plus GX, PicoDrive | bios_CD_U.bin, bios_CD_E.bin or bios_CD_J.bin (PicoDrive's other names too) | a disc; with PicoDrive not an MSU-MD one (a cartridge of the disc's name beside it) |
+  | PC Engine CD: Beetle PCE Fast, SuperGrafx, PCE; Mednafen | syscard3.pce, or the card the core option (mednafen.cfg) names | cue, ccd, chd, toc, m3u |
+  | FDS: Nestopia, FCEUmm; Mednafen | disksys.rom | the fds folder, a .fds, a zip with one |
+  | Neo Geo: FBNeo | neogeo.zip (or in bios/fbneo, or the game's folder) | the game's zip without the four BIOS ROMs (full non-merged sets carry them) |
+  | Neo Geo CD: FBNeo | neocdz.zip or neogeo.zip, the same places | |
+  | Neo Geo: Geolith | aes.zip (its default AES) or neogeo.zip; neocdz.zip for discs | .neo; chd, cue |
+  | NAOMI, Atomiswave: flycast (RetroArch, standalone, retrorun) | dc/naomi.zip (naomi2.zip, a few games' own), dc/awbios.zip, or in the game's folder | the game's zip without the BIOS ROMs |
+  | 3DO: Opera | any 3DO BIOS | builds without the built-in Opera Boot (the image's is of 2024-10) |
+  | PS1: SwanStation, DuckStation | any file of a PS1 BIOS's size | SwanStation without its built-in OpenBIOS (the image's is of 2024-06); PCSX ReARMed has HLE |
+  | PS2: ARMSX2 | a PS2 BIOS under any name: 4 to 8 MiB with a ROMDIR, as ARMSX2 finds one | |
+  | Saturn: YabaSanshiro | saturn_bios.bin, sega_101.bin or mpr-17933.bin | even with its HLE option on; Yabause does without |
+  | Intellivision: FreeIntv | exec.bin and grom.bin | |
+  | PC-FX: Beetle PC-FX | pcfx.rom | |
+  | Lynx: Beetle Lynx; Mednafen | lynxboot.img | a cartridge, not BS93 homebrew |
+  | Atari ST: Hatari | tos.img, or the TOS its option names | hatariB only when its option names a file |
+  | Mac II: Mini vMac | MacII.ROM or MacIIx.ROM | |
+  | X68000: PX68k | keropi/iplrom.dat (or another IPL), keropi/cgrom.dat | |
+  | CD-i: SAME CDi | same_cdi/bios/cdimono1.zip (or 7z, a folder, the game's folder) | |
+  | Palm: Mu | the ROM of the model in its options (palmos41-en-m515.rom) | |
+  | Odyssey 2, Videopac: O2EM | the BIOS its option names (o2rom.bin) | |
+  | ColecoVision: Gearcoleco | colecovision.rom or coleco.rom | |
+  | MSX, ColecoVision: blueMSX | Machines/<the machine>/config.ini and the ROMs it lists | the image's build has no C-BIOS fallback |
+  | MSX: fMSX | the model's ROMs (MSX2P.ROM and MSX2PEXT.ROM by default); DISK.ROM | DISK.ROM for disks |
+  | Amiga CD32, CDTV: PUAE, UAE4ARM | the CD32 (CDTV) Kickstart and its extension ROM | a disc, with the default model options |
+  | 64DD: parallel_n64 | 64DD_IPL.bin | .ndd, builds without the built-in IPL |
+  | Super Cassette Vision: EmuSCV | upd7801g.s01 (or its other names) | |
+  | Sufami Turbo, Satellaview: snes9x | STBIOS.bin, BS-X.bin (or in the game's folder) | a Sufami Turbo cartridge; .bs |
+  | Enterprise: ep128emu | ep128emu/roms/ide12.rom | .vhd |
+
+  Not asked for, the cores do without: gpSP, NeoCD (the image's has the
+  built-in BIOS), FreeChaF, PUAE and UAE4ARM for floppies and hard disks
+  (AROS), Atari800 and a5200 (Altirra), X1, NP2kai, Yabause, flycast's
+  Dreamcast (Dreamcast's launcher is not hooked), PCSX ReARMed.
+* **The switch.** Options -> Advanced -> Disable BIOS Check (a flag,
+  `/home/ark/.config/.NOBIOSCHECK`) turns off the check and the second start
+  both; Enable BIOS Check turns them back on. On by default.
+* **Cost.** About 0.1 s a game start on the RG52 Mini: python3 -IS with only
+  os and sys loaded (re, subprocess when a box is shown), zips read by its own
+  few lines instead of zipfile, which alone took 80 ms to import.
+* **Checked** on 1.8 (the owner's card shared with GammaOS, 2026-11-09), the
+  launchers bound over the image's and an empty folder bound over /roms/bios
+  for the runs that needed one:
+  - 21 core and game pairs on the card: nothing missing with the owner's BIOS,
+    the right files named with the empty folder; Yabause, PCSX ReARMed and the
+    cartridges passed in both. The owner's Neo Geo zips carry the BIOS ROMs:
+    no box for them either way.
+  - Sega CD started as ES does: the box; Back, and nothing started. Start
+    anyway: RetroArch failed, started again, and the second box showed
+    `[libretro ERROR] Unable to open CD BIOS: "/roms/bios/bios_CD_U.bin"`.
+  - PS2 in Russian; Atomiswave on standalone flycast; Lynx in Mednafen: the
+    boxes, and nothing started after Back.
+  - With the owner's BIOS: the Sega CD BIOS screen and ARMSX2's game, no box.
+  - The switch both ways: off, the same start went back to ES in silence as
+    before; on again, the box.

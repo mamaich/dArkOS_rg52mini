@@ -2,6 +2,16 @@
 
 ESUDO=""
 
+# dArkOS RG52 Mini: the BIOS files the game needs (awbios.zip), listed before the
+# emulator starts (darkos-bios-check); the retroarch wrappers check for their own cores
+if [[ $1 != retroarch* ]] && [ -x /usr/local/bin/darkos-bios-check ]; then
+  if [[ $1 == "standalone" ]]; then
+    /usr/local/bin/darkos-bios-check run flycast - "$2" || exit 0
+  else
+    /usr/local/bin/darkos-bios-check run "$1" "$2" "$3" || exit 0
+  fi
+fi
+
 if  [[ $1 == "retroarch" ]]; then
 /usr/local/bin/"$1" -L /home/ark/.config/"$1"/cores/"$2"_libretro.so "$3"
 elif [[ $1 == "retroarch32" ]]; then

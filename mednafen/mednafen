@@ -1,6 +1,11 @@
 #!/bin/bash
 
 export SDL_VIDEO_EGL_DRIVER=libEGL.so
+# dArkOS RG52 Mini: the BIOS files the game needs (a PC Engine CD's System Card, the FDS's
+# disksys.rom, the Lynx's boot ROM), listed before Mednafen starts (darkos-bios-check)
+if [ -x /usr/local/bin/darkos-bios-check ] && ! /usr/local/bin/darkos-bios-check run mednafen - "$3"; then
+  exit 0
+fi
 rootdirectory=$(dirname "$3" | cut -d "/" -f2)
 romsdirectory=$(dirname "$3" | cut -d "/" -f3)
 
