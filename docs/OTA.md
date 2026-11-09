@@ -4,9 +4,13 @@ From 1.1 on, dArkOS for the RG52 Mini updates itself over the network
 (Options → Update), without rewriting the card. 1.0 and earlier have the
 upstream updater, so moving from them to 1.1 means writing the card once.
 The first package over the air, 1.1 → 1.2, was published with 1.2 on
-2026-10-18. Since 1.3 every release comes with a package from each older
-release that has OTA (1.8: from 1.7, 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 and 1.1), so a card
-never needs the releases in between.
+2026-10-18. From 1.3 to 1.8 every release came with a package from each
+older release that has OTA (1.8: from 1.7, 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 and
+1.1). From 1.9 on, a release comes with packages from the two releases before
+it only (1.9: from 1.8 and 1.7; owner, 2026-11-09). The feed keeps every
+package published, and the client takes the newest one for its build, so an
+older card gets there in steps: a card on 1.1 to 1.6 updates to 1.8 by the
+package 1.8 brought, then to 1.9. Each step is one more Update and reboot.
 
 The upstream `Update.sh` is not used on this device. It fetches
 christianhaitian/darkos-updates, whose packages are built for RK3326 and
@@ -229,8 +233,10 @@ may change, so the client checks free space and assumes no sizes.
    Create `<dir>` first: the script fails at the very end, after the three
    minutes of comparing, when it does not exist (TODO.md, "Found while
    testing 1.2").
-   Packages from older releases straight to the new one can be made the same
-   way; the client picks the newest entry for its build. Such a package also
+   Then the same for the release before the previous one (N-2 -> N), and no
+   older: from 1.9 on older cards go through the releases in between (top of
+   this page). The client picks the newest entry for its build. A package
+   from an older release also
    runs the hooks of the releases it skips (`ota/hooks/<version>*.sh` of every
    version after the old one, oldest first), so a hook has to work on any
    later build too. Up to 2026-10-26 make-ota took the new release's hooks
