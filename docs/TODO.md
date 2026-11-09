@@ -104,7 +104,13 @@ it. Confirmed on the device.
   "Unhandled SIGSEGV at pc ..." about one stop in two, under 1.7's retroarch
   as under 1.8's (bound from the OTA snapshot); azahar_libretro.so is the same
   file in both. Not seen while playing; whether a quit from RetroArch's menu
-  does it too is not known yet.
+  does it too is not known yet. 2026-11-09: the stack is the System's
+  destructor at exit() reaching Core::Timing::UnscheduleEvent after timing is
+  gone (KNOWN-ISSUES.md, the Azahar section); upstream has it too, and the
+  owner: wait for their fix, not ours.
+- **Azahar on GLES** works with four patches, at about 26 fps where Vulkan
+  holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
+  rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
 ## Upstream updates for 1.8 (2026-11-07, the owner: "take what you think is needed"; released 2026-11-08)
 

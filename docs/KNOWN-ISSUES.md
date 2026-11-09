@@ -1152,6 +1152,16 @@ The shader cache ID changes, so each game compiles its pipelines once more
 after the update. After 1.7 -> 1.8 the God of War demo runs on it as ES
 starts it.
 
+**Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
+Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
+`citra_resolution_factor` raised through a copy. The title demo, three rounds
+each, the order flipped every round: at 2x Arm's driver 40.5 fps, malisx2 39.9
+(both on vsync's 40 step, 60 x 2/3); at 3x 24.1 against 21.4 (+13% for Arm's).
+The owner's savestate (in a level, two rounds): at 1x both 60; at 2x Arm's 60,
+malisx2 44-46. malisx2 used 2-3 points less CPU of the four cores (13% against
+15-19%). With vsync off the numbers were the same: both drivers present in FIFO
+on this display, so a frame rate under 60 keeps vsync's steps.
+
 **`mali ff320000.gpu: Stride 72 passed to job_submit isn't supported by the
 kernel` in dmesg is harmless.** malisx2 sends one JOB_SUBMIT with 72-byte atoms
 when it opens a kbase context (each start of a game or emulator on it), to
@@ -2401,7 +2411,25 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
 - **Stopped by SIGTERM** (`systemctl stop`, as the test scripts end a game),
   about one stop in two ends in dynarmic's "Unhandled SIGSEGV at pc ...", with
   1.7's retroarch as with 1.8's (2026-11-08; the core is the same file). Not
-  seen while playing; a quit from RetroArch's menu was not tried for it.
+  seen while playing; a quit from RetroArch's menu was not tried for it. The
+  stack (an LD_PRELOAD reporter, 2026-11-09): `exit()` -> `Core::System::~System`
+  -> `~KernelSystem` -> `~ThreadManager` -> `Kernel::Thread::Stop` ->
+  `Core::Timing::UnscheduleEvent` on timing already gone, at address 0x18. Upstream
+  has it too; the owner: wait for their fix.
+- **GLES (RetroArch's gl driver, `citra_graphics_api` OpenGL) did not work at
+  all**: every game crashed at its first draw. Found on 2026-11-09, three causes
+  and a fourth that cost minutes at every start: azahar-nano's async GPU worker
+  drove the GL rasterizer from a thread with no context; vs_data's
+  `depth_scale`/`depth_offset` clash with fs_data's in GLSL ES, so Mali linked
+  no program; RetroArch, sharing the context, rewrote the presenter's vertex
+  array with its own draws (black screen while the game rendered); libmali
+  g29p1 reports no program binary formats, so the precompiled cache was thrown
+  away and every cached shader rebuilt at each start (about 1.4 s a program).
+  With the fixes the picture is right and Super Mario 3D Land runs at about 26
+  fps at 1x where Vulkan holds 60: not playable, so the owner did not take them.
+  They are kept on rk3566_core_builds' branch `parked/azahar-gles` (patches
+  030-033 and the LD_PRELOAD shim the vertex array fix was proven with; 032 as
+  committed is not enough, its commit says why).
 - The core keeps its NAND and SD card in an `Azahar` folder next to the games,
   as RetroArch keeps saves next to them here.
 - Theme: nes-box has no 3ds folder, and ours goes into the theme (both of the
