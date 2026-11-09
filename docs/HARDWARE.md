@@ -247,9 +247,17 @@ defconfig and read as if they were shared, but they are declared in
 its own `MALI_BIFROST_DEVFREQ`, which stays on. Checked before switching
 anything off: nothing outside `drivers/gpu/arm` depends on either driver.
 
-The 32-bit armhf side is GLES 3.2 as well, but from the older `g13p0` blob.
-`build_deps.sh` picks it deliberately: the 32-bit build of g29p1 segfaults
-inside libmali during GL and shader setup (SEGV_ACCERR).
+The 32-bit armhf side is GLES 3.2 as well, but from the older `g13p0` blob
+(`arm_release_ver: g13p0-01eac0, rk_so_ver: 11`), which has no Vulkan.
+`build_deps.sh` picks it deliberately. The 32-bit build of g29p1 crashed in its
+GLSL ES compiler at the first shader:
+- **The cause** is a bug of its own. It reads its RW segment's data 64 KiB below
+  where it lies, in the hole the loader leaves between its segments.
+- **With that hole mapped** (six bytes of its program header, KNOWN-ISSUES
+  "Vulkan for 32-bit programs") it runs, Vulkan included.
+- **GLES on it is slower than g13p0's** (2026-11-09):
+  - Zelda OoT's intro in parallel_n64: 55.7 fps against 59.9;
+  - Crazy Taxi in flycast32: 43.1 against 46.7.
 
 ## A silent RGB bridge used to black the screen
 

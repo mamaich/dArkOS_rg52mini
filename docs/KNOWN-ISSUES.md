@@ -957,14 +957,51 @@ Tested on the device:
 Not done: a program that presents several swapchains in one call gets only
 the first one turned.
 
-**No Vulkan for 32-bit programs.** On this device only 64-bit programs can use
-Vulkan, so the layer is built for aarch64 only.
-- **The Mali driver.** Rockchip ships Vulkan for the Mali-G52 only in its 64-bit
-  libmali. None of the armhf builds exports `vk_icdGetInstanceProcAddr`: g13p0,
-  which the image uses because the 32-bit g29p1 crashes in GL setup
-  (build_deps.sh); g24p0, the newest armhf build in Rockchip's libmali mirror
-  (JeffyCN/mirrors); and g2p0 in `BSP/mali32`. So the armhf Vulkan loader has no
-  driver.
+**Vulkan for 32-bit programs: possible, not in the image.** In the image only
+64-bit programs can use Vulkan, and the layer is built for aarch64 only. What
+2026-11-09 found (the owner: 32-bit Vulkan could serve some ports):
+- **The Mali driver.**
+  - No Vulkan in the old armhf blobs. g13p0, which the image uses
+    (`arm_release_ver: g13p0-01eac0, rk_so_ver: 11`), and g2p0 in `BSP/mali32`
+    export no `vk_icdGetInstanceProcAddr`.
+  - The armhf g29p1 has Vulkan but crashes. It is in Rockchip's mirror at the
+    commit the 64-bit blob is pinned to (JeffyCN/mirrors 3e59dab3b6, the same
+    g29p1-12eac0 release). It crashes in its GLSL ES compiler at the first
+    shader, and Debian's armhf vulkaninfo crashes on it too.
+  - One cause for both. It reads data of its RW segment 0x10000 below where it
+    lies: in the PROT_NONE hole the dynamic loader leaves between the first
+    PT_LOAD (R E, 64 KiB aligned) and the RW one. It takes the segments for
+    contiguous.
+  - The fix: six bytes of the program header. Growing the first PT_LOAD's
+    p_filesz and p_memsz to the page the RW segment starts in (0x25b7384 to
+    0x25c7000) maps the hole from the file, with the bytes those reads expect.
+    Both then work.
+- **GLES on it is slower than g13p0**, so 32-bit GLES stays on g13p0:
+  - Zelda OoT's intro in parallel_n64: 55.7 fps against 59.9, three runs, the
+    main thread 47% against 41%;
+  - Crazy Taxi in flycast32: 43.1 against 46.7.
+- **Vulkan on it works:**
+  - Debian's armhf vulkaninfo reports Vulkan 1.3.303, conformance 1.4.1.0, and
+    the same 135 device extensions as the 64-bit driver, VK_KHR_display among
+    them.
+  - A test program (`vkdisp`: VK_KHR_display, coloured rectangles that show the
+    orientation, built for both arches) presents at 60 fps.
+  - Without a layer, a 32-bit program gets the portrait 720x1280 panel, and the
+    driver offers only the IDENTITY transform.
+  - With this layer built for armhf (arm-linux-gnueabihf-gcc; its only
+    warning, a `%p` LOG of a 64-bit handle; a manifest with `library_arch` 32),
+    it gets 1280x720. The picture is the one the 64-bit reference shows, by
+    kmsgrab and by the webcam.
+  - g13p0 and g29p1 live in one process without trouble: g13p0 loaded through
+    libgbm, as SDL's KMSDRM loads it, and g29p1 as the Vulkan driver.
+- **Not a test of the driver:** Debian's vkcube 1.4.304 crashes here with
+  `--wsi display` on both arches, inside the loader's
+  vkGetPhysicalDeviceDisplayPropertiesKHR.
+- **What the image would need:**
+  - the fixed g29p1 as a file of its own, the 32-bit Vulkan driver only;
+  - an armhf manifest with `library_arch` 32, and `library_arch` 64 in
+    `rk_vk.json`;
+  - this layer built for armhf too, with its own manifest.
 - **The manifest.** `rk_vk.json` names an aarch64 library by absolute path,
   which fits: `libvulkan_darkos.so`, which loads the aarch64 libmali or
   malisx2 (next section).

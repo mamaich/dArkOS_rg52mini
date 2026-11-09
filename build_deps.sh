@@ -76,8 +76,10 @@ do
   fi
   sudo mkdir -p Arkbuild/usr/lib/${ARCHITECTURE}/
 
-  # 64-bit uses g29p1 (BSP); 32-bit armhf stays on g13p0 from core_builds — the
-  # 32-bit g29p1 blob SIGSEGVs inside libmali during GL/shader setup (SEGV_ACCERR).
+  # 64-bit uses g29p1 (BSP); 32-bit armhf stays on g13p0 from core_builds. The 32-bit
+  # g29p1 crashed in its GLSL ES compiler (it reads 64 KiB below its data, in the hole
+  # between its segments); with that hole mapped it runs, but GLES is slower than on
+  # g13p0 (docs/HARDWARE.md).
   if [ "${whichmali_bsp}" == "true" ] && [ "$FOLDER" == "armhf" ]; then
     MALI_BLOB=libmali-bifrost-g52-g13p0-gbm.so
   else
