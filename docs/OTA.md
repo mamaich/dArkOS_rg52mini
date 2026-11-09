@@ -121,8 +121,9 @@ Not in a package (see `ROOT_EXCLUDE` in `make-ota.py`):
    - the old boot loader;
    - new files removed.
 
-`darkos-ota rollback` does the same later, from the booted new system. Options
-→ Update offers it while the snapshot exists.
+`darkos-ota rollback` does the same later, from the booted new system, except
+for the package databases, which it merges (below). Options → Update offers it
+while the snapshot exists.
 
 ## The package database
 
@@ -144,6 +145,50 @@ the old build's copy the package carries (`hooks/base/`, gzipped; the list is
 
 It runs only on what the client kept, removes the `.ota-new` files it used, and
 logs what it merged. A failure leaves them as kept and does not fail the update.
+
+**On a rollback** (the updater of 1.9 on), the client merges the same files the
+other way instead of putting the old build's back. The old build's alone would
+forget what was installed, removed or upgraded with apt after the update, whose
+files stay as they are. Or it would call a package installed whose files the
+user has removed since. So, entry by entry: what the update changed goes back
+to the old build's, the rest stays as it is on the device.
+
+- **What the update changed** it tells by the databases as the update left
+  them, which the updater keeps in `/var/lib/darkos-ota/after/`. An update that
+  an updater before 1.9 applied has none; then it goes by the `dpkg/info` files
+  in the journal and the merged list (an entry the update changed has its
+  `.md5sums` changed too).
+- **A package that goes back** gets its files and `dpkg/info` from the snapshot
+  where they are missing or differ. Under `etc/`, `home/`, `root/` and
+  `var/lib/`, only missing ones: an edit stays.
+- **An entry that goes away** takes its `dpkg/info` files with it.
+- `darkos-ota rollback --dry-run` prints what would go back and what would stay.
+
+Checked on the console (2026-11-09): the 1.9 test build rolled back to 1.8,
+with 27 packages installed with apt after the update. They stayed in dpkg's
+list. The three packages the update had changed (it had removed two and
+upgraded one) came back as they were in 1.8. `dpkg --audit` and `dpkg -V`
+found nothing.
+
+## More than one update in a row
+
+From 1.9 on a release brings packages from the two releases before it only
+(top of this page), so an older card gets to the newest in steps.
+
+- `darkos-ota check` adds `after` to the entry it prints: the versions that
+  follow it, one more update each, read from the feed the same way (the newest
+  package for each build).
+- `darkos-ota next` says what follows an update just applied (with none
+  pending, this build): a package for it in the update folders, else the feed,
+  with a 15-second wait for the network.
+- Options → Update says both. Before installing: "This is update 1 of 2:
+  dArkOS 1.10 comes after it". After: "Another update follows: dArkOS 1.10.
+  After the restart, open Options > Update again."
+
+Checked on the console (2026-11-09) with a test feed: the real 1.8 → 1.9
+package and a made-up 1.9 → 1.10 one. Update showed both lines, installed 1.9
+and restarted. `rollback --dry-run` then told what the update had changed by
+its record: 3 entries would go back, none kept.
 
 ## Quick Mode
 

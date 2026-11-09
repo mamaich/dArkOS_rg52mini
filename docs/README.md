@@ -306,6 +306,16 @@ In master for 1.9, not released yet (VERSION says 1.9):
   loader in both, ES's video previews with and without the file, 300 frames of
   H.264 decoded by the 32-bit libraries (KNOWN-ISSUES.md).
 
+- Options -> Update says when another update follows the one it installs: from
+  1.9 a release brings packages from the two releases before it only, and an
+  older card updates in steps (`darkos-ota check` lists what follows, `darkos-ota
+  next`). A rollback merges the package database instead of putting the old
+  one back: what was installed, removed or upgraded with apt after the update
+  stays as it is, and what the update changed goes back to the old build's,
+  files included. Checked on the console (2026-11-09): a rollback from the 1.9
+  test build to 1.8 with 27 packages installed after the update, then 1.9 again
+  through the menu from a test feed (OTA.md).
+
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
 Yabasanshiro was in the same state until 2026-10-24, when the one game tried

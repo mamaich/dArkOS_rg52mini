@@ -37,14 +37,29 @@ Run() {
   return ${PIPESTATUS[0]}
 }
 
+# " (N more updates)" for a list of versions longer than one
+More() {
+  local n
+  n=$(wc -w <<< "$1")
+  [ "$n" -gt 1 ] && printf " (%d more updates)" "$n"
+}
+
 Apply() {
-  # $1: what to show, rest: darkos-ota arguments
-  local what="$1"; shift
+  # $1: what to show, $2: a note for the question (or ""), rest: darkos-ota arguments
+  local what="$1" note="$2" next after=""
+  shift 2
   dialog --clear --title "dArkOS update" --yes-label "Update" --no-label "Cancel" \
-    --yesno "\nInstall $what?\n\nThe update cannot be stopped once started. Keep the device on (or on the charger) until it says it is done." \
+    --yesno "\nInstall $what?$note\n\nThe update cannot be stopped once started. Keep the device on (or on the charger) until it says it is done." \
     $height $width 2>&1 > /dev/tty1 || return
   if Run "$@"; then
-    Msg "dArkOS update" "$what is installed. The device will now restart."
+    # From 1.9 on a release brings packages from the two releases before it
+    # only: an older build gets there in steps. Another one after this (in the
+    # update folder, else in the feed) is said here.
+    next=$(sudo /usr/local/sbin/darkos-ota next 2>/dev/null | tail -n 1)
+    if [ -n "$next" ] && [ "$next" != "none" ]; then
+      after="\n\nAnother update follows: dArkOS ${next##* }$(More "$next"). After the restart, open Options > Update again."
+    fi
+    Msg "dArkOS update" "$what is installed. The device will now restart.$after"
     sudo reboot
     exit 0
   fi
@@ -80,7 +95,7 @@ Check() {
     local file ver
     file=$(echo "$pkgs" | tail -n 1 | cut -f1)
     ver=$(echo "$pkgs" | tail -n 1 | cut -f2)
-    Apply "dArkOS $ver from $(basename "$file")" install "$file"
+    Apply "dArkOS $ver from $(basename "$file")" "" install "$file"
     return
   fi
   Problems "$cur"
@@ -91,10 +106,15 @@ Check() {
     none)
       Msg "dArkOS update" "dArkOS $cur (build $build) is up to date." ;;
     \{*)
-      local ver size
+      local ver size steps last note=""
       ver=$(echo "$entry" | jq -r .version)
       size=$(( $(echo "$entry" | jq -r .size) / 1048576 ))
-      Apply "dArkOS $ver (download $size MiB)" update ;;
+      steps=$(echo "$entry" | jq -r '(.after // []) | length')
+      last=$(echo "$entry" | jq -r '(.after // []) | last // empty')
+      if [ "${steps:-0}" -gt 0 ]; then
+        note="\n\nThis is update 1 of $((steps + 1)): dArkOS $last comes after it."
+      fi
+      Apply "dArkOS $ver (download $size MiB)" "$note" update ;;
     *)
       Msg "dArkOS update" "Could not check for updates. Is Wi-Fi connected?\n\n$(LastError)" ;;
   esac

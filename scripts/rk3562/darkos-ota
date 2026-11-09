@@ -14,7 +14,9 @@
 #
 # Before the root filesystem is touched a read-only btrfs snapshot of it is
 # taken, and the boot files about to change are copied aside; a failure while
-# applying puts everything back, and "rollback" does the same after a reboot.
+# applying puts everything back, and "rollback" does the same after a reboot,
+# merging the package databases rather than putting them back (what was
+# installed or removed with apt since the update stays as it is).
 #
 # docs/OTA.md describes the format and the release procedure.
 
@@ -38,6 +40,13 @@ STATE_DIR = "/var/lib/darkos-ota"
 WORK_DIR = "/var/cache/darkos-ota"
 LOG_FILE = STATE_DIR + "/ota.log"
 MERGED_LIST = STATE_DIR + "/merged"
+# The package databases. An update keeps them as it left them (AFTER_DIR), and a
+# rollback merges them with the old build's instead of putting those back
+# (rollback_packages).
+DPKG_DBS = [("var/lib/dpkg/status", "stanzas"), ("var/lib/apt/extended_states", "stanzas"),
+            ("var/lib/dpkg/triggers/File", "lines")]
+DPKG_INFO = "var/lib/dpkg/info"
+AFTER_DIR = STATE_DIR + "/after"
 LOCAL_DIRS = ["/roms/update", "/roms/tools/update"]
 SNAP_PREFIX = "/.ota-snapshot-"
 DEFAULT_FEED = ("https://raw.githubusercontent.com/mamaich/dArkOS_rg52mini/"
@@ -194,21 +203,68 @@ def fetch(url, timeout=60):
         return r.read()
 
 
-def check(feed=None):
-    """The newest feed entry that applies to this build, or None."""
+def feed_entries(feed=None, timeout=60):
+    """The feed's packages for this device."""
     rel = release()
-    url = feed_url(feed)
-    data = json.loads(fetch(url).decode())
-    cands = [e for e in data.get("response", [])
-             if e.get("from_build_id") == rel["BUILD_ID"]
-             and e.get("device", "rg52mini") == rel.get("DEVICE", "rg52mini")]
+    data = json.loads(fetch(feed_url(feed), timeout).decode())
+    return [e for e in data.get("response", [])
+            if e.get("device", "rg52mini") == rel.get("DEVICE", "rg52mini")]
+
+
+def newest_from(entries, build_id):
+    """The newest package that updates build_id, or None."""
+    cands = [e for e in entries if e.get("from_build_id") == build_id]
     if not cands:
         return None
     return max(cands, key=lambda e: e.get("build_id", ""))
 
 
-def local_packages():
-    rel = release()
+def steps_after(entries, build_id):
+    """The versions the feed leads to from build_id, one package at a time,
+    the newest each time. From 1.9 on a release brings packages from the two
+    releases before it only, so an older build gets there in steps."""
+    out, seen = [], {build_id}
+    while len(out) < 30:
+        e = newest_from(entries, build_id)
+        if not e or e.get("build_id") in seen:
+            break
+        out.append(e.get("version", "?"))
+        build_id = e.get("build_id")
+        seen.add(build_id)
+    return out
+
+
+def check(feed=None):
+    """The newest feed entry that applies to this build, or None. Its "after"
+    lists the versions that follow it, one more update each."""
+    entries = feed_entries(feed)
+    e = newest_from(entries, release()["BUILD_ID"])
+    if not e:
+        return None
+    return dict(e, after=steps_after(entries, e.get("build_id")))
+
+
+def next_steps(feed=None, build_id=None):
+    """What follows an update just applied (with none pending, this build): a
+    package for it in the update folders, else the versions the feed leads to.
+    The feed gets a short wait; without the network the answer is none."""
+    if build_id is None:
+        st = load_state()
+        build_id = st.get("to_build_id") if st.get("status") == "applied" \
+            else release()["BUILD_ID"]
+    loc = local_packages(build_id)
+    if loc:
+        return [max(loc, key=lambda x: x[1].get("build_id", ""))[1].get("version", "?")]
+    try:
+        return steps_after(feed_entries(feed, timeout=15), build_id)
+    except Exception:
+        return []
+
+
+def local_packages(build_id=None):
+    """Packages in the update folders for this build (or build_id)."""
+    if build_id is None:
+        build_id = release()["BUILD_ID"]
     found = []
     for d in LOCAL_DIRS:
         if not os.path.isdir(d):
@@ -221,7 +277,7 @@ def local_packages():
                 m = read_manifest(p)
             except Exception:
                 continue
-            if m.get("from_build_id") == rel["BUILD_ID"]:
+            if m.get("from_build_id") == build_id:
                 found.append((p, m))
     return found
 
@@ -660,6 +716,7 @@ def install(pkg, assume_yes=False):
     log("snapshot " + snap)
     if os.path.exists(MERGED_LIST):
         os.unlink(MERGED_LIST)
+    shutil.rmtree(AFTER_DIR, ignore_errors=True)
     log("checking the package")
     try:
         verify_payload(pkg, m, stage)
@@ -728,6 +785,10 @@ def install(pkg, assume_yes=False):
         save_state(state)
         raise OtaError("the update failed and was undone: %s" % ex)
 
+    try:
+        save_after()
+    except OSError as ex:
+        log("could not keep the package database as written: %s" % ex)
     state["status"] = "applied"
     save_state(state)
     shutil.rmtree(stage, ignore_errors=True)
@@ -735,12 +796,248 @@ def install(pkg, assume_yes=False):
     return m
 
 
-def cmd_rollback():
+# ---------------------------------------------------------------- rollback: packages
+
+def read_text(path):
+    try:
+        with open(path, encoding="utf-8", errors="surrogateescape") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+def write_text(path, text):
+    """In place of path, with its owner and mode."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        st = None
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), ".ota-tmp." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8", errors="surrogateescape") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    if st:
+        os.chown(tmp, st.st_uid, st.st_gid)
+        os.chmod(tmp, st.st_mode & 0o7777)
+    os.replace(tmp, path)
+
+
+def stanzas(text):
+    """dpkg's or apt's database as {(Package, Architecture): entry}, in order."""
+    out = {}
+    for s in text.split("\n\n"):
+        s = s.strip("\n")
+        if not s:
+            continue
+        f = dict(ln.split(":", 1) for ln in s.split("\n")
+                 if ln[:1] not in (" ", "\t") and ":" in ln)
+        if "Package" in f:
+            out[(f["Package"].strip(), f.get("Architecture", "").strip())] = s
+    return out
+
+
+def field(entry, name):
+    for ln in (entry or "").split("\n"):
+        if ln.startswith(name + ":"):
+            return ln.split(":", 1)[1].strip()
+    return None
+
+
+def info_stem(name):
+    """The package a dpkg/info file is of, as dpkg names it there (pkg or
+    pkg:arch); None for anything else."""
+    if name.endswith(".ota-new"):
+        name = name[:-len(".ota-new")]
+    return name.rsplit(".", 1)[0] if "." in name else None
+
+
+def save_after():
+    """The package databases as the update left them: a rollback tells by them
+    what the update changed."""
+    shutil.rmtree(AFTER_DIR, ignore_errors=True)
+    for rel, _ in DPKG_DBS:
+        if os.path.isfile("/" + rel):
+            dst = os.path.join(AFTER_DIR, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2("/" + rel, dst)
+
+
+def update_changed(state, old_status, after_status):
+    """Which entries the update changed, as (by entry, by package name, how):
+    by the database it left (AFTER_DIR), or, for an update an updater before
+    1.9 applied, which kept none, by the dpkg/info files in its journal and the
+    merged list (an entry the update changed has its .md5sums changed too)."""
+    if after_status is not None:
+        O, A = stanzas(old_status), stanzas(after_status)
+        keys = {k for k in set(O) | set(A) if O.get(k) != A.get(k)}
+        names = {k[0] for k in keys}
+        return (lambda k: k in keys), (lambda n: n in names), "by the update's record"
+    try:
+        paths = [p for p in open(MERGED_LIST).read().split("\n") if p]
+    except OSError:
+        paths = []
+    paths += [p for _, p in state.get("journal", [])]
+    stems = set()
+    for p in paths:
+        if os.path.dirname(p) == "/" + DPKG_INFO:
+            s = info_stem(os.path.basename(p))
+            if s:
+                stems.add(s)
+    names = {s.split(":")[0] for s in stems}
+    return (lambda k: k[0] in stems or "%s:%s" % k in stems), (lambda n: n in names), \
+        "by the dpkg/info files the update wrote"
+
+
+def put_back(snap, p, user, root):
+    """p made as in the snapshot where it is missing, or differs and is not a
+    path a user edits. 1 if written."""
+    s = snap + p
+    live = os.path.join(root, p.lstrip("/"))
+    try:
+        ss = os.lstat(s)
+    except OSError:
+        return 0
+    try:
+        ls = os.lstat(live)
+    except OSError:
+        ls = None
+    if stat.S_ISDIR(ss.st_mode):
+        if ls is not None:
+            return 0
+        os.makedirs(live)
+        shutil.copystat(s, live)
+        os.chown(live, ss.st_uid, ss.st_gid)
+        return 1
+    if not (stat.S_ISREG(ss.st_mode) or stat.S_ISLNK(ss.st_mode)):
+        return 0
+    if ls is not None:
+        if user:
+            return 0
+        if stat.S_ISLNK(ss.st_mode) and stat.S_ISLNK(ls.st_mode):
+            if os.readlink(s) == os.readlink(live):
+                return 0
+        elif stat.S_ISREG(ss.st_mode) and stat.S_ISREG(ls.st_mode) and \
+                ss.st_size == ls.st_size and \
+                (ss.st_mtime_ns == ls.st_mtime_ns or sha256_file(s) == sha256_file(live)):
+            return 0
+    parent = os.path.dirname(live)
+    os.makedirs(parent, exist_ok=True)
+    tmp = os.path.join(parent, ".ota-tmp." + os.path.basename(live))
+    if os.path.lexists(tmp):
+        os.unlink(tmp)
+    subprocess.run(["cp", "-a", "--reflink=auto", s, tmp], check=True)
+    if ls is not None and stat.S_ISDIR(ls.st_mode):
+        shutil.rmtree(live)
+    os.replace(tmp, live)
+    return 1
+
+
+def rollback_packages(state, now, write=True, root="/"):
+    """After an update's files are put back: its package databases are merged
+    rather than put back. The old build's alone would forget what was
+    installed, removed or upgraded with apt since the update, whose files stay
+    as they are, or call a package installed whose files are gone. So, entry
+    by entry: what the update changed goes back to the old build's, the rest
+    stays as it is now. A package going back gets its files and dpkg/info from
+    the snapshot where they are missing or differ (under the paths a user
+    edits, only missing ones): the update's own files the journal already put
+    back, but it may have been removed or upgraded since. The info files of an
+    entry that goes away go too. now: the databases before the rollback."""
+    snap = state["snapshot"]
+    old = {rel: read_text(snap + "/" + rel) for rel, _ in DPKG_DBS}
+    after = {rel: read_text(os.path.join(AFTER_DIR, rel)) for rel, _ in DPKG_DBS}
+    st_rel = "var/lib/dpkg/status"
+    if old[st_rel] is None or now.get(st_rel) is None:
+        log("package database: nothing to merge")
+        return None
+    changed, changed_name, how = update_changed(state, old[st_rel], after[st_rel])
+    O, D = stanzas(old[st_rel]), stanzas(now[st_rel])
+    allk = sorted(set(O) | set(D))
+    back = [k for k in allk if changed(k) and O.get(k) != D.get(k)]
+    kept = [k for k in allk if not changed(k) and O.get(k) != D.get(k)]
+    out = {}
+    for rel, kind in DPKG_DBS:
+        o, d = old[rel], now.get(rel)
+        if o is None or d is None:
+            continue
+        if kind == "stanzas":
+            Os, Ds = stanzas(o), stanzas(d)
+            keys = list(Ds) + [k for k in Os if k not in Ds]
+            if list(Ds) == sorted(Ds):
+                keys.sort()
+            vals = [Os.get(k) if changed(k) else Ds.get(k) for k in keys]
+            out[rel] = "".join(v + "\n\n" for v in vals if v is not None)
+        else:
+            def name(ln):
+                return ln.rsplit(" ", 1)[-1].split(":")[0]
+            lines = [ln for ln in d.splitlines() if ln and not changed_name(name(ln))] + \
+                    [ln for ln in o.splitlines() if ln and changed_name(name(ln))]
+            out[rel] = "".join(ln + "\n" for ln in dict.fromkeys(lines))
+    log("package database: %d entries back to %s's, %d changed with apt since "
+        "the update kept (what the update changed told %s)"
+        % (len(back), state.get("from_version", "the old build"), len(kept), how))
+    if not write:
+        for title, keys, a, b in (("back", back, D, O), ("kept", kept, O, D)):
+            for k in keys:
+                print("  %s: %s:%s %s -> %s" % (title, k[0], k[1],
+                      field(a.get(k), "Version") or "-", field(b.get(k), "Version") or "-"))
+        return back, kept
+    for rel, text in out.items():
+        write_text(os.path.join(root, rel), text)
+    # files and dpkg/info of the packages going back; info of entries going away
+    want = {k for k in back if O.get(k) and "installed" in (field(O[k], "Status") or "")}
+    stems = {k[0] for k in want} | {"%s:%s" % k for k in want}
+    gone = {k for k in back if not O.get(k)}
+    final = set(O) | set(D)
+    final = {k for k in final if (O.get(k) if changed(k) else D.get(k))}
+    keep_stems = {k[0] for k in final} | {"%s:%s" % k for k in final}
+    gone_stems = ({k[0] for k in gone} | {"%s:%s" % k for k in gone}) - keep_stems
+    n = 0
+    infodir = snap + "/" + DPKG_INFO
+    for nm in sorted(os.listdir(infodir)) if os.path.isdir(infodir) else []:
+        if info_stem(nm) not in stems:
+            continue
+        n += put_back(snap, "/%s/%s" % (DPKG_INFO, nm), False, root)
+        if nm.endswith(".list"):
+            for p in read_text(os.path.join(infodir, nm)).splitlines():
+                if p.startswith("/") and p != "/.":
+                    n += put_back(snap, p, any(p[1:].startswith(u) for u in USER_PREFIXES), root)
+    live_info = os.path.join(root, DPKG_INFO)
+    dropped = 0
+    for nm in sorted(os.listdir(live_info)) if os.path.isdir(live_info) else []:
+        if info_stem(nm) in gone_stems:
+            os.unlink(os.path.join(live_info, nm))
+            dropped += 1
+    if n or dropped:
+        log("  package files put back from the snapshot: %d; dpkg/info files of "
+            "entries gone: %d" % (n, dropped))
+    return back, kept
+
+
+def cmd_rollback(dry_run=False):
     st = load_state()
     if st.get("status") not in ("applying", "applied", "booted", "failed"):
         raise OtaError("no update to roll back")
+    # the package databases as they are before anything is put back
+    now = {rel: read_text("/" + rel) for rel, _ in DPKG_DBS}
+    merge = st.get("status") in ("applied", "booted")
+    if dry_run:
+        if merge:
+            rollback_packages(st, now, write=False)
+        else:
+            print("an update half applied: everything goes back as it was")
+        return
     log("rolling back to %s (%s)" % (st.get("from_version"), st.get("from_build_id")))
     restore(st)
+    if merge:
+        try:
+            rollback_packages(st, now)
+        except Exception as ex:
+            log("package database: not merged, the old build's put back (%s: %s)"
+                % (type(ex).__name__, ex))
+    shutil.rmtree(AFTER_DIR, ignore_errors=True)
     st["status"] = "rolled-back"
     save_state(st)
     log("rolled back; reboot")
@@ -773,7 +1070,11 @@ def main():
     sub.add_parser("update")
     p = sub.add_parser("install")
     p.add_argument("package")
-    sub.add_parser("rollback")
+    p = sub.add_parser("rollback")
+    p.add_argument("--dry-run", action="store_true",
+                   help="say what would happen to the package database")
+    p = sub.add_parser("next")
+    p.add_argument("--build", help="instead of the update applied, or this build")
     sub.add_parser("status")
     sub.add_parser("boot-ok")
     sub.add_parser("clean")
@@ -800,7 +1101,10 @@ def main():
         elif a.cmd == "install":
             install(a.package)
         elif a.cmd == "rollback":
-            cmd_rollback()
+            cmd_rollback(a.dry_run)
+        elif a.cmd == "next":
+            v = next_steps(a.feed, a.build)
+            print(" ".join(v) if v else "none")
         elif a.cmd == "status":
             st = load_state()
             st.pop("journal", None)
@@ -812,6 +1116,7 @@ def main():
             shutil.rmtree(WORK_DIR, ignore_errors=True)
             if load_state().get("status") in ("booted", "rolled-back", "failed"):
                 drop_snapshots()
+                shutil.rmtree(AFTER_DIR, ignore_errors=True)
     except OtaError as ex:
         log("ERROR: %s" % ex)
         return 2
