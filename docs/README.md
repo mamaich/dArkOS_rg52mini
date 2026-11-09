@@ -316,6 +316,9 @@ In master for 1.9, not released yet (VERSION says 1.9):
   test build to 1.8 with 27 packages installed after the update, then 1.9 again
   through the menu from a test feed (OTA.md).
 
+- Over USB (MTP) a PC sees files and folders whose names start with a dot,
+  such as `/roms/.darkos`; up to 1.8 umtp-responder was told to hide them.
+
 - The image's PortMaster installer installs the latest PortMaster (2026.11.02
   now). The installer in PortMaster's release was not rebuilt and installed
   2026.06.23, which knows no newer runtime and cannot read newer ports'

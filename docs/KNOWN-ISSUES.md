@@ -2815,7 +2815,9 @@ How it works:
   controller (`fe500000.usb`, dwc3) is OTG behind a role switch and becomes a
   device on a cable to a PC.
 - `umtprd` runs as ark, so copied files are ark's: group `media_rw` with the
-  ROM folders' ACLs, umask 002. Hidden files are not shown.
+  ROM folders' ACLs, umask 002. Files and folders whose names start with a dot
+  (`/roms/.darkos` and the like) are shown too; up to 1.8 they were not, and a
+  PC could neither see nor copy them.
 - The PC sees the model from the device tree without its vendor ("RG52 Mini"),
   maker "dArkOS". The serial is `dArkOS-` plus the board's serial.
 - On by default. Options > "Disable USB File Transfer" stops it, and it no longer

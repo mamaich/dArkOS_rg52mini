@@ -35,7 +35,9 @@ setup)
     echo 'storage "/roms" "ROMs" "rw"'
     mountpoint -q /roms2 && echo 'storage "/roms2" "ROMs (SD2)" "rw"'
     echo 'umask 002'
-    echo 'show_hidden_files 0'
+    # names that start with a dot as well: /roms/.darkos and the like are the
+    # user's files too, and a PC had no way to see or copy them
+    echo 'show_hidden_files 1'
     echo 'manufacturer "dArkOS"'
     echo "product \"$model\""
     echo "serial \"$serial\""
