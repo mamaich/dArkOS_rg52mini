@@ -2961,3 +2961,38 @@ ES is unchanged (TODO.md).
   dArkOS as well. Other games are not tried.
 * **The update** adds the system to a user's own `es_systems.cfg` and makes
   `/roms/zeebo` (`ota/hooks/1.8-zeebo.sh`).
+
+## PS2: PCSX2's game patches in ARMSX2 (patches.zip) — in master for 1.9
+
+* **What was missing.** Up to 1.8 every game start logged "Failed to open
+  patches.zip. Built-in game patches are not available": PCSX2's per-game
+  patches (PCSX2/pcsx2_patches: widescreen, no-interlacing, 60 fps and other
+  fixes) are a separate download that ARMSX2's source does not carry.
+* **What the build does** (`build_pcsx2sa.sh`, 23f58f5): zips pcsx2_patches at a
+  pinned commit (192ee9b, 2026-10-31, 4719 files) as their CI does and installs
+  it as `/opt/pcsx2/share/PCSX2/resources/patches.zip`. The zip is cached under
+  that commit, apart from ARMSX2's own cache.
+* **Nothing changes by itself.** ARMSX2 2.9.2 enables unlabelled patches on its
+  own, and every patch in the database sits in a named group, so a game runs as
+  before until a player turns one on:
+  - for every game, the pause menu (Select+X) -> Settings -> Graphics Settings:
+    "Apply Widescreen Patches" (a "Widescreen 16:9" group in 4281 of the files)
+    and "Apply No-Interlacing Patches" (332); in `PCSX2.ini`,
+    `EnableWideScreenPatches` and `EnableNoInterlacingPatches`, both false in
+    our template;
+  - per game, the pause menu -> Game Properties -> Patches, which lists the
+    game's groups (60 FPS, 480p Mode, Remove Blur and so on); in the game's
+    `gamesettings/<serial>_<crc>.ini`, `[Patches]` `Enable = <group>`.
+  A pnach of the player's own for the game, in the patches folder, replaces the
+  zip's file for that game whole (ARMSX2's rule, unlike PCSX2's). The Patches
+  page's online search installs into that folder too, so after installing one
+  from there the game's built-in groups are no longer listed.
+* **Checked** on 1.8 with the zip bound over the resources (2026-11-09), Jak
+  and Daxter from the owner's savestate as ES starts it: as it is, "Found 3
+  game patches" and none enabled; with widescreen on, "Enabled patch:
+  Widescreen 16:9" and "Setting aspect ratio to 1.7777777 by patch request",
+  the picture 16:9 across the whole panel with more of the scene at the sides;
+  No-Interlacing turned on in the game's settings, enabled. The speed the same
+  in all three. A widescreen patch draws more of the scene, so a heavy game can
+  run slower with it; PCSX2 warns that these patches "can cause issues".
+

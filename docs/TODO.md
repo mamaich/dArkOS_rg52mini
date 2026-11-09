@@ -125,7 +125,7 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
 | retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
 | ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing) |
 | ARMSX2 | **taken** (the owner's word, 2026-11-08): 2.9.2 with its own profile (`pcsx2/pgo/armsx2-20261108.profdata.gz`; our patches apply as they are, and of our PCSX2.ini it reads the same keys as 1.7; 2026-11-08: the instrumented build played on Jak and GoW from the owner's saves and Burnout 3 from boot, merged with 1.7's profile at equal weight) | Jak 35.7 / 34.5 / 35.1 against 1.7's 35.1 / 35.2 / 35.1 (level), Burnout 3 37.6 / 37.5 / 37.0 against 36.5 / 36.8 / 36.9 (+1.7%, every round) |
-| ARMSX2 patches.zip | **for 1.9** (in master after 1.8's build of 2026-11-08) (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console (bound over the resources, 2026-11-08): the warning gone, Jak and Daxter "Found 3 game patches in SCES-50361_9C712FF0.pnach" |
+| ARMSX2 patches.zip | **for 1.9** (in master after 1.8's build of 2026-11-08) (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console (bound over the resources, 2026-11-08): the warning gone, Jak and Daxter "Found 3 game patches in SCES-50361_9C712FF0.pnach"; 2026-11-09 on 1.8, Jak from the owner's save: none on by itself (all 4719 files keep their patches in named groups, ARMSX2 auto-enables only unlabelled ones), EnableWideScreenPatches gives "Enabled patch: Widescreen 16:9" and a 16:9 picture, a per-game `[Patches] Enable = No-Interlacing` enables that one; flips the same (12.5/12.6/12.5, the game on its memory-card notice) |
 | Zeebo | in master (merge 1948065): core_builds a900997, `zeebx-patch-0001` (black screen) and `0002` (speed) | see below |
 
 * **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,
@@ -1157,7 +1157,8 @@ Left:
 * **No `patches.zip`.** ARMSX2 logs "Failed to open patches.zip. Built-in game
   patches are not available": PCSX2's per-game patches (pcsx2_patches) are a
   separate download, not in the source, and the old fork's build lacked them
-  too. GameIndex.yaml's fixes do apply.
+  too. GameIndex.yaml's fixes do apply. **In master for 1.9** (23f58f5: the
+  recipe zips pcsx2_patches at a pinned commit; "Upstream updates for 1.8").
 
 ## Heavy emulators: compiler flags measured, none kept (1.3, 2026-10-20)
 

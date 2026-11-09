@@ -260,7 +260,15 @@ In master for 1.9, not released yet (VERSION says 1.9):
 
 - ARMSX2 gets PCSX2's game patch database: `resources/patches.zip` made from
   PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it; before, every
-  game start logged "Failed to open patches.zip" (TODO.md).
+  game start logged "Failed to open patches.zip" (TODO.md). Nothing is applied
+  by itself: every one of its 4719 files keeps its patches in named groups, and
+  ARMSX2 enables only unlabelled ones on its own. The pause menu (Select+X) ->
+  Settings -> Graphics Settings has "Apply Widescreen Patches" and "Apply
+  No-Interlacing Patches" for every game, Game Properties -> Patches the rest
+  per game. Checked on 1.8 with the zip bound in (2026-11-09, Jak and Daxter):
+  as it is, 3 patches found and none on; with widescreen on, "Widescreen 16:9"
+  enabled and the picture 16:9 across the whole panel; No-Interlacing enabled
+  from the game's settings; the speed the same in all three (KNOWN-ISSUES.md).
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
