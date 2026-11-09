@@ -4,7 +4,11 @@
 # PortMaster ports source PortMaster's control.txt. On ArkOS and dArkOS they
 # are written for, and tested as, the ark user: control.txt finds sudo and
 # routes what needs root through $ESUDO, and their saves live under
-# /home/ark. They run as ark, as before.
+# /home/ark. They run as ark, as before. So does PortMaster.sh itself, which
+# since PortMaster 2026.11 is a stub that sources utils/pm_launch.txt and
+# names no control.txt: as root, get_controls looks for the pad's mapping in
+# /root/.config/emulationstation, finds none, and A/B (and X/Y) come out
+# swapped in PortMaster's own menus.
 #
 # Anything else in ports - scripts written for Knulli, ROCKNIX, muOS and the
 # like, which run everything as root (the native Halo CE port is one) - runs
@@ -86,7 +90,7 @@ fi
 
 # A script without the execute bit still runs, through bash.
 
-if grep -q "control\.txt" "$port" 2>/dev/null || [ "$(id -u)" -eq 0 ]; then
+if grep -q -E "control\.txt|pm_launch\.txt" "$port" 2>/dev/null || [ "$(id -u)" -eq 0 ]; then
 	[ -x "$port" ] && exec "$port"
 	exec bash "$port"
 fi

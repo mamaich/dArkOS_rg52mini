@@ -3273,6 +3273,21 @@ ES is unchanged (TODO.md).
   against its .md5) into it with `scripts/rk3562/pm-installer-update.py`. The
   installer's own check (`bash Install.PortMaster.sh --check`) passes, and it
   installs 2026.11.02-0433.
+* **PortMaster 2026.11 on the console** (2026-11-09, installed with that
+  installer the way `runport.sh` does it):
+  - Our additions to `mod_dArkOS.txt` (E2BIG guard, gl4es fix, Vulkan driver
+    through sudo) and `libgl_dArkOS.txt` went into the new files.
+  - Its window fills the 16:9 screen without our `pugwash` patch: the new
+    version takes the screen's size from `device_info.txt` for any device.
+    That code now lives in `pylibs.zip`, so `portmaster-e2big.sh` logs "code for
+    the screen size not found, left as it is"; nothing is missing.
+  - `PortMaster.sh` became a stub that sources `utils/pm_launch.txt` and names
+    no `control.txt`. From Options → Tools it runs as ark: the pad's mapping is
+    found and A/B are right. Started from Ports, `runport.sh` took it for a
+    root-only script and ran it as root: `get_controls` looked for the mapping
+    in /root, and A/B and X/Y came out swapped. `runport.sh` now runs scripts
+    that source `pm_launch.txt` as ark too.
+  - NFSU's port.json (version 8) is newer than this PortMaster reads as well.
 * **Postal 2 itself** (Westonpack: box86, Weston headless, crusty GLX on gl4es)
   runs at the menu at 33–51 fps. Two things to know about it:
   - Its picture is not scaled. The game's 800x600 sat in the bottom-left
