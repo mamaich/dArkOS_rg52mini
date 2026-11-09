@@ -27,21 +27,30 @@ port="$1"
 # the next start. Ports already set up cost one look at the top-level scripts.
 # As root: files Android wrote are not ark's. u+x,g+x keeps the group bits
 # Android needs.
+# fix_port_dirs <script>: u+x,g+x on every file that lacks it in the folders of
+# /roms/ports the script names in a path. Returns 1 if it names none. Nothing
+# is started per folder (a card may hold a hundred ports); one find per folder
+# named.
+fix_port_dirs() {
+	local sh="$1" text d name found=1
+	local end=$'[\"\'/ }\n\r]'
+	text=$(< "$sh") 2>/dev/null || return 1
+	for d in /roms/ports/*/; do
+		[ -d "$d" ] || continue
+		name=${d%/}
+		name=${name##*/}
+		if [[ $text == *"/$name"$end* || $text == *"/$name" ]]; then
+			sudo find "$d" -type f ! -perm -u=x -exec chmod u+x,g+x {} + 2>/dev/null
+			found=0
+		fi
+	done
+	return $found
+}
 fix_new_ports() {
-	local sh d name esc found
+	local sh
 	for sh in /roms/ports/*.sh /roms/ports/*.SH; do
 		[ -f "$sh" ] && [ ! -x "$sh" ] || continue
-		found=0
-		for d in /roms/ports/*/; do
-			[ -d "$d" ] || continue
-			name=$(basename "$d")
-			esc=$(printf '%s' "$name" | sed 's/[][\\.*^$|+?(){}]/\\&/g')
-			if grep -qE "/${esc}([\"'/ }]|\$)" "$sh"; then
-				sudo find "$d" -type f ! -perm -u=x -exec chmod u+x,g+x {} + 2>/dev/null
-				found=1
-			fi
-		done
-		if [ "$found" = 0 ]; then
+		if ! fix_port_dirs "$sh"; then
 			sudo find /roms/ports -mindepth 2 -type f ! -perm -u=x -exec chmod u+x,g+x {} + 2>/dev/null
 		fi
 		sudo chmod u+x,g+x "$sh"
@@ -49,6 +58,13 @@ fix_new_ports() {
 }
 if [ -f /boot/dualboot ] && [ -d /roms/ports ]; then
 	fix_new_ports
+	# The port being started, every time: its folder may have been copied again
+	# (over USB, through Android) while its script stayed as it was, executable,
+	# and then nothing above looks at it. GTA San Andreas copied a second time
+	# ended with "gtasa: Permission denied". About 0.1 s for a port of 500 files.
+	case "$port" in
+		/roms/ports/*) [ -f "$port" ] && fix_port_dirs "$port" ;;
+	esac
 fi
 
 # A PortMaster port on a card that has no PortMaster yet - a fresh card, the

@@ -3300,6 +3300,15 @@ ES is unchanged (TODO.md).
     characters here), and SDL still reads the whole file. Its path unit watches
     `control.txt`. With it GTA SA starts, at 1280x720 ("drawable size 1280x720"
     in its log).
+* **A port's folder copied again on a dual-boot card** (2026-11-09). There the
+  ports are on Android's ext4, where a file copied over USB or through Android
+  has no execute bit. `runport.sh` gave the bit to a port's files only when
+  the port's script lacked it, as the mark of a port that had just come in.
+  The owner deleted the `gtasa` folder and copied it again, the script stayed
+  executable, and the game ended with "gtasa: Permission denied". Now the
+  folders the script being started names are checked at every start (about
+  0.1 s for a port of 500 files). Checked by taking the bit off all 458 files
+  of `gtasa` with the script left executable: the port starts and all have it.
 * **Postal 2 itself** (Westonpack: box86, Weston headless, crusty GLX on gl4es)
   runs at the menu at 33–51 fps. Two things to know about it:
   - Its picture is not scaled. The game's 800x600 sat in the bottom-left
