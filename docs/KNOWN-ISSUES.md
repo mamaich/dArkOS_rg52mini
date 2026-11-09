@@ -3246,3 +3246,39 @@ ES is unchanged (TODO.md).
     five, demuxes and decodes 300 frames of H.264 in 1.5 s (64-bit 1.2 s).
   - 32-bit RetroArch unchanged: PS1 (pcsx_rearmed) and N64 (parallel_n64) at
     60 fps.
+
+## PortMaster: the latest version, and ports copied by hand — in master for 1.9
+
+* **What happened** (2026-11-09). The owner copied Postal 2 into /roms/ports by
+  hand, and neither of its scripts started.
+  - The scripts ask harbourmaster for the Westonpack 0.2 runtime with
+    `--no-check`, that is, without the network.
+  - PortMaster on that card had never fetched its data (it does when PortMaster
+    itself runs with the network): `runtimes.json` was empty, so harbourmaster
+    logged "Unknown runtime weston_pkg_0.2.squashfs" and nothing was mounted.
+  - The lines about NFSU in the port's log are harbourmaster failing on NFSU's
+    newer port.json (version 8), which PortMaster 2026.06.23 cannot read. They
+    are in every port's log and are not the cause.
+* **On such a card**, open PortMaster once with Wi-Fi (Options → Tools →
+  PortMaster). harbourmaster run without `--no-check` did the same: it fetched
+  the data and Westonpack 0.2 (53 MB), and the port started. PortMaster then
+  offers its own update as well. Options → Tools → Install.PortMaster only
+  installs the version it carries.
+* **The image's installer.** `finishing_touches-rk3562.sh` puts PortMaster's
+  installer from the latest release in Tools, and `runport.sh` installs from it,
+  without the network, when the first port starts on a card that has no
+  PortMaster. That installer was not rebuilt for its release: the one of
+  2026.11.02-0433 is byte for byte the one on the card and installs
+  2026.06.23-0015. The build now puts the release's PortMaster.zip (checked
+  against its .md5) into it with `scripts/rk3562/pm-installer-update.py`. The
+  installer's own check (`bash Install.PortMaster.sh --check`) passes, and it
+  installs 2026.11.02-0433.
+* **Postal 2 itself** (Westonpack: box86, Weston headless, crusty GLX on gl4es)
+  runs at the menu at 33–51 fps. Two things to know about it:
+  - Its picture is not scaled. The game's 800x600 sat in the bottom-left
+    corner of the 1280x720 screen (the script turns 800x600 into 640x480).
+    Video options → 1280x720, or `[SDLDrv.SDLClient]` WindowedViewportX/Y in
+    `conf/.lgp/postal2/System/Postal2.ini`.
+  - The mouse cursor stays within about 730x400 until the first click, then
+    reaches the whole screen. One click (R2) after the menu appears is enough.
+    The cause was not looked into further (the owner, 2026-11-09).

@@ -316,6 +316,15 @@ In master for 1.9, not released yet (VERSION says 1.9):
   test build to 1.8 with 27 packages installed after the update, then 1.9 again
   through the menu from a test feed (OTA.md).
 
+- The image's PortMaster installer installs the latest PortMaster (2026.11.02
+  now). The installer in PortMaster's release was not rebuilt and installed
+  2026.06.23, which knows no newer runtime and cannot read newer ports'
+  port.json; the build puts the release's PortMaster.zip into it
+  (`scripts/rk3562/pm-installer-update.py`). A card made from an earlier image
+  keeps its PortMaster, which lives on the ROMs partition that an update does
+  not touch: PortMaster offers its own update when started with Wi-Fi
+  (KNOWN-ISSUES.md, "PortMaster: the latest version, and ports copied by hand").
+
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
 Yabasanshiro was in the same state until 2026-10-24, when the one game tried

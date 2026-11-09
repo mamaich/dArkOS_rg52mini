@@ -980,16 +980,28 @@ sudo mkdir -p ${fat32_mountpoint}/ps2/memcards
 sudo cp shutdownimages/bye.gif ${fat32_mountpoint}/shutdownimages/
 sudo mkdir -p ${fat32_mountpoint}/ps2/savestates
 
-# Add latest version of PortMaster install to roms/tools folder
+# Add latest version of PortMaster install to roms/tools folder. runport.sh installs PortMaster
+# from it, without the network, when the first port starts on a card that has none.
+# The release's Install.PortMaster.sh was not rebuilt for its PortMaster: that of 2026.11.02-0433
+# still installs 2026.06.23-0015, which knows no runtime newer than itself and cannot read the
+# port.json of newer ports. The release's PortMaster.zip, checked against its .md5, goes into the
+# installer instead (scripts/rk3562/pm-installer-update.py; the installer's own check passes).
 for (( ; ; ))
 do
  PMver=$(curl --silent -qI https://github.com/PortsMaster/PortMaster-GUI/releases/latest | awk -F '/' '/^location/ {print  substr($NF, 1, length($NF)-1)}')
- wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/Install.PortMaster.sh
+ rm -f Install.PortMaster.sh PortMaster.zip PortMaster.zip.md5
+ wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/Install.PortMaster.sh &&
+  wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/PortMaster.zip &&
+  wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/PortMaster.zip.md5 &&
+  [ "$(md5sum PortMaster.zip | cut -c1-32)" = "$(cut -c1-32 PortMaster.zip.md5)" ]
  if [ $? == 0 ]; then
   break
  fi
  sleep 10
 done
+python3 scripts/rk3562/pm-installer-update.py Install.PortMaster.sh PortMaster.zip
+verify_action
+rm -f PortMaster.zip PortMaster.zip.md5
 sudo mv -f Install.PortMaster.sh ${fat32_mountpoint}/tools/Install.PortMaster.sh
 chmod 777 ${fat32_mountpoint}/tools/Install.PortMaster.sh
 
