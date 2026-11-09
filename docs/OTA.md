@@ -161,11 +161,18 @@ State and log are in `/var/lib/darkos-ota/` (`state.json`, `ota.log`).
 
 Commands:
 
-- `darkos-ota version | check | local | update | install <pkg> | rollback | status | clean`;
+- `darkos-ota version | check | local | local-problems | update | install <pkg> | rollback | status | clean`;
 - `--feed URL` overrides the feed, and so does a URL in `/home/ark/.config/darkos-ota-feed`. Use it for a test channel.
 
 A package copied to `/roms/update/` (or `/roms/tools/update/`) is offered
-before the network is asked.
+before the network is asked. What is there and cannot be installed is said
+before the network is asked, too (`local-problems`, since 1.9): a .tar whose
+manifest cannot be read (a download cut short, or an error page saved under
+the package's name), a package made for another build, a package-like file
+that is not a .tar. Up to 1.8 such a file was passed over without a word: on
+2026-11-09 a user's 1.7 -> 1.8 package, saved while GitHub answered 504 for
+that one asset (92 bytes), left only "up to date" or a network error on the
+screen. "Up to date" now names the build as well.
 
 There is no A/B copy of the system. If the system does not boot after an
 update, the card has to be written again, as with GammaOS.

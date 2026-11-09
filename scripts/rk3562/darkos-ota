@@ -226,6 +226,39 @@ def local_packages():
     return found
 
 
+def local_problems():
+    """What in the update folders cannot be installed here, and why, so that the
+    menu can say it instead of passing over it: a .tar whose manifest cannot be
+    read (a download cut short, or an error page saved under the package's
+    name), a package made for another build, or a package-like file that is not
+    a .tar. A package for the build already installed is no problem."""
+    rel = release()
+    out = []
+    for d in LOCAL_DIRS:
+        if not os.path.isdir(d):
+            continue
+        for n in sorted(os.listdir(d)):
+            p = os.path.join(d, n)
+            if not os.path.isfile(p):
+                continue
+            size = os.path.getsize(p)
+            if not n.endswith(".tar"):
+                if "_ota_" in n:
+                    out.append((p, "not-tar", "%d bytes" % size))
+                continue
+            try:
+                m = read_manifest(p)
+            except Exception:
+                out.append((p, "damaged", "%d bytes" % size))
+                continue
+            if m.get("from_build_id") == rel["BUILD_ID"] or m.get("build_id") == rel["BUILD_ID"]:
+                continue
+            out.append((p, "other-build", "%s (%s) to %s (%s)" % (
+                m.get("from_version", "?"), m.get("from_build_id", "?"),
+                m.get("version", "?"), m.get("build_id", "?"))))
+    return out
+
+
 def dl_dir():
     """Downloads go to a subvolume of their own, so that the snapshot of /
     taken before an update does not pin them."""
@@ -736,6 +769,7 @@ def main():
     sub.add_parser("version")
     sub.add_parser("check")
     sub.add_parser("local")
+    sub.add_parser("local-problems")
     sub.add_parser("update")
     p = sub.add_parser("install")
     p.add_argument("package")
@@ -754,6 +788,9 @@ def main():
         elif a.cmd == "local":
             for p_, m in local_packages():
                 print("%s\t%s\t%s" % (p_, m["version"], m["build_id"]))
+        elif a.cmd == "local-problems":
+            for p_, kind, detail in local_problems():
+                print("%s\t%s\t%s" % (p_, kind, detail))
         elif a.cmd == "update":
             e = check(a.feed)
             if not e:

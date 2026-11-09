@@ -51,9 +51,30 @@ Apply() {
   Msg "Update failed" "$(LastError)\n\nNothing was changed, or the change was undone. The log is /var/lib/darkos-ota/ota.log."
 }
 
+# Files in the update folders that cannot be installed here, said rather than passed over:
+# a package cut short in the download (or an error page saved under its name) used to leave
+# only "up to date" or a network error on the screen.
+Problems() {
+  local probs text="" path kind detail name build
+  probs=$(sudo /usr/local/sbin/darkos-ota local-problems 2>/dev/null)
+  [ -n "$probs" ] || return
+  build=$(/usr/local/sbin/darkos-ota version | cut -d' ' -f2)
+  while IFS=$'\t' read -r path kind detail; do
+    name=$(basename "$path")
+    case "$kind" in
+      damaged) text+="$name: damaged or not downloaded completely ($detail). Download it again.\n\n" ;;
+      not-tar) text+="$name: not a .tar file ($detail). Was its download finished?\n\n" ;;
+      other-build) text+="$name: made for another build, from $detail. This console runs dArkOS $1 (build $build): take the package that starts from it.\n\n" ;;
+    esac
+  done <<< "$probs"
+  # taller and wider than Msg: three files with their long names did not fit 15 x 60
+  [ -n "$text" ] && dialog --clear --title "Update folder" --msgbox "\n$text" 22 72 2>&1 > /dev/tty1
+}
+
 Check() {
-  local cur pkgs entry
+  local cur build pkgs entry
   cur=$(/usr/local/sbin/darkos-ota version | cut -d' ' -f1)
+  build=$(/usr/local/sbin/darkos-ota version | cut -d' ' -f2)
   pkgs=$(sudo /usr/local/sbin/darkos-ota local 2>/dev/null)
   if [ -n "$pkgs" ]; then
     local file ver
@@ -62,12 +83,13 @@ Check() {
     Apply "dArkOS $ver from $(basename "$file")" install "$file"
     return
   fi
+  Problems "$cur"
   dialog --infobox "\nChecking for updates. Please wait..." 5 $width > /dev/tty1
   sudo timedatectl set-ntp 1 2>/dev/null
   entry=$(sudo /usr/local/sbin/darkos-ota check 2>&1 | tail -n 1)
   case "$entry" in
     none)
-      Msg "dArkOS update" "dArkOS $cur is up to date." ;;
+      Msg "dArkOS update" "dArkOS $cur (build $build) is up to date." ;;
     \{*)
       local ver size
       ver=$(echo "$entry" | jq -r .version)

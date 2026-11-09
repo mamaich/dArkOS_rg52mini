@@ -258,6 +258,12 @@ from the published images and not installed.
 
 In master for 1.9, not released yet (VERSION says 1.9):
 
+- Options -> Update says what is wrong with a file in the update folder
+  instead of passing over it: damaged or cut short in the download, made for
+  another build, not a .tar (`darkos-ota local-problems`, OTA.md); "up to
+  date" names the build. Checked on the console with a 47-byte package, a
+  package from 1.5 to 1.7 and a .part file.
+
 - ARMSX2 gets PCSX2's game patch database: `resources/patches.zip` made from
   PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it; before, every
   game start logged "Failed to open patches.zip" (TODO.md). Nothing is applied
