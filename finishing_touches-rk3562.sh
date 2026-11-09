@@ -531,6 +531,30 @@ sudo chroot Arkbuild/ bash -c "ln -sf /usr/share/zoneinfo/America/New_York /etc/
 # Fetch older Debian library versions for PortMaster compatibility
 source ./fetch_compat_libs.sh
 
+# 32-bit FFmpeg 4 for ports: fetch_compat_libs.sh lifts libavcodec.so.58 and the rest out of Debian 11's
+# .debs without what they link, and on the armhf side 22 of those libraries were missing, so a 32-bit
+# program could not load them at all (KNOWN-ISSUES.md, "OpenCL, and FFmpeg 4 for 32-bit ports").
+# Debian's armhf packages for them: 27 with what they pull, 7 MiB installed; trixie's names (t64).
+# ocl-icd-libopencl1 among them is also the OpenCL loader for 32-bit programs (mali.icd, below).
+if [[ "${BUILD_ARMHF}" == "y" ]]; then
+  COMPAT_ARMHF_PKGS=""
+  for p in ocl-icd-libopencl1 libbluray2 libchromaprint1 libgcrypt20 libgme0 libgsm1 libopenjp2-7 \
+           libopenmpt0t64 librabbitmq4 libshine3 libsnappy1v5 libsoxr0 libspeex1 libtwolame0 libva2 \
+           libva-drm2 libva-x11-2 libvdpau1 libwebpmux3 libxvidcore4 libzmq5 libzvbi0t64; do
+    COMPAT_ARMHF_PKGS="${COMPAT_ARMHF_PKGS} ${p}:armhf"
+  done
+  call_chroot "dpkg -s ${COMPAT_ARMHF_PKGS} >/dev/null 2>&1 || (apt-get -y update && DEBIAN_FRONTEND=noninteractive eatmydata apt-get -y install --no-install-recommends ${COMPAT_ARMHF_PKGS})"
+  verify_action
+  # Debian 10/11's armhf libx264 asks for an executable stack (assembly without a .note.GNU-stack
+  # section; nothing runs from the stack). glibc 2.41 refuses such a library to dlopen(), so a 32-bit
+  # program could not dlopen libavcodec.so.58, which needs libx264.so.160. The flag is cleared.
+  for f in Arkbuild/usr/lib/arm-linux-gnueabihf/libx264.so.155 Arkbuild/usr/lib/arm-linux-gnueabihf/libx264.so.160; do
+    if [ -f "$f" ]; then
+      sudo python3 scripts/rk3562/clear-execstack.py "$f"
+    fi
+  done
+fi
+
 # J2ME: the freej2me core runs freej2me-lr.jar, built for Java 21, but freej2me.sh
 # downloads a JDK 11 for it. Run that core on the image's OpenJDK 21 instead
 # (docs/KNOWN-ISSUES.md, "J2ME"). Leaves freej2me.sh alone if it is not the stock one.
@@ -701,6 +725,16 @@ if [ -f Arkbuild/usr/lib/aarch64-linux-gnu/libvulkan_darkos.so ]; then
 fi
 sudo cp BSP/vulkan/vulkaninfo Arkbuild/usr/bin/
 sudo chmod 755 Arkbuild/usr/bin/vulkaninfo
+
+# OpenCL through the standard ICD loader (ocl-icd's libOpenCL.so.1), which finds a driver by a file in
+# /etc/OpenCL/vendors. A bare soname, so the 64-bit loader opens g29p1 and the 32-bit one (installed
+# with the FFmpeg 4 dependencies above) g13p0; both export OpenCL 3.0 (KNOWN-ISSUES.md, "OpenCL, and
+# FFmpeg 4 for 32-bit ports"). The 64-bit loader came in only as a dependency of Debian's FFmpeg
+# packages, so it is marked as wanted for itself.
+call_chroot "if dpkg -s ocl-icd-libopencl1:arm64 >/dev/null 2>&1; then apt-mark manual ocl-icd-libopencl1:arm64; else apt-get -y update && DEBIAN_FRONTEND=noninteractive eatmydata apt-get -y install --no-install-recommends ocl-icd-libopencl1:arm64; fi"
+verify_action
+sudo mkdir -p Arkbuild/etc/OpenCL/vendors
+echo "libmali.so.1" | sudo tee Arkbuild/etc/OpenCL/vendors/mali.icd > /dev/null
 
 # Disable requirement for sudo for setting niceness
 echo "ark              -       nice            -20" | sudo tee -a Arkbuild/etc/security/limits.conf

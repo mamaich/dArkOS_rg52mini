@@ -201,7 +201,7 @@ Read off the blobs and the config rather than from documentation, 2026-09-16.
 | OpenGL ES | 3.2, plus legacy ES-CM 1.1 |
 | EGL | 1.5, with the Mali AFBC/AFRC framebuffer-compression extensions |
 | Vulkan | 1.3, through the same blob |
-| OpenCL | exported by the blob |
+| OpenCL | 3.0, in the 64-bit g29p1 and the 32-bit g13p0; through ocl-icd's loader by /etc/OpenCL/vendors/mali.icd (1.9) |
 | Desktop OpenGL | software only — see below |
 
 The hardware path is ARM's `libmali-bifrost-g52-g29p1.so`, 57 MB, installed as

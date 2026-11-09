@@ -190,6 +190,10 @@ and in every earlier full build log kept here). The image has the 64-bit one
 only; a 32-bit port that needs `libjpeg.so.8` will not find it. No such port is
 known so far.
 
+Until 1.9 none of the armhf FFmpeg 4 libraries could load at all: what they
+link was missing on the 32-bit side ("OpenCL, and FFmpeg 4 for 32-bit ports",
+below).
+
 ## PortMaster ports failed with "Argument list too long" — fixed
 
 Reported by users: every PortMaster port failed at launch with "Argument list
@@ -3195,3 +3199,50 @@ ES is unchanged (TODO.md).
     build 60.0 fps at 12% of the four cores, the new one 60.0 at 13%. With an
     empty folder over /roms/bios, the new one started the game on OpenBIOS
     (60.0, title screen).
+
+## OpenCL, and FFmpeg 4 for 32-bit ports — in master for 1.9
+
+* **OpenCL.** Both Mali blobs carry OpenCL 3.0: the 64-bit g29p1 and the
+  32-bit g13p0 (`ARM Platform`, device `Mali-G52 r1p0`). A program linked to
+  libMali reached it before. Debian's programs and most others go through the
+  standard ICD loader (ocl-icd, `libOpenCL.so.1`), which finds a driver by a
+  file in /etc/OpenCL/vendors. There was none, so the loader saw no platform,
+  and the 32-bit side had no loader at all. Now /etc/OpenCL/vendors/mali.icd
+  holds `libmali.so.1`: a bare name, so each arch's loader opens its own blob.
+  The armhf loader is installed with the FFmpeg 4 dependencies below
+  (`finishing_touches-rk3562.sh`).
+* **Why not the link upstream removed.** christianhaitian's 4837de9 ("Fix
+  video previews and screensaver for rk3326") took `libOpenCL.so` and
+  `libOpenCL.so.1` out of the names linked to libMali: with the loader's own
+  name pointing at libMali, video previews broke. The ICD file keeps the
+  loader. ES does not load OpenCL at all here: VLC decodes the previews with
+  our FFmpeg build, which uses rkmpp and links no OpenCL. The `libOpenCL.so`
+  link to libMali stays; it is a name for linking only.
+* **FFmpeg 4 for 32-bit ports.** `fetch_compat_libs.sh` puts Debian 11's
+  FFmpeg 4.3 libraries in both lib folders for PortMaster ports
+  (libavcodec.so.58, libavformat.so.58, libavutil.so.56, libswscale.so.5,
+  libswresample.so.3), taken out of their .debs without what they link. The
+  64-bit side had all of it already. On the armhf side 22 libraries were
+  missing (libOpenCL.so.1, libva, libvdpau, libbluray, libzmq and others), so a
+  32-bit program could not load them at all. The build now installs Debian's
+  armhf packages for them: 27 with what they pull, 7 MiB.
+* **The second fault under it.** Debian 10/11's armhf libx264.so.155 and .160
+  ask for an executable stack, and glibc 2.41 refuses such a library to
+  dlopen() ("cannot enable executable stack as shared object requires").
+  x264 runs nothing from its stack: its assembly only lacks a .note.GNU-stack
+  section, which Debian's later builds add. So the build clears the flag
+  (`scripts/rk3562/clear-execstack.py`, one byte of the program header). These
+  were the only two libraries in either lib folder asking for an executable
+  stack.
+* **Checked** on the 1.9 test build (2026-11-09), with the packages installed
+  and the file written by hand as the build does:
+  - OpenCL through the loader: a kernel built and run on the GPU with the
+    right results, 64-bit on g29p1 and 32-bit on g13p0. Without the file the
+    loader found no platform.
+  - ES restarted on a gamelist with a test video, with and without the file:
+    the video plays, ES stays up, and its process maps no OpenCL library.
+  - 32-bit FFmpeg 4: before, `libavcodec.so.58` failed on `libva-drm.so.2`, and
+    with that there, on libx264's stack. After, a 32-bit program loads all
+    five, demuxes and decodes 300 frames of H.264 in 1.5 s (64-bit 1.2 s).
+  - 32-bit RetroArch unchanged: PS1 (pcsx_rearmed) and N64 (parallel_n64) at
+    60 fps.

@@ -296,6 +296,16 @@ In master for 1.9, not released yet (VERSION says 1.9):
   60 fps on both SwanStation builds, the new one also with no BIOS
   (KNOWN-ISSUES.md).
 
+- OpenCL through the standard loader (ocl-icd), for 64-bit and 32-bit
+  programs: /etc/OpenCL/vendors/mali.icd points it at the Mali blobs, OpenCL
+  3.0 in both, and the 32-bit loader is installed. Debian 11's FFmpeg 4
+  libraries for 32-bit ports could not load at all: 22 libraries they link
+  were missing, and libx264 asked for an executable stack, which glibc 2.41
+  refuses to dlopen(). The build installs the missing ones and clears the flag.
+  Checked on the 1.9 test build (2026-11-09): a kernel on the GPU through the
+  loader in both, ES's video previews with and without the file, 300 frames of
+  H.264 decoded by the 32-bit libraries (KNOWN-ISSUES.md).
+
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
 Yabasanshiro was in the same state until 2026-10-24, when the one game tried

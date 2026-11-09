@@ -588,9 +588,11 @@ on the device:
 4. **Shutdown image** (bye.gif through ffplay in finish.sh / pause.sh): does
    it show the right way up through our SDL rotation?
 5. **wifi_importer**: a wifikeyfile.txt in Tools is imported at boot.
-6. Not taken, to be decided on the device: libOpenCL.so symlink (upstream
-   says it breaks video previews), Dolphin Stretch option, batteryplus,
+6. Not taken, to be decided on the device: Dolphin Stretch option, batteryplus,
    headphone auto-switch (done our own way in 1.5: KNOWN-ISSUES, "Headphones"), bluealsa conf path.
+   The libOpenCL.so.1 link to libMali that upstream dropped (it broke video
+   previews) stays out: OpenCL goes through the ICD loader's mali.icd instead
+   (1.9, KNOWN-ISSUES, "OpenCL, and FFmpeg 4 for 32-bit ports").
 
 ## Left by the patch audit after 1.3 (2026-10-26, to do)
 
