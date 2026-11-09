@@ -177,7 +177,7 @@ New in 1.7 (build 11062026, 2026-11-06):
 | DSperate | v3.3.0 |
 | linapple | upstream's SDL2 build (no sdl12-compat), and apple2.sh's HDD1/HDD2 handling from upstream dArkOS; 1.6 still had the SDL 1.2 build, as the recipe's cache was keyed by linapple's commit alone |
 | 351Files | Chinese, Japanese and Korean file names drawn with Noto Sans CJK instead of boxes; Latin and Cyrillic ones as before |
-| Bootloader | U-Boot rg52mini-1.6 with the overclocking tables (since 1.8; the Type-C probe that finds revision A on a dual-boot card too): the system menu on a dual-boot card, a long press that leaves the charge screen no longer lost; the OTA writes it to a card with dArkOS alone ([HARDWARE](HARDWARE.md#the-bootloader)) |
+| Bootloader | U-Boot rg52mini-1.5 with the overclocking tables (1.8 ships rg52mini-1.6, below): the system menu on a dual-boot card, a long press that leaves the charge screen no longer lost; the OTA writes it to a card with dArkOS alone ([HARDWARE](HARDWARE.md#the-bootloader)) |
 
 Checked for 1.7: on the owner's new dual-boot card (card v1.5) the update
 1.5 -> 1.7 from `ROMs/update` (73 files, 124 deleted, every hook, the 1.5

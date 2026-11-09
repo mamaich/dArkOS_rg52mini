@@ -2,7 +2,7 @@
 
 All of these are visible in the build log. `make rg52mini` ends with an audit
 that names them, so start there rather than reading 70 000 lines. Build
-20261025224049 (release 1.3), the same as 1.2's:
+20261108184714 (release 1.8), the same as every release's since 1.2:
 
     ==================== COMPONENT AUDIT ====================
       ---
@@ -1138,6 +1138,20 @@ games tried as on bde09ad (TODO.md, "1.7 rebuilt with malisx2 083892f"). The sha
 changes again, so each game compiles its pipelines once more after the
 update.
 
+**malisx2 0.4.0 (2a2a2cd, in 1.8).** Upstream's 0.4.0 merged whole, with our
+indirect draws through IDVS on top; Mesa as before (3b0e036). It brings what
+upstream wrote for the G52 and every GPU: synchronization2, more dynamic state,
+local read, descriptor indexing, 8- and 16-bit storage, events, indirect draws
+and dispatches, BC textures. It also carries 0.3.3's fixes, in master from
+2026-11-07 (11aba31) but in no image: the v7 tiler heap's Top at the end of its
+region (ARMSX2 at 3x lost the device in God of War), and instanced draws that
+read per-instance attributes from firstInstance. Against 11aba31, on a profile
+retrained for it: God of War +0.8%, Jak and Daxter +1.2%, Castlevania within
+the spread, the malisx2 session's fitest 12 of 12 (README.md, "New in 1.8").
+The shader cache ID changes, so each game compiles its pipelines once more
+after the update. After 1.7 -> 1.8 the God of War demo runs on it as ES
+starts it.
+
 **`mali ff320000.gpu: Stride 72 passed to job_submit isn't supported by the
 kernel` in dmesg is harmless.** malisx2 sends one JOB_SUBMIT with 72-byte atoms
 when it opens a kbase context (each start of a game or emulator on it), to
@@ -1729,6 +1743,17 @@ An earlier version of the same day did one full suspend/resume instead, which
 worked but put the whole device to sleep for it. A fbdev blank without unbinding
 fbcon does not work at all: fbcon switches the output back 38 ms later and
 produces the very black screen it was meant to cure.
+
+**Revision A on a dual-boot card booting GammaOS: a black screen — fixed in
+U-Boot 1.6 (1.8's image).** U-Boot tells the revisions apart by the Type-C
+chip (HUSB311 at 0x4e, absent on revision A) and fixes up the kernel's tree
+with the answer. It used to ask from `rk_board_fdt_fixup()`, after distro
+boot had loaded the kernel's dtb over the blob the live tree points into. With dArkOS alone the two are the same file; booting GammaOS the probe
+never took effect: `husb311@4e` stayed enabled, a revision A board was not
+recognised, and its panel kick never happened. rg52mini-1.6 asks from
+`rk_board_init()`, up to three times, and leaves the answer in
+`/chosen/rg52,typec-probe` (HARDWARE.md, "The bootloader"). A dual-boot card
+takes its loader from GammaOS, not from dArkOS's update.
 
 ## Every card had the same SSH host keys — fixed in 1.2
 
@@ -2373,6 +2398,10 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
   that a warning in the log.
 - A savestate made in New 3DS mode (the core's default) does not load in Old
   3DS mode: RetroArch quits.
+- **Stopped by SIGTERM** (`systemctl stop`, as the test scripts end a game),
+  about one stop in two ends in dynarmic's "Unhandled SIGSEGV at pc ...", with
+  1.7's retroarch as with 1.8's (2026-11-08; the core is the same file). Not
+  seen while playing; a quit from RetroArch's menu was not tried for it.
 - The core keeps its NAND and SD card in an `Azahar` folder next to the games,
   as RetroArch keeps saves next to them here.
 - Theme: nes-box has no 3ds folder, and ours goes into the theme (both of the
@@ -2590,6 +2619,13 @@ when it was stopped on purpose. Checked the same way: the panel came back.
 
 Not covered: why ES exits when HDMI's EDID cannot be read. While the cable is
 moved, it fails until the next change is acted on.
+
+**RetroArch's first start could stay silent on HDMI** (upstream dArkOS's
+case): alsathread's write failed with the PCM still in SETUP. His 0017, our
+`retroarch-patch-0026` (in 1.8, the retry counter moved out of the loop),
+prepares the PCM and writes again, up to 3 times. On the panel the sound plays
+as before; the HDMI case itself was not tried here, and the owner's HDMI checks
+of 2026-10-30 and 2026-11-01 had sound without it.
 
 ## Scraper: ScreenScraper's developer login (since 1.4)
 
@@ -2891,3 +2927,37 @@ today's master; they were not looked at.
 * **Known:** Start+Select may not close a J2ME game (cause not found). Some
   games are not compatible with FreeJ2ME (ViMAP's "Diamonds Duel" needs an XML
   parser it lacks).
+
+## retrorun: red and blue swapped — in 1.2 to 1.7, fixed in 1.8
+
+The owner saw Crazy Taxi blue instead of yellow under retrorun (2026-11-07).
+retrorun scans out 24-bit RGB (RG24), and the RK3562's display controller takes
+24-bit RGB with its bytes the other way round from the RK3568, whose order the
+kernel's `vop2_win_rb_swap()` encodes. `kernel_rk3562` 84be12412 gives the
+RK3562 the opposite swap for RGB888 and BGR888. Seen through the webcam: 1.7's
+kernel shows Crazy Taxi's title cyan, 1.8's yellow, as a kmsgrab of the buffer
+does. The 32-bit formats were right before (ES, RetroArch, every emulator), and
+ES is unchanged (TODO.md).
+
+## Zeebo: the zeebx core (since 1.8)
+
+* **What is there.** ZeebxTeam's zeebx-emu v0.5.1 as a RetroArch core
+  (`zeebx_libretro.so`), ES system "zeebo" reading `/roms/zeebo` (`.mod`,
+  `.zip`, `.7z`). christianhaitian's recipe cloned NextOs-Ports/zeebx-nextos,
+  which is gone; ours builds zeebx-emu, whose locked crates want a newer Rust
+  than trixie's, so the recipe unpacks a pinned official Rust 1.99.1.
+* **A game has to be zipped as the console lays it out:** `mif/<id>.mif` and
+  `mod/<id>/...`. A zip with every file at its root stops at "IMICRO3D failed
+  creation".
+* **Two patches of ours.** `zeebx-patch-0001`: with the hardware rasterizer the
+  core delivered its 2D frames (IDisplay/IBitmap) as pixels, which RetroArch's
+  GL driver ignores once a hardware framebuffer exists, so the screen stayed
+  black; the patch blits them into RetroArch's framebuffer. `zeebx-patch-0002`:
+  2D blits without a checked get/set per pixel, and the media list looked at
+  once per 0.5 ms of the game's clock instead of at every API call.
+* **Speed:** Action Hero 3D, the one game tried, runs its title, menus, story
+  and first stage at about 60% of full speed (real-time audio 50% -> 59%
+  with patch 0002), playable; upstream's issue 67 reports about half speed for
+  dArkOS as well. Other games are not tried.
+* **The update** adds the system to a user's own `es_systems.cfg` and makes
+  `/roms/zeebo` (`ota/hooks/1.8-zeebo.sh`).
