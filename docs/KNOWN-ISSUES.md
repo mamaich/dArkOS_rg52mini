@@ -1209,7 +1209,13 @@ against 14.25-14.48, Castlevania level at 19.0-19.5, fitest 7 of 7 and 12 of
 12 indirect, no GPU fault. driverInfo says 0.4.1 and the shader cache ID
 changes (822e9997-... for 56b0bba4-...), so each game compiles its pipelines
 once more after the update. The second 1.9 test build (20261109210946) has
-0.4.0: the pin moved after it.
+0.4.0: the pin moved after it. The third (20261111204040, 2026-11-12) has it
+as the recipe built it: 15522496 bytes, sha256 b5022adb..., driverInfo
+0.4.1.sb66da8550014 and the cache ID above on the console; the malisx2 session
+compared the file with its own build of the same code (the same driverInfo,
+cache ID and entry points; the differences are those of another clang, as with
+earlier releases). On the console after the update: God of War and Jak start
+on it, GameCube and 3DS as before, no GPU fault.
 
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with

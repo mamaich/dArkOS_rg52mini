@@ -178,6 +178,24 @@ Not taken:
 - mupen64plus-core follows its branch: the next build takes its 8 commits by
   itself (Pokemon Stadium's GB Tower, bounds of 64DD transfers).
 
+**As built**: the third 1.9 test build (20261111204040, built 2026-11-11/12
+from b5e2578 in 129 min, installed by OTA over the second test build). The
+image's files are the repo's (saturn.sh, the RetroArch launcher, the DDR and
+LED tools with "Select + Start to Exit", the malisx2 library); DSperate says
+v3.4.1 (0688b410), patches.zip has 4719 files, the build's PortMaster
+installer carries 2026.11.11-1004 (the release's latest; its control.txt
+still has the line our E2BIG guard goes after). On the console: no failed
+unit, `dpkg --audit` clean, OpenCL in both arches, 300 H.264 frames by the
+32-bit FFmpeg 4. The smoke set, each as ES starts it, with sound and the
+right picture: PS2 God of War 37.7 and Jak from boot, GameCube 49.9, DS on
+DraStic 60 and on DSperate 59.9, 3DS 59.3, PSP 59.9, N64 59.9, Dreamcast
+59.9, Saturn 60 standalone, 59.9 on retrorun and 60.1 on retrorun32, Zeebo
+22.6, Atomiswave 38.8, GBA, SNES, Apple II, PS1 on both cores and Sega CD at
+60; ports: Don't Starve on the image's gl4es 29.9, GTA SA 59.4, Postal 2 45.8,
+Doom 3 60, Mina the Hollower 59.9, PortMaster's window (it offers its own
+update to 2026.11.11). The one crash line in the journal is the Azahar core's
+at the stop of the 3DS game, as before.
+
 Forks looked at: bmdhacks' dArkOS_rg52mini (no commit since June),
 llj503/dArkOS_ngp45ht (a port to the XIFAN NGP45HT, nothing since 2026-10-20),
 doster00's forks (every branch is in our master but his own OTA channel for
