@@ -60,7 +60,13 @@
 # through IDVS on top (c04bb70: after the merge alone they were skipped);
 # driverInfo says 0.4.0, a new shader cache ID again; MALISX2_DEBUG (now
 # MALISX2_MEASURE) and MALISX2_V7_GPU_DESC_COPY are gone, MALISX2_V7_FP16 as
-# before), and the work on the driver
+# before; 02ca776 (f09aa4c's code and a commit of docs), with the same Mesa:
+# upstream's 0.4.1 merged (pjperez's work for Vita3K: buffer device addresses
+# and std430 uniform buffers on v7; a shader that reaches a binding its
+# pipeline layout does not have fails to build, where it read past the layout
+# and could take gigabytes of memory; two more extensions listed on Android);
+# driverInfo says 0.4.1, a new shader cache ID once more), and the work on the
+# driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
 #
@@ -86,12 +92,17 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="2a2a2cdbd2024a244b67299dd034d08133290f31"
+MALISX2_COMMIT="02ca77632e7e8e87f0896d89bf975cdf06a0b197"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained by the malisx2
-# session on 0e4732c (the code of the commit above, Mesa 3b0e036) on an RG52
-# Mini (2026-11-08), with 2026-10-31's set: Azahar's Super Mario 3D Land and
+# session on 0e4732c (0.4.0's code, Mesa 3b0e036) on an RG52 Mini
+# (2026-11-08), and kept for 0.4.1: on its code only the functions that
+# compile shaders and enumerate devices miss their data, the draw path is as
+# it was (the malisx2 session on 2026-11-11, its build of this code against
+# 0.4.0's: God of War 17.66/18.00 against 17.77-18.05, Jak and Daxter 14.29
+# against 14.25-14.48, Castlevania level, fitest 7/7 and 12/12 indirect, no
+# GPU fault). It was trained with 2026-10-31's set: Azahar's Super Mario 3D Land and
 # Luigi's Mansion from an empty pipeline cache; ARMSX2 started as ES does,
 # 90 s each of God of War from a savestate on the ship, Jak and Daxter's
 # intro and Jak and Daxter in game from the owner's save. Castlevania is left

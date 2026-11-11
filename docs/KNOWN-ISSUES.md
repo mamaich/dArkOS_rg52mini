@@ -1193,6 +1193,24 @@ The shader cache ID changes, so each game compiles its pipelines once more
 after the update. After 1.7 -> 1.8 the God of War demo runs on it as ES
 starts it.
 
+**malisx2 0.4.1 (02ca776, in master for 1.9).** Upstream's 0.4.1 merged
+(seven commits by pjperez, written for Vita3K); Mesa (3b0e036) and the profile
+(2026-11-08's) as before: the draw path is not touched, only the functions
+that compile shaders and enumerate devices miss their profile data. What it
+changes: buffer device addresses and std430 uniform buffers on v7; a shader
+that reaches a binding its pipeline layout does not have now fails to build
+with an error, where it read past the layout and could take gigabytes of
+memory; two more extensions listed on Android. For ARMSX2, Dolphin and Azahar
+on the G52 the speed is the same. The malisx2 session measured it on the
+console on 2026-11-11 (the 1.9 test build, its own build of this code against
+0.4.0's, and the lib of 1.8's image, which matched 0.4.0's driverInfo and
+cache ID): God of War 17.66/18.00 against 17.77-18.05, Jak and Daxter 14.29
+against 14.25-14.48, Castlevania level at 19.0-19.5, fitest 7 of 7 and 12 of
+12 indirect, no GPU fault. driverInfo says 0.4.1 and the shader cache ID
+changes (822e9997-... for 56b0bba4-...), so each game compiles its pipelines
+once more after the update. The second 1.9 test build (20261109210946) has
+0.4.0: the pin moved after it.
+
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
 `citra_resolution_factor` raised through a copy. The title demo, three rounds

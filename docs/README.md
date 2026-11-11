@@ -316,6 +316,15 @@ In master for 1.9, not released yet (VERSION says 1.9):
   test build to 1.8 with 27 packages installed after the update, then 1.9 again
   through the menu from a test feed (OTA.md).
 
+- malisx2 0.4.1 (02ca776, Mesa 3b0e036 and the profile as in 1.8; handed
+  over by the malisx2 session on 2026-11-11 with the owner's word): upstream's
+  0.4.1 merged (buffer device addresses and std430 uniform buffers on v7, a
+  shader that reaches a binding its pipeline layout lacks fails to build
+  instead of reading past the layout). The speed of ARMSX2, Dolphin and Azahar
+  is the same. Its shader cache ID is new, so emulators on malisx2 rebuild
+  their pipeline caches once (KNOWN-ISSUES.md, "Vulkan: Arm's driver or
+  malisx2"). Not in the second test build: the pin moved after it.
+
 - Over USB (MTP) a PC sees files and folders whose names start with a dot,
   such as `/roms/.darkos`; up to 1.8 umtp-responder was told to hide them.
 
