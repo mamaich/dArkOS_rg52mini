@@ -128,12 +128,43 @@ bound over the installed file.
 | RetroArch launcher | his 83244776c, one word: armgba in the list of cores without netplay | not tried |
 
 Not taken:
-- **ARMSX2 2.9.3** (2026-11-09, 84 commits after our 2.9.2: ARM64 GS, IPU and
-  sound code, shadow volumes counted in the stencil buffer, fewer hazard-copy
-  clears, the IOP thread on the slow cores). To be measured with a profile
-  retrained for it after the malisx2 session's turn on the console (the owner,
-  2026-11-11). Master after it (146 commits in two days: the "run machine",
-  the burst memo, a compile queue) is too fresh to take.
+- **ARMSX2 2.9.3** (1d68034, 2026-11-09, 84 commits after our 2.9.2: ARM64
+  GS, IPU and sound code, shadow volumes counted in the stencil buffer, fewer
+  hazard-copy clears, the IOP thread on the slow cores). Measured on
+  2026-11-11 and **not taken: no faster anywhere** (the owner's rule for
+  ARMSX2: only what gives speed). Our eight patches apply as they are. Its own
+  profile: the instrumented build played Jak (200 s) and God of War (120 s)
+  from the owner's savestates and Burnout 3 from boot (120 s), merged with
+  2.9.2's at the same total count (2.9.2's x 1, the new runs x 1159). Speed
+  in vsyncs a second on the GS thread (50 is full speed; uprobes on GSvsync
+  and PerformanceMetrics::Update), the image's template settings
+  (EECycleRate -3, EECycleSkip 1), malisx2 0.4.0, 3 rounds, the order of the
+  builds turned every round, each run started below 58 C:
+
+  | Scene | 2.9.2 (ba68927) | 2.9.3, its own profile | 2.9.3, 2.9.2's profile |
+  |---|---|---|---|
+  | Jak in play (past the memory-card notice) | 36.80 / 36.00 / 36.80 | 35.70 / 37.00 / 36.00 (-0.8%, within the spread) | 35.10 |
+  | God of War in play (the ship, enemies) | 28.47 / 28.73 / 29.20 | 27.80 / 28.40 / 28.87 (-1.5%, lower every round) | 27.20 |
+  | Burnout 3's title screen (EE-bound) | 40.00 / 40.00 / 39.65 | 39.90 / 39.00 / 39.10 (-1.4%) | 38.50 |
+  | Jak on its memory-card notice | 37.90 / 38.30 / 38.20 | 38.30 / 38.40 / 36.60 | 35.80 |
+
+  God of War's pause menu runs at the full 50 on every build. Frames shown
+  follow the speed (half of it in Jak and Burnout 3). The runs end at
+  75-79 C, at the throttle, the same for every build. One thing not held
+  equal: 2.9.3's profile was trained with the owner's settings of the day
+  (EECycleRate -8, EECycleSkip 4), under which the EE does less work than in
+  the measured runs. With the owner's settings Jak runs at the full 50 in
+  this scene on 2.9.2 already. Master after 2.9.3 (146 commits in two days:
+  the "run machine", the burst memo, a compile queue) is too fresh to take;
+  worth another look once it has a release.
+
+  How it was measured, for the next time: `~/rg52/armsx2-test.sh` builds a
+  commit in the test chroot and now keeps the addresses of the vsync
+  functions beside the binary; the amd64 cross clang has no aarch64 profile
+  runtime, so the instrumented build takes it from the chroot's own clang
+  through `-resource-dir`. The owner's savestates stand on service screens:
+  Cross (the console's A) passes Jak's notice, Triangle (the console's X)
+  leaves God of War's pause menu.
 - **Dolphin** 4a70679 -> 36982a2: macOS packaging, Skylanders audio, one game's
   setting, AGENTS.md. Nothing for us.
 - christianhaitian's dArkOS, the rest of its three commits since 1.8's review:
