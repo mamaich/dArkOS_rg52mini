@@ -325,6 +325,13 @@ In master for 1.9, not released yet (VERSION says 1.9):
   their pipeline caches once (KNOWN-ISSUES.md, "Vulkan: Arm's driver or
   malisx2"). Not in the second test build: the pin moved after it.
 
+- Saturn on retrorun and retrorun32 starts again: the launcher the image
+  installed called retrorun without its config and without the RG52 Mini's
+  profile, and the game did not start (christianhaitian's fix of 2026-11-08,
+  ported). DSperate main 0688b41 (v3.4.1 and after: local wireless keeps its
+  frame phase), PCSX2's patch database of 2026-11-09, gl4es 1e5d45c; armgba no
+  longer offers netplay (TODO.md, "Upstream updates for 1.9").
+
 - Over USB (MTP) a PC sees files and folders whose names start with a dot,
   such as `/roms/.darkos`; up to 1.8 umtp-responder was told to hide them.
 

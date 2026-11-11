@@ -112,6 +112,46 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
+## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS)
+
+`tools/upstream/check.py` of 2026-11-11 before the next full build; no pull
+request or issue open in our nine repos. Each one taken was built in the test
+chroot and tried on the owner's dual-boot card (the second 1.9 test build),
+bound over the installed file.
+
+| Component | Taken | On the console |
+|---|---|---|
+| DSperate | ff08a3c -> main 0688b41: v3.4.1 (PGO profiles refreshed, the display-engine framebuffers cleared on exit, DS_CHEEVOS_HOST) and 6 commits after it (writes to VCOUNT honoured, which local wireless uses to line a guest's frames up with the host's; a --lan-join guest keeps trying; the LAN MP wait configurable); our cheats-directory patch applies | against the image's, both as ES starts them: Diddy Kong Racing 59.87 against 59.87, its emulation thread 59% of a core against 60%; Castlevania DoS 59.80 against 59.87; the same pictures, sound, no crash |
+| pcsx2_patches | 192ee9b -> b919d7f (one broken patch of one game disabled); 4719 files as before | not tried: data only |
+| gl4es | bc4314d -> 1e5d45c: the accumulation buffer emulated with a framebuffer object, viewport and scissor state that starts off-screen, a texture parameter; our preprocessor patch applies | Don't Starve with the new libGL bound over the port's own folder: 29.87 fps against 29.93, the same screen, sound |
+| Saturn launcher | christianhaitian's 06738b308, ported: `yabasanshiro/saturn.sh`, which the build installs over `retrorun/scripts/saturn.sh`, takes that file's retrorun and retrorun32 branches (retrorun's config, `--triggers`, DEVICE_NAME; ours with the RG52MINI profile) | with the image's saturn.sh Resident Evil does not start on retrorun at all (no frame, the unit ends); with the fix 59.93 fps on retrorun and 60.00 on retrorun32, sound, the picture the right way up as Dreamcast's on retrorun; the standalone emulator as before (60.00) |
+| RetroArch launcher | his 83244776c, one word: armgba in the list of cores without netplay | not tried |
+
+Not taken:
+- **ARMSX2 2.9.3** (2026-11-09, 84 commits after our 2.9.2: ARM64 GS, IPU and
+  sound code, shadow volumes counted in the stencil buffer, fewer hazard-copy
+  clears, the IOP thread on the slow cores). To be measured with a profile
+  retrained for it after the malisx2 session's turn on the console (the owner,
+  2026-11-11). Master after it (146 commits in two days: the "run machine",
+  the burst memo, a compile queue) is too fresh to take.
+- **Dolphin** 4a70679 -> 36982a2: macOS packaging, Skylanders audio, one game's
+  setting, AGENTS.md. Nothing for us.
+- christianhaitian's dArkOS, the rest of its three commits since 1.8's review:
+  the yabadabadoo core in Saturn's lists (our image has no such core), zram
+  for the Azahar core under 1.9 GB of memory (the RG52 Mini reports 1965 MiB),
+  `build_advanced_drastic.sh` (we have no such recipe). His rk3566_core_builds:
+  the two commits seen before (the HDMI sound workaround is our
+  retroarch-patch-0026 since 1.8; the other is for the Miniloong).
+- OpenBOR v7533, openMSX 20+, SDL2's release branch, azahar-nano: as decided
+  before, nothing new.
+- mupen64plus-core follows its branch: the next build takes its 8 commits by
+  itself (Pokemon Stadium's GB Tower, bounds of 64DD transfers).
+
+Forks looked at: bmdhacks' dArkOS_rg52mini (no commit since June),
+llj503/dArkOS_ngp45ht (a port to the XIFAN NGP45HT, nothing since 2026-10-20),
+doster00's forks (every branch is in our master but his own OTA channel for
+the RG43H).
+
 ## Upstream updates for 1.8 (2026-11-07, the owner: "take what you think is needed"; released 2026-11-08)
 
 `tools/upstream/check.py` of 2026-11-07, then each candidate built in the test

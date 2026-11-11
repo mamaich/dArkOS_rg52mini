@@ -221,7 +221,7 @@ fi
 # made here as their CI makes it (`7z a -r patches.zip ./patches/*`: the .pnach files at
 # the zip's root) from a pinned commit of PCSX2/pcsx2_patches, and kept in the package
 # cache under that commit. Outside ARMSX2's own cache, whose key it leaves alone.
-PCSX2_PATCHES_COMMIT="192ee9b5d081d23d358c5c9aa6f80eb2ec677fe9"   # 2026-10-31, 4719 patches
+PCSX2_PATCHES_COMMIT="b919d7fb5849feeb30b2da07d02f6dc662f28ba5"   # 2026-11-09, 4719 patches
 PATCHES_ZIP="Arkbuild_package_cache/${CHIPSET}/pcsx2-patches-${PCSX2_PATCHES_COMMIT:0:12}.zip"
 if [ ! -s "${PATCHES_ZIP}" ]; then
     rm -rf pcsx2_patches.tmp "${PATCHES_ZIP}.new"
