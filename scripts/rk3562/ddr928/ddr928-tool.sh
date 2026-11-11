@@ -54,6 +54,8 @@ m() {
   ru:select) echo "Выбрать" ;;
   en:exit) echo "Exit" ;;
   ru:exit) echo "Выход" ;;
+  en:exit_btn) echo "Select + Start to Exit" ;;   # the menu's button, as in Wifi.sh and Bluetooth.sh
+  ru:exit_btn) echo "Select + Start: выход" ;;
   en:ok) echo "OK" ;;
   ru:ok) echo "OK" ;;
   en:cancel) echo "Cancel" ;;
@@ -185,7 +187,7 @@ menu() {   # $1 text, then the items; prints the choice
   local x=$1
   shift
   dialog --backtitle "$(m back)" --title "$(m title)" --no-collapse --ok-label "$(m select)" \
-    --cancel-label "$(m exit)" --menu "$x" "$(hgt "$x" 10)" $W 2 "$@" 2>&1 > /dev/tty1
+    --cancel-label "$(m exit_btn)" --menu "$x" "$(hgt "$x" 10)" $W 2 "$@" 2>&1 > /dev/tty1
 }
 
 pad_off() { pgrep -f gptokeyb | sudo xargs -r kill -9 2>/dev/null; }

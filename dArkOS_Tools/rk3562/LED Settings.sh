@@ -95,7 +95,7 @@ MainMenu() {
     choice=$(dialog \
       --backtitle "Stick Lighting: $stat  |  Effect: $(effect_name "$MODE")  |  Brightness: $BRI" \
       --title "LED Settings" \
-      --no-collapse --clear --cancel-label "Exit" \
+      --no-collapse --clear --cancel-label "Select + Start to Exit" \
       --menu "" $height $width 10 \
       1 "$toggle" \
       2 "Colour / Effect" \
