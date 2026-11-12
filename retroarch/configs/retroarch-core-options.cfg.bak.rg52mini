@@ -1,3 +1,4 @@
+armn64_resolution = "1"
 atari800_artifacting = "disabled"
 atari800_cassboot = "disabled"
 atari800_internalbasic = "disabled"

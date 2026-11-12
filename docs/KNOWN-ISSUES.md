@@ -1217,6 +1217,34 @@ cache ID and entry points; the differences are those of another clang, as with
 earlier releases). On the console after the update: God of War and Jak start
 on it, GameCube and 3DS as before, no GPU fault.
 
+**malisx2 0.5.0 with the whole FAU block for fragment shaders (86b16a8, in
+master for 1.9).** Upstream's 0.5.0 merged (the Mali-G610 and G710 and the
+other Malis of arches 7 to 11: nothing new for the G52), and one change of
+ours: a shader's uniform words go into the whole FAU block, 64 words where 32
+were, for fragment shaders; vertex shaders keep 32. Mesa (3b0e036) and the
+profile (2026-11-08's) as before. The malisx2 session's numbers on the
+console, 2026-11-12, its build of this code against 0.4.1's (LTO and the
+profile in both):
+
+| | 0.4.1 | 0.5.0 + FAU |
+|---|---|---|
+| God of War, 1x, frames 100-800 | 18.25 | 18.21 |
+| ND Demo (GameCube), frames 300-1300 | 46.77 / 46.84 | 47.59 / 46.81 |
+| ND Demo, frames 1300-2100 | 50.53 / 49.69 | 50.69 / 49.59 |
+| Castlevania (3DS), frames 60-360 | 19.03 / 18.97 | 19.59 / 19.55 (+3.0%) |
+| Castlevania, frames 360-660 | 19.36 / 19.50 | 20.20 / 19.69 (+2.7%) |
+
+fitest 7 of 7 and 12 of 12 indirect, no GPU fault, no device lost. Metroid
+Prime and Jak were level on the build before the last one (64 words for both
+stages), and ARMSX2's shaders do not change with it. With 64 words for vertex
+shaders as well (`MALISX2_V7_UBO_PUSH_VS=64`) Castlevania gains 4.5% and
+Super Mario 3D Land at 3x stays at 29.3, but the ND Demo loses 2%, so only
+the RetroArch launcher sets it, and only for the Azahar core (the owner's
+word, 2026-11-12), as ARMSX2's launcher sets MALISX2_V7_FP16. driverInfo says
+0.5.0 and the shader cache ID changes (7b4bf7cb-... for 822e9997-...), so
+each game compiles its pipelines once more after the update. The third 1.9
+test build (20261111204040) has 0.4.1.
+
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
 `citra_resolution_factor` raised through a copy. The title demo, three rounds

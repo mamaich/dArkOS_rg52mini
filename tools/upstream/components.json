@@ -57,6 +57,8 @@
     {"name": "openMSX", "mode": "tag", "repo": "openMSX/openMSX", "pin": {"file": "rk3562_core_builds/scripts/openmsx.sh", "regex": "^TAG=\"([^\"]+)\""}, "tag_regex": "^RELEASE_\\d+_\\d+$"},
     {"name": "flycast (standalone)", "mode": "tag", "repo": "flyinghead/flycast", "pin": {"file": "rk3562_core_builds/scripts/flycastsa.sh", "regex": "^TAG=\"([^\"]+)\""}, "tag_regex": "^v\\d+\\.\\d+$"},
     {"name": "Dolphin", "mode": "commit", "repo": "dolphin-emu/dolphin", "pin": {"file": "rk3562_core_builds/scripts/dolphinsa.sh", "regex": "^TAG=\"([0-9a-f]+)\""}, "tag_regex": "^\\d{4}[a-z]?$"},
+    {"name": "armGBA", "mode": "commit", "repo": "MagnominusGit/armGBA", "branch": "main", "pin": {"file": "rk3562_core_builds/scripts/armgba.sh", "regex": "^commit=\"([0-9a-f]+)\""}, "tag_regex": "^v\\d+\\.\\d+(\\.\\d+)?$", "note": "light: take what upstream has"},
+    {"name": "armN64", "mode": "commit", "repo": "MagnominusGit/armN64", "branch": "main", "pin": {"file": "rk3562_core_builds/scripts/armn64.sh", "regex": "^commit=\"([0-9a-f]+)\""}, "tag_regex": "^v\\d+\\.\\d+(\\.\\d+)?$", "note": "an extra N64 core, slower here than parallel_n64 (2026-11-12): take what makes it faster or runs more games"},
     {"name": "DSperate", "mode": "commit", "repo": "beebono/DSperate", "pin": {"file": "rk3562_core_builds/scripts/dsperate.sh", "regex": "^commit=\"([0-9a-f]+)\""}, "tag_regex": "^v\\d+\\.\\d+\\.\\d+$"},
     {"name": "AppleWin (sa2)", "mode": "follow", "repo": "audetto/AppleWin"},
     {"name": "linapple (christianhaitian)", "mode": "follow", "repo": "christianhaitian/linapple"},

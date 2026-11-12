@@ -1020,6 +1020,7 @@
 					<core>parallel_n64</core>
 					<core>mupen64plus_next</core>
 					<core>mupen64plus</core>
+					<core>armn64</core>
 				</cores>
 			</emulator>
 			<emulator name="standalone-Rice">

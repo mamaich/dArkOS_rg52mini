@@ -316,6 +316,15 @@ In master for 1.9, not released yet (VERSION says 1.9):
   test build to 1.8 with 27 packages installed after the update, then 1.9 again
   through the menu from a test feed (OTA.md).
 
+- malisx2 0.5.0 (86b16a8, on top of the 0.4.1 below; handed over by the
+  malisx2 session on 2026-11-12 with the owner's word): upstream's 0.5.0
+  (other Mali GPUs; nothing new for the G52) and a shader's uniform words in
+  the whole 64-word FAU block for fragment shaders: Castlevania on the Azahar
+  core 3% faster, 4.5% with the same for vertex shaders, which the RetroArch
+  launcher asks for when it starts that core; God of War and the ND Demo as
+  they were. A new shader cache ID once more (KNOWN-ISSUES.md, "Vulkan: Arm's
+  driver or malisx2"). Not in the third test build: the pin moved after it.
+
 - malisx2 0.4.1 (02ca776, Mesa 3b0e036 and the profile as in 1.8; handed
   over by the malisx2 session on 2026-11-11 with the owner's word): upstream's
   0.4.1 merged (buffer device addresses and std430 uniform buffers on v7, a
@@ -331,6 +340,15 @@ In master for 1.9, not released yet (VERSION says 1.9):
   ported). DSperate main 0688b41 (v3.4.1 and after: local wireless keeps its
   frame phase), PCSX2's patch database of 2026-11-09, gl4es 1e5d45c; armgba no
   longer offers netplay (TODO.md, "Upstream updates for 1.9").
+
+- armN64, a second low-level Nintendo 64 core (the armGBA author's), offered
+  last in the N64 list of EMULATOR SETTINGS; parallel_n64 stays the default.
+  RetroArch runs it on its vulkan driver (`config/armN64/armN64.cfg`), where
+  its GL renderer draws in a context of its own: Zelda's title at 60 frames a
+  second with a fifth of the CPU; on the gl driver it would draw on the CPU at
+  42. Dolphin db2afcb, with two CRT post-processing shaders (crt_pi costs
+  2.5% in the ND Demo; `PostProcessingShader = crt_pi` in GFX.ini), armGBA
+  v1.5, gl4es 8b1a3da (TODO.md, "Upstream updates for 1.9", the second look).
 
 - Over USB (MTP) a PC sees files and folders whose names start with a dot,
   such as `/roms/.darkos`; up to 1.8 umtp-responder was told to hide them.

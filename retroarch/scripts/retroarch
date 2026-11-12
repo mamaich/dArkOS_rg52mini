@@ -13,6 +13,14 @@ if [ -x "$bioscheck" ] && ! "$bioscheck" ra "$emulator" "$@"; then
   exit 0
 fi
 
+# dArkOS RG52 Mini: the Azahar (3DS) core on malisx2 gets its vertex shaders' uniform words in the
+# whole 64-word block too (the driver's default is 32 for them: Dolphin loses 2% with 64, Azahar's
+# Castlevania gains 4.5% and Super Mario 3D Land stays as it was). Another driver does not read it;
+# a value already in the environment is kept.
+case "$*" in
+  *cores/azahar_libretro.so*) export MALISX2_V7_UBO_PUSH_VS="${MALISX2_V7_UBO_PUSH_VS:-64}" ;;
+esac
+
 . /usr/local/bin/buttonmon.sh
 
 Test_Button_X

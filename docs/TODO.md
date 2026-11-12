@@ -196,6 +196,55 @@ Doom 3 60, Mina the Hollower 59.9, PortMaster's window (it offers its own
 update to 2026.11.11). The one crash line in the journal is the Azahar core's
 at the stop of the 3DS game, as before.
 
+**A second look on 2026-11-12** (the owner, while the malisx2 session finished
+its 0.5.0: "check the upstreams and their forks out of turn, something useful
+for the release may have come"). Each one built in the test chroot and tried on
+the console (the third test build), bound over the installed file.
+
+| Component | Taken | On the console |
+|---|---|---|
+| Dolphin | 4a70679 -> db2afcb (15 commits), the owner's word, for its two CRT post-processing shaders, `crt_pi` and `crt_lottes_fast` (two files in Sys/Shaders; the rest is macOS packaging, Skylanders audio, one game's setting, glslang's headers under clang); our three patches apply. No tool to choose a shader (the owner: a line in this release's description is enough): `PostProcessingShader = crt_pi` under `[Enhancements]` in `~/.local/share/dolphin-emu/Config/GFX.ini` | the ND Demo 50.27 / 50.27 against 49.47 / 50.27 for 4a70679; with crt_pi 49.00 on Arm's driver and 50.13 on malisx2, scanlines and the mask in a full-size grab; with crt_lottes_fast 34.40 (a third slower: not for this GPU) |
+| gl4es | 1e5d45c -> 8b1a3da (3 commits: GL_COMBINE_RGB and GL_COMBINE_ALPHA start as GL_MODULATE, a warning hidden) | Don't Starve 29.87 against 29.93, the same screen |
+| armGBA | 20061e2 -> v1.5 (b1c4a69, 60 commits; it was not in `components.json` and had fallen behind unseen: a row for it now): LCD effects, cartridge clocks, a CPU clock option, e-Reader cards and the Game Boy Printer, SRAM for reproduction cartridges' images, a JIT fix. Main, 15 commits further with recompiler changes of 2026-11-10, is left for the next check | Goodboy Galaxy and 007: Everything or Nothing 60.0 on both versions, 5-6% of the four cores, the same pictures |
+| armN64 | **new**: MagnominusGit/armN64 (the armGBA author's low-level N64 core; christianhaitian's recipe of 2026-11-11), pinned at 58e58ca (3 commits after v1.1), built for the Cortex-A53; offered last in N64's "retroarch" list, parallel_n64 stays the default (the owner: first "not now", then "take it as an extra engine") | see below |
+
+**armN64 on the RG52 Mini.** As RetroArch runs it here by default, on the gl
+driver, the core gets no GL context: RetroArch answers
+GET_PREFERRED_HW_RENDER with false when driver switching is off (as dArkOS and
+ArkOS ship it), the core takes that for "no GL" and draws on the CPU, three
+threads at 60-80% of a core each: Zelda's title 42.4 frames a second
+(parallel_n64 59.9, mupen64plus_next 58.3), AeroGauge 56.9 (60), Air Boarder
+50.3 (as the others), 50-75% of the four cores against 10-20%. Its GL options
+then change nothing, and neither did link-time optimisation (42.2 / 58.4).
+
+What makes it fast: RetroArch's **vulkan** driver for this core
+(`config/armN64/armN64.cfg`, one line, as the Azahar core has). Beside a
+Vulkan frontend the core makes a GLES context of its own and its GL renderer
+draws there: Zelda 60.0 at the console's resolution and 46.0 at twice that
+(its "Auto" here; 16% of the four cores either way, so the limit is the GPU
+and the copy of each frame from GLES to Vulkan), AeroGauge 60.0, Air Boarder
+50.3, 14-21% of the four cores, the right pictures. So the image starts it at
+`armn64_resolution = "1"` (the core options file, and the update hook
+`1.9-es-armn64.sh` for a device that keeps its own).
+
+Tried and left (patches and traces in the session's folder
+`~/rg52/sess19/armn64-gl-wip`):
+- The core taking RetroArch's GL context under the gl driver (a one-line
+  patch: use the answer whatever the call returns). It gets a GLES 3.1 context
+  and runs at 60 with 11-17% of the four cores, but only its fills reach the
+  picture: black in Zelda and AeroGauge, the sky's blue in Air Boarder. A GL
+  call tracer shows about 70 draws a frame, 60 blits a second into RetroArch's
+  framebuffer and no GL error. Unbinding the vertex array before the frame is
+  handed over changed nothing. Not found.
+- Its standalone app (`armn64`, `-DARMN64_APP=ON`, SDL2), which draws in its
+  own GL context with no copy: the right picture, but 11-13 frames a second
+  shown with vsync on and 33 with it off, at 13-19% of the four cores:
+  something in how it presents through our SDL (KMSDRM with the RGA
+  rotation). It would also want a launcher, pad mapping and save folders of
+  its own.
+Worth reporting upstream (the first as a bug: a frontend that names its
+context yet answers false); nothing is sent without the owner's word.
+
 Forks looked at: bmdhacks' dArkOS_rg52mini (no commit since June),
 llj503/dArkOS_ngp45ht (a port to the XIFAN NGP45HT, nothing since 2026-10-20),
 doster00's forks (every branch is in our master but his own OTA channel for

@@ -65,7 +65,15 @@
 # and std430 uniform buffers on v7; a shader that reaches a binding its
 # pipeline layout does not have fails to build, where it read past the layout
 # and could take gigabytes of memory; two more extensions listed on Android);
-# driverInfo says 0.4.1, a new shader cache ID once more), and the work on the
+# driverInfo says 0.4.1, a new shader cache ID once more; 86b16a8 (1728a5b's
+# code and docs on top), with the same Mesa: upstream's 0.5.0 merged (the
+# Mali-G610 and G710, arch 10, and every Mali of arches 7, 9, 10 and 11:
+# nothing new for the G52) and a shader's uniform words pushed into the whole
+# FAU block for fragment shaders, 64 words where 32 were, vertex shaders at
+# 32 as before; MALISX2_V7_UBO_PUSH_VS=64 gives them 64 too, which the
+# RetroArch launcher sets for the Azahar core (Castlevania +4.5%, where
+# Dolphin's ND Demo would lose 2%); driverInfo says 0.5.0, a new shader cache
+# ID again), and the work on the
 # driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
@@ -92,7 +100,7 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="02ca77632e7e8e87f0896d89bf975cdf06a0b197"
+MALISX2_COMMIT="86b16a84da9980c524bfb6149bfbcea790eff9c2"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained by the malisx2
@@ -102,7 +110,13 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # it was (the malisx2 session on 2026-11-11, its build of this code against
 # 0.4.0's: God of War 17.66/18.00 against 17.77-18.05, Jak and Daxter 14.29
 # against 14.25-14.48, Castlevania level, fitest 7/7 and 12/12 indirect, no
-# GPU fault). It was trained with 2026-10-31's set: Azahar's Super Mario 3D Land and
+# GPU fault), and for 0.5.0 with the FAU change (2026-11-12, its build of
+# 86b16a8's code against 0.4.1's: God of War 18.21 against 18.25, ND Demo
+# 47.59/46.81 against 46.77/46.84 and 50.69/49.59 against 50.53/49.69,
+# Castlevania 19.59/19.55 against 19.03/18.97 (+3.0%) and 20.20/19.69 against
+# 19.36/19.50 (+2.7%), fitest 7/7 and 12/12 indirect, no GPU fault; only the
+# functions that compile shaders, make the device and the CSF half miss
+# their data). It was trained with 2026-10-31's set: Azahar's Super Mario 3D Land and
 # Luigi's Mansion from an empty pipeline cache; ARMSX2 started as ES does,
 # 90 s each of God of War from a savestate on the ship, Jak and Daxter's
 # intro and Jak and Daxter in game from the owner's save. Castlevania is left
