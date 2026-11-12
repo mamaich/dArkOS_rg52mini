@@ -120,11 +120,11 @@ Do not reopen these without new evidence; each has its section in the docs.
 This is one person's fork with regular releases, and others may work beside
 the owner.
 
-- **Work in your own fork and send a pull request into the `develop` branch**
-  of `mamaich/dArkOS_rg52mini` (for a core's recipe or patch, into `develop`
+- **Work in your own fork and send a pull request into the `master` branch**
+  of `mamaich/dArkOS_rg52mini` (for a core's recipe or patch, into `master`
   of `mamaich/rk3566_core_builds`; the pointer in this repo then moves in a
-  second request). `master` is what releases are built from: only the owner
-  writes to it, taking `develop` in after trying it on a console.
+  second request). `master` is what releases are built from, and only the
+  owner writes to it directly.
 - **One topic per pull request.** The owner tests each on a console before it
   goes into a release; a small request is tried and merged sooner.
 - **In the description say how it was checked on a console**: the board's
