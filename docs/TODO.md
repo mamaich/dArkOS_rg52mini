@@ -208,42 +208,67 @@ the console (the third test build), bound over the installed file.
 | armGBA | 20061e2 -> v1.5 (b1c4a69, 60 commits; it was not in `components.json` and had fallen behind unseen: a row for it now): LCD effects, cartridge clocks, a CPU clock option, e-Reader cards and the Game Boy Printer, SRAM for reproduction cartridges' images, a JIT fix. Main, 15 commits further with recompiler changes of 2026-11-10, is left for the next check | Goodboy Galaxy and 007: Everything or Nothing 60.0 on both versions, 5-6% of the four cores, the same pictures |
 | armN64 | **new**: MagnominusGit/armN64 (the armGBA author's low-level N64 core; christianhaitian's recipe of 2026-11-11), pinned at 58e58ca (3 commits after v1.1), built for the Cortex-A53; offered last in N64's "retroarch" list, parallel_n64 stays the default (the owner: first "not now", then "take it as an extra engine") | see below |
 
-**armN64 on the RG52 Mini.** As RetroArch runs it here by default, on the gl
-driver, the core gets no GL context: RetroArch answers
-GET_PREFERRED_HW_RENDER with false when driver switching is off (as dArkOS and
-ArkOS ship it), the core takes that for "no GL" and draws on the CPU, three
-threads at 60-80% of a core each: Zelda's title 42.4 frames a second
-(parallel_n64 59.9, mupen64plus_next 58.3), AeroGauge 56.9 (60), Air Boarder
-50.3 (as the others), 50-75% of the four cores against 10-20%. Its GL options
-then change nothing, and neither did link-time optimisation (42.2 / 58.4).
+**armN64 on the RG52 Mini.** As upstream has it, the core draws on the CPU
+here: RetroArch answers GET_PREFERRED_HW_RENDER with false when driver
+switching is off (as dArkOS and ArkOS ship it), though it has named its
+context; the core takes that for "no GL", asks for no context and falls back
+without a word. Three threads at 60-80% of a core each: Zelda's title 42.4
+frames a second (parallel_n64 59.9, mupen64plus_next 58.3), AeroGauge 56.9
+(60), Air Boarder 50.3 (as the others), 50-75% of the four cores against
+10-20%. Its GL options then change nothing, and neither did link-time
+optimisation (42.2 / 58.4).
 
-What makes it fast: RetroArch's **vulkan** driver for this core
-(`config/armN64/armN64.cfg`, one line, as the Azahar core has). Beside a
-Vulkan frontend the core makes a GLES context of its own and its GL renderer
-draws there: Zelda 60.0 at the console's resolution and 46.0 at twice that
-(its "Auto" here; 16% of the four cores either way, so the limit is the GPU
-and the copy of each frame from GLES to Vulkan), AeroGauge 60.0, Air Boarder
-50.3, 14-21% of the four cores, the right pictures. So the image starts it at
-`armn64_resolution = "1"` (the core options file, and the update hook
-`1.9-es-armn64.sh` for a device that keeps its own).
+Two patches of ours make its GL renderer work in RetroArch's gl driver
+(rk3562_core_builds `patches/armn64-patch-0001` and `-0002`):
+- **0001**, one line: the frontend's answer is used whatever the call
+  returns. The core then gets a GLES 3.1 context from RetroArch.
+- **0002**: with that alone the game ran at full speed on a picture that had
+  only the RDP's fills (black in Zelda and AeroGauge, the sky's blue in Air
+  Boarder), about 70 draws a frame and no GL error in a call tracer. The same
+  trace showed two eglMakeCurrent calls in all: RetroArch makes no second
+  context for the core here, both draw in one. The renderer sets its vertex
+  array's layout once and leaves the array bound; RetroArch's gl driver on
+  GLES has no vertex array of its own, points the bound one's attributes at
+  its quad's buffer (`gl_glsl_set_attribs`) and disables them when it hands
+  the context back (`gl_glsl_reset_attrib`, RetroArch 1.22.2), so from the
+  frontend's first frame the renderer drew without vertex attributes. The
+  renderer's `glrForget`, which already puts back what the frontend may have
+  left, now sets the layout again. (A first try, unbinding the array where
+  the frame is handed over, changed nothing: the core returns to the frontend
+  on other paths too.)
 
-Tried and left (patches and traces in the session's folder
-`~/rg52/sess19/armn64-gl-wip`):
-- The core taking RetroArch's GL context under the gl driver (a one-line
-  patch: use the answer whatever the call returns). It gets a GLES 3.1 context
-  and runs at 60 with 11-17% of the four cores, but only its fills reach the
-  picture: black in Zelda and AeroGauge, the sky's blue in Air Boarder. A GL
-  call tracer shows about 70 draws a frame, 60 blits a second into RetroArch's
-  framebuffer and no GL error. Unbinding the vertex array before the frame is
-  handed over changed nothing. Not found.
-- Its standalone app (`armn64`, `-DARMN64_APP=ON`, SDL2), which draws in its
-  own GL context with no copy: the right picture, but 11-13 frames a second
-  shown with vsync on and 33 with it off, at 13-19% of the four cores:
-  something in how it presents through our SDL (KMSDRM with the RGA
-  rotation). It would also want a launcher, pad mapping and save folders of
-  its own.
-Worth reporting upstream (the first as a bug: a frontend that names its
-context yet answers false); nothing is sent without the owner's word.
+With both, on the gl driver, warm shader cache, each as ES starts it:
+
+| | Zelda's title | AeroGauge | Air Boarder | of the four cores |
+|---|---|---|---|---|
+| parallel_n64 (the default) | 59.9 | 60.0 | 49.6 | 10-13% |
+| mupen64plus_next | 58.3 | 60.0 | 50.2 | 16-21% |
+| armN64 as upstream (CPU renderer) | 42.4 | 56.9 | 50.3 | 50-75% |
+| armN64 patched, the console's resolution | 59.8 | 60.1 | 50.3 | 11-16% |
+| armN64 patched, twice that ("Auto" here) | 41.8 | 55.8 | 50.3 | 12-14% |
+
+The pictures are right, and stay right through RetroArch's menu over the
+game, a pause, a savestate saved and loaded and fast-forward (58.5 frames a
+second straight after). At twice the resolution the GPU is the limit, so the
+image starts the core at `armn64_resolution = "1"` (the core options file,
+and the update hook `1.9-es-armn64.sh` for a device that keeps its own).
+
+Tried on the way and left:
+- RetroArch's **vulkan** driver for the core (a one-line override, as the
+  Azahar core has; no patch needed): beside a Vulkan frontend the core makes a
+  GLES context of its own and hands over the VI's picture from RDRAM. As fast
+  at the console's resolution (60.0 / 60.0 / 50.3, 14-21% of the four cores)
+  and 46.0 / 60.1 / 50.2 at "twice", but the picture it hands over is never
+  larger than the console's 640x480, so a higher resolution shows nothing for
+  its cost. It was in master for an hour (a46840e) and gave way to the
+  patches.
+- Its standalone app (`armn64`, `-DARMN64_APP=ON`, SDL2): the right picture,
+  but 11-13 frames a second shown with vsync on and 33 with it off, at 13-19%
+  of the four cores: something in how it presents through our SDL (KMSDRM
+  with the RGA rotation). It would also want a launcher, pad mapping and save
+  folders of its own.
+Both patches are fit to send upstream; nothing is sent without the owner's
+word.
 
 Forks looked at: bmdhacks' dArkOS_rg52mini (no commit since June),
 llj503/dArkOS_ngp45ht (a port to the XIFAN NGP45HT, nothing since 2026-10-20),

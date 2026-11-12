@@ -6,10 +6,10 @@
 # file is the image's already. Safe to run twice.
 #
 # And the core's resolution: the image's core options start it at the console's own (Resolution
-# Native; at Auto, twice that here, Zelda's title runs at 46 frames a second for 60: the frame the
-# core draws in its own GLES context is copied to RetroArch's Vulkan one). RetroArch's options
-# file is the user's on any device that has run a game, so the update keeps it; the line is added
-# to it here unless the user has chosen a resolution for the core already.
+# Native; at Auto, twice that here, the Mali-G52 does not keep up: Zelda's title at 42 frames a
+# second for 60, AeroGauge at 56). RetroArch's options file is the user's on any device that has
+# run a game, so the update keeps it; the line is added to it here unless the user has chosen a
+# resolution for the core already.
 #
 # Never fails the update. Changed files go to merged for a rollback.
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

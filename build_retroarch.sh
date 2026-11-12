@@ -106,11 +106,6 @@ sudo cp retroarch/configs/controller/*.cfg Arkbuild/home/ark/.config/retroarch/a
 if [ "$CHIPSET" == "rk3562" ]; then
   sudo mkdir -p Arkbuild/home/ark/.config/retroarch/config
   sudo cp -r retroarch/configs/config/Azahar Arkbuild/home/ark/.config/retroarch/config/
-  # armN64 (N64) on the gl driver gets no GL context from RetroArch (driver switching is off, and
-  # the core takes RetroArch's answer for "no GL") and draws on the CPU, three threads and 42
-  # frames a second in Zelda's title; beside the vulkan driver it makes a GLES context of its own
-  # and its GL renderer draws at full speed (docs/TODO.md, "Upstream updates for 1.9")
-  sudo cp -r retroarch/configs/config/armN64 Arkbuild/home/ark/.config/retroarch/config/
 fi
 sudo cp retroarch/scripts/retroarch Arkbuild/usr/local/bin/
 sudo mkdir -p Arkbuild/opt/cmds
@@ -313,8 +308,9 @@ if [ "$CHIPSET" == "rk3562" ]; then
   build_a53_core armgba pinned armgba
   # armN64, the same author's low-level N64 core (christianhaitian's recipe of 2026-11-11, pinned
   # in ours and built for the Cortex-A53): a choice in EMULATOR SETTINGS, last in the list;
-  # parallel_n64 stays the default. As fast here as the cores the image has once RetroArch
-  # runs it on its vulkan driver (the override above; docs/TODO.md, "Upstream updates for 1.9")
+  # parallel_n64 stays the default. As fast here as the cores the image has with our two
+  # patches, which let its GL renderer draw in RetroArch's gl driver; unpatched it draws on the
+  # CPU at two thirds of the speed (docs/TODO.md, "Upstream updates for 1.9")
   build_a53_core armn64 pinned armn64
   # Nintendo 3DS: not in rg503's set at all, built here from a pinned release
   build_a53_core azahar pinned azahar

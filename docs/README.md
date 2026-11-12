@@ -343,10 +343,9 @@ In master for 1.9, not released yet (VERSION says 1.9):
 
 - armN64, a second low-level Nintendo 64 core (the armGBA author's), offered
   last in the N64 list of EMULATOR SETTINGS; parallel_n64 stays the default.
-  RetroArch runs it on its vulkan driver (`config/armN64/armN64.cfg`), where
-  its GL renderer draws in a context of its own: Zelda's title at 60 frames a
-  second with a fifth of the CPU; on the gl driver it would draw on the CPU at
-  42. Dolphin db2afcb, with two CRT post-processing shaders (crt_pi costs
+  Two patches of ours let its GL renderer draw in RetroArch's gl driver:
+  Zelda's title at 60 frames a second with a sixth of the CPU; as upstream
+  has it the core draws on the CPU here, at 42. Dolphin db2afcb, with two CRT post-processing shaders (crt_pi costs
   2.5% in the ND Demo; `PostProcessingShader = crt_pi` in GFX.ini), armGBA
   v1.5, gl4es 8b1a3da (TODO.md, "Upstream updates for 1.9", the second look).
 
