@@ -115,17 +115,25 @@ Do not reopen these without new evidence; each has its section in the docs.
   git-ignored `exports.sh` at build time or from the user's own settings
   (KNOWN-ISSUES.md, "Scraper: ScreenScraper's developer login").
 
-## Working beside the owner
+## How to send changes
 
-This is one person's fork with regular releases; `master` is what the next
-release is built from. Work in your own fork or branch and send a pull
-request against `mamaich/dArkOS_rg52mini` (for a core's recipe or patch,
-against `mamaich/rk3566_core_builds`; the pointer in this repo then moves in a
-second request). In the request say what was run on real hardware, on which
-release, and what was measured; a change tried only in a build is welcome but
-say so. Keep one topic per request: the owner tests each on a console before
-it goes into a release. Releases, tags and the OTA feed are the owner's to
-make.
+This is one person's fork with regular releases, and others may work beside
+the owner.
+
+- **Work in your own fork and send a pull request into the `develop` branch**
+  of `mamaich/dArkOS_rg52mini` (for a core's recipe or patch, into `develop`
+  of `mamaich/rk3566_core_builds`; the pointer in this repo then moves in a
+  second request). `master` is what releases are built from: only the owner
+  writes to it, taking `develop` in after trying it on a console.
+- **One topic per pull request.** The owner tests each on a console before it
+  goes into a release; a small request is tried and merged sooner.
+- **In the description say how it was checked on a console**: the board's
+  revision, A or B; a card with dArkOS alone or one shared with GammaOS
+  (dual-boot); the release or build it ran on; what was measured; and what
+  was not checked. A change tried only in a build is welcome, but say so.
+- Do not rewrite history that is already pushed, and do not move pins,
+  `VERSION` or the OTA feed in passing. Releases, tags and the feed are the
+  owner's to make.
 
 On a console you test with: back up saves and settings you are going to
 change, and do not write to the eMMC or to the loader partition unless that
