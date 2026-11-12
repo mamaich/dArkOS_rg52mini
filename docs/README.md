@@ -44,6 +44,16 @@ any manual steps:
 Clone with `--recursive`. All three are https; an earlier `git@github.com:`
 in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
+Two more of our repositories feed the build without being submodules: malisx2
+is cloned from mamaich/malisx2-rg52mini at the commit in `build_malisx2.sh`
+(the driver is developed there), and U-Boot is a committed binary,
+`BSP/uboot-rg52mini.img`, built from mamaich/u-boot-rk3562-rg52mini
+(HARDWARE.md, "The bootloader"). Every other pin is in a recipe;
+`tools/upstream/components.json` says in which file (BUILDING.md).
+[AGENTS.md](../AGENTS.md) at the top of the tree is the entry page for an AI
+assistant, or a person, picking the work up: the layout and the rules it has
+followed.
+
 ## State of the port
 
 The current release is 1.9 (build 11122026, 2026-11-12); from 1.1 on, a card
@@ -102,7 +112,7 @@ New in 1.4 (build 10312026, 2026-10-31):
 | Dreamcast | flycast 2.7 with master's fixes; Atomiswave keeps its NVRAM |
 | PS1 | standalone DuckStation is no longer in the image: its author did not agree to the way it was passed on; PS1 games run in RetroArch, as ES starts them by default; an update to 1.4 takes it off and keeps memory cards and savestates ([KNOWN-ISSUES](KNOWN-ISSUES.md#standalone-duckstation-not-in-the-image-since-14)) |
 | PS2 | malisx2 by default, 10-12% faster than libmali; malisx2 d398141 (da1e3a2 in the image builds the same code for ARMSX2): one GPU job a draw (IDVS), FP16 fragment arithmetic for ARMSX2 (God of War 5-8% faster); EE Cycle Rate down to 27% in ARMSX2's menu, 50% by default |
-| Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it) and openMSX 19.1 start again; XRoar 1.12.1 starts too, but its screen stays on the power-on pattern ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
+| Other emulators | ScummVM 2026.4.0 (MIDI through FluidSynth, no dialog about it) and openMSX 19.1 start again; XRoar 1.12.1 starts too, but its screen stays on the power-on pattern ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--openmsx-fixed-in-14-xroar-in-15)) |
 | Doom | LZDoom and GZDoom: no turning by itself, the RG52 pad's layout |
 | HDMI | follows the cable on hotplug, debounced, not only at boot; sound over HDMI (the RK628's sound card had no pins, kernel eba0d6e); a game started from Ports counts as a game; RetroArch's picture is no longer on its side on a TV (patch 0025); doster00's pull requests #3-#5 |
 | Scraper | ScreenScraper works again: with no developer login of the user's or the build's, ES fetches one from a friendly project's server (es-0003; [KNOWN-ISSUES](KNOWN-ISSUES.md#scraper-screenscrapers-developer-login-since-14)) |
@@ -128,7 +138,7 @@ New in 1.5 (build 11012026, 2026-11-02):
 | EmulationStation | UI Settings > Show Clock shows the clock (at the bottom right, it was below the screen); the battery's percent at the top right is on the screen; nes-box shows a game's logo whole, in the bar at the bottom (es-0004, `1.5-nesbox-marquee.sh`; [KNOWN-ISSUES](KNOWN-ISSUES.md#es-no-clock-the-batterys-percent-off-the-screen-a-games-logo-in-the-corner--fixed-in-15)) |
 | PortMaster | its window fills the screen, no black bars on the sides: `portmaster-e2big.sh` gives it the screen's size ([KNOWN-ISSUES](KNOWN-ISSUES.md#portmasters-window-had-black-bars-on-the-sides--fixed-in-15)) |
 | RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f, 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |
-| XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--fixed-in-14)) |
+| XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--openmsx-fixed-in-14-xroar-in-15)) |
 | Sleep | not changed, but the notes advise unplugging USB devices before sleep and plugging a charger into an awake console: a USB headset on the port turns deep sleep into a loop of wakes ([KNOWN-ISSUES](KNOWN-ISSUES.md#usb-devices-on-the-port-in-sleep-it-woke-again-and-again--advice-in-15-not-fixed)) |
 
 Checked for 1.5 on the dual-boot card: the update 1.4 -> 1.5 from `ROMs/update`
@@ -265,7 +275,8 @@ New in 1.9 (build 11122026, 2026-11-12):
   package from 1.5 to 1.7 and a .part file.
 
 - ARMSX2 gets PCSX2's game patch database: `resources/patches.zip` made from
-  PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it; before, every
+  PCSX2/pcsx2_patches b919d7f (2026-11-09; first taken at 192ee9b of
+  2026-10-31, which the checks below used) as their CI makes it; before, every
   game start logged "Failed to open patches.zip" (TODO.md). Nothing is applied
   by itself: every one of its 4719 files keeps its patches in named groups, and
   ARMSX2 enables only unlabelled ones on its own. The pause menu (Select+X) ->
@@ -361,6 +372,13 @@ New in 1.9 (build 11122026, 2026-11-12):
   not touch: PortMaster offers its own update when started with Wi-Fi
   (KNOWN-ISSUES.md, "PortMaster: the latest version, and ports copied by hand").
 
+- Ports with PortMaster 2026.11: PortMaster started from Ports runs as ark
+  (A/B and X/Y were swapped in its menus), a port that exports the controller
+  config itself no longer fails with "Argument list too long" (GTA San
+  Andreas), and a port copied again over USB or through Android gets its
+  execute bits at every start (`runport.sh`, `portmaster-e2big.sh`; the same
+  KNOWN-ISSUES section).
+
 - The Azahar core no longer binds null descriptors on Arm's driver
   (`azahar-patch-034`): a 3DS game that sampled one lost the Vulkan device on
   the stock libmali and RetroArch ended, as Super Mario 3D Land did entering
@@ -392,9 +410,11 @@ In master for 1.10, not released yet (VERSION says 1.10):
   (`darkos-backlight-keep`, KNOWN-ISSUES.md, "The screen at 5% brightness
   after a start").
 
-Built but never launched: freej2me-plus. It had been silently missing from
-earlier images and now exists — whether it runs is another question.
-Yabasanshiro was in the same state until 2026-10-24, when the one game tried
+freej2me-plus, silently missing from earlier images, is built and starts (on
+a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini
+(2026-11-03, cause not found); since 1.7 the `freej2me` core on the image's
+OpenJDK 21 is offered first (KNOWN-ISSUES.md, "J2ME: the freej2me core on the
+system OpenJDK 21"). Yabasanshiro was built and never launched until 2026-10-24, when the one game tried
 crashed within seconds, in a dynarec template for an instruction as common as
 MOV.B; patches 12 and 13 of its recipe make it run (KNOWN-ISSUES.md).
 
