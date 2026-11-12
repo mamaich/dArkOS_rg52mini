@@ -275,6 +275,39 @@ llj503/dArkOS_ngp45ht (a port to the XIFAN NGP45HT, nothing since 2026-10-20),
 doster00's forks (every branch is in our master but his own OTA channel for
 the RG43H).
 
+**As built, with the second look in it**: the fourth 1.9 test build
+(20261112155920, built 2026-11-12 from bc9ef41 in 125 min, installed by OTA
+over the third test build; the package is 37 MiB, the one from 1.8 56 MiB and
+carries the armN64 hook). The image's files are the repo's; malisx2 says
+`v1.r44p1-malisx2.0.5.0.s16d8fde8ac24`, cache UUID 7b4bf7cb-…, and the launcher
+has the Azahar knob; the Azahar core has `azahar-patch-034` (KNOWN-ISSUES, "No
+null descriptors on Arm's driver"); armN64 is in N64's list and the hook for
+updates sets its resolution once; armGBA says 1.5; Dolphin has the two CRT
+shaders; the build's PortMaster installer carries 2026.11.12-1059. On the
+console: no failed unit, `dpkg --audit` clean, OpenCL in both arches, the
+owner's settings as they were. The smoke set, each as ES starts it, with sound
+and the right picture: PS2 God of War 38.1 and Jak 17.5, GameCube 50.1 on
+Arm's driver and 50.2 on malisx2, DS on DraStic 60 and on DSperate 59.9, 3DS
+Castlevania 56.9 on Arm's driver (52 in the first five seconds, then 59-60)
+and 59.4 on malisx2 0.5.0, PSP 59.9, N64 59.9 on the default core, armN64
+AeroGauge 60 and Zelda's title 57.4 (54 in the first five seconds, then 59),
+Dreamcast 60, Saturn 60 standalone and 59.9 on retrorun, Zeebo 22.7,
+Atomiswave 38.9, GBA on both cores, SNES, Apple II, PS1 on both cores and
+Sega CD at 60; ports: Don't Starve 29.9, GTA SA 59.4, Postal 2 44.5, Doom 3
+60.1, Mina the Hollower 59.9. Super Mario 3D Land, world 6-3, the report that
+brought patch 034: from the state on the map (A, the "World 6-3" card, the
+level) 60 fps on Arm's driver with no GPU fault, 45 s watched with the stick
+held up for 8 of them; the same from a state inside the level, on Arm's driver
+and on malisx2 0.5.0. The crash lines in the journal are the Azahar core's at
+the stop of each 3DS game, as before.
+
+The packaging step after the build failed once: wsl-pro-service still held the
+build's root file system mounted (`Arkbuild`, a loop of the deleted
+ArkOS_File_System.img), and btrfs will not mount the image's copy of the same
+file system beside it ("duplicate device" in dmesg, mount's exit 32).
+`nsenter -t <its pid> -m umount -l …/Arkbuild`, detach the loops make-ota
+left, run the packaging again.
+
 ## Upstream updates for 1.8 (2026-11-07, the owner: "take what you think is needed"; released 2026-11-08)
 
 `tools/upstream/check.py` of 2026-11-07, then each candidate built in the test
