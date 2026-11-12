@@ -2488,6 +2488,27 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
   held back by that. At internal resolution x2 and above, `ScaleUp` still
   makes the scaled image with storage usage and MUTABLE_FORMAT, so it stays
   uncompressed; not changed, since x1 is the default.
+- **No null descriptors on Arm's driver** (`azahar-patch-034`, 2026-11-12).
+  The owner's report: Super Mario 3D Land, A on the map before world 6-3, the
+  "World 6-3" card, and 14-19 s later RetroArch aborts with
+  `vk::DeviceLostError` after `mali ... GPU fault 0x58 (DATA_INVALID_FAULT)
+  from job slot 0` (0x5b at times). Every time on libmali g29p1: with the
+  owner's caches, with none, with vertex shaders on the CPU, and on the
+  previous test build after an OTA rollback; on malisx2 the level runs. The
+  kernel has CONFIG_MALI_JOB_DUMP: a reader of debugfs `mali0/job_fault`
+  gets the registers at the fault and, while kbase holds the context, its GPU
+  memory from `ctx/<tgid>_<id>/mem_view`. The faulted fragment job's header
+  names the descriptor the GPU refused in its fault pointer: an all-zero
+  texture descriptor, third in a draw's texture table, after two valid 64x64
+  textures. That is patch 024 (Azahar's #2545): with VK_EXT_robustness2's
+  `nullDescriptor` a disabled texture unit gets VK_NULL_HANDLE in place of the
+  black texture. libmali offers the feature (malisx2 does not) and writes an
+  empty descriptor; a shader that samples that unit then faults the GPU where
+  Vulkan promises zeroes. Shaders rarely sample a disabled unit, which is why
+  it took this level to show. A copy of the core that cannot find the
+  extension (one letter of its name changed in the binary) runs the level at
+  60 fps on libmali, no fault. 034 does not take the extension when the
+  driver is Arm's; unused units get the black texture as before 024.
 - **RetroArch's FPS counter costs about 20%** on the vulkan driver (29.7 fps
   without it, 24.3 with it, same savestate, 2126.2). Measure without it.
 - **RGA scaling** (`video_ctx_scaling`) changes nothing on the vulkan driver
