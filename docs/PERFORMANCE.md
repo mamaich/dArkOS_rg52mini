@@ -95,13 +95,14 @@ eMMC wear was the concern, and the tuning answers it:
   pointless against RAM.
 * The eMMC tier is last-resort by construction: priority 10 against 100.
 
-The partition is found by GPT label, never hardcoded, and
-`/usr/local/sbin/emmc-swap` refuses to touch it unless all four hold: the label
-is `swap`, `blkid` says the type is already `swap`, the size is between 64 MB
-and 2 GB, and nothing has it mounted. It waits up to 30 s for
-`/dev/disk/by-partlabel/swap` to appear, because udev and the service race.
-It never runs `mkswap` on a partition it did not already recognise as swap —
-`mkswap` on the wrong device is unrecoverable.
+`/usr/local/sbin/emmc-swap` finds the partition by GPT label, never by a
+device path, and leaves it alone if it is mounted or if `blkid` reports
+anything but swap or nothing. A partition that already is swap is just
+enabled. A raw one, as these consoles ship it, is formatted once with
+`mkswap`, and only if its size is between 64 MB and 2 GB. It waits up to 30 s
+for `/dev/disk/by-partlabel/swap` to appear, because udev and the service
+race. It never runs `mkswap` over something `blkid` recognises — `mkswap` on
+the wrong device is unrecoverable.
 
 `CONFIG_ZRAM_WRITEBACK=y` is in the kernel but not wired up. It is the other
 way to spend the eMMC partition: instead of a second swap device, zram evicts
@@ -197,6 +198,21 @@ not comparable. Why `flycast32_rumble` (a May 2024 build from retroarch-cores)
 shows a grey screen on this game was not looked into; it logs
 "FlashRom: ReadAMDID1 unexpected write" where `flycast_xtreme` does not.
 
+Why the RetroArch cores sit near 43 fps was found on 2026-11-09, and it is
+not the GPU driver, though the same game ran at 59 on older libmali builds
+(g24p0, g13p0, g2p0): the core's threaded renderer
+(`reicast_threaded_rendering`) together with RetroArch's audio sync. The
+emulation thread blocks on the full audio buffer once per audio period
+(22.8 ms), and the core drops a frame that arrives before the last one was
+taken, which leaves two stable speeds: one frame per audio period, about 43,
+or 60. The driver's timing only decides which of the two a game falls into;
+the GPU spends about 1.8 ms on a frame with every blob. With
+`reicast_threaded_rendering = "disabled"` every blob gives 60.0 in both
+arches. The default is not changed: without the thread emulation and
+rendering share a core, and the heavy Dreamcast, NAOMI and Atomiswave games
+were not measured that way. Before blaming a driver version for a difference
+in speed, look for a timing mode like this one.
+
 ### A profile (PGO) for the heaviest emulators (1.3)
 
 Compiler flags alone gained nothing on these emulators ("Not worth doing",
@@ -215,6 +231,14 @@ made from a tree at the chroot's path (`/home/ark/...`), or clang drops those
 functions. GammaOS's profile alone did nothing for Azahar here (24.8 fps): it
 comes from an Android build, and 44% of its counts are on functions whose code
 differs in ours. TODO.md has the series.
+
+### PS2 on malisx2 (1.4)
+
+ARMSX2 runs on malisx2, the open Vulkan driver, by default: 10-12% faster
+there than on Arm's driver. The other systems stay on Arm's and can be
+switched per system in ES. TODO.md, "malisx2 measured against libmali" and
+"malisx2 for 1.4", has the series; KNOWN-ISSUES.md, "Vulkan: Arm's driver or
+malisx2", what each version of the driver changed.
 
 ### perfmax: performance unless told otherwise (1.3)
 
@@ -356,6 +380,31 @@ check above misses because their makefiles do not print compile lines:
   another matter and is shipped (above). Everything is still built with the
   Debian toolchain in the chroot; swapping the toolchain for the whole image
   on the assumption that newer is faster is not an experiment.
+* **A kernel built with a newer compiler.** The kernel is built with Linaro
+  GCC 6.3. Read from saved profiles on 2026-10-27, not measured on the
+  console: a newer gcc or clang with LTO would make the kernel's lzo 3-22%
+  faster on a model, but the kernel is 9-13% of a game's cycles and the
+  threads that limit the speed spend 1.5-5% there, so the gain in frames is
+  about nothing. Moving off Linaro also needs
+  `KCFLAGS=-mfix-cortex-a53-835769` (the CPU is r0p4, and only Linaro adds
+  that by default), and `gcc-wrapper.py` and `CONFIG_WERROR` stand in the way.
+* **A newer kernel-side Mali driver.** Asked on 2026-11-08, when a Batocera
+  image for the RK3562 seemed faster: its kernel is 6.1.118, but its kbase is
+  the same g25p0 (UK 11.47) as ours and its libmali the same g29p1 release.
+  Rockchip has g29p1's kbase only in develop-6.1 and develop-6.12, and for a
+  job-manager GPU like the G52 its difference from g25p0 is context teardown
+  and MMU fixes, CSF-only changes and devfreq for 6.1's OPP API: nothing that
+  makes a frame faster. Not ported.
+* **libmali's environment keys.** `MALI_SCHED_RT_THREAD_PRIORITY=95`, which
+  that Batocera image sets, changed nothing (Super Mario 3D Land 59.7 against
+  59.7; the driver applies it only when the application asks for a high
+  queue priority, and RetroArch and ARMSX2 do not), and forcing its thread
+  to real-time cost 1-5%. `MALI_PREGLES2018_EARLY_KILL_ENABLE=1` gave Saturn
+  1% and drew part of the scene black. Neither is set.
+* **Booting without the initrd.** Tried on 2026-10-08: with `initrd=` taken
+  out of `extlinux.conf` the console stayed on U-Boot's logo. The initrd holds
+  no modules the boot needs (btrfs and the MMC drivers are built in), so it
+  could be made to work, for about 1.8 s of a boot; the owner: not worth it.
 * **The START menu's shell commands.** ES's main menu runs 14 of them as it
   opens (`systemctl status bluetooth` alone 37 ms, `current_volume` 20 ms)
   and stands still for 167 ms, 10 frames, every time (2026-11-08). The

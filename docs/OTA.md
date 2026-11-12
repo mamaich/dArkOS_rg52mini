@@ -210,7 +210,7 @@ State and log are in `/var/lib/darkos-ota/` (`state.json`, `ota.log`).
 
 Commands:
 
-- `darkos-ota version | check | local | local-problems | update | install <pkg> | rollback | status | clean`;
+- `darkos-ota version | check | next [--build ID] | local | local-problems | update | install <pkg> | rollback [--dry-run] | status | clean` (and `boot-ok`, which `darkos-ota-boot.service` runs);
 - `--feed URL` overrides the feed, and so does a URL in `/home/ark/.config/darkos-ota-feed`. Use it for a test channel.
 
 A package copied to `/roms/update/` (or `/roms/tools/update/`) is offered
@@ -270,7 +270,12 @@ may change, so the client checks free space and assumes no sizes.
 
 ## Release procedure
 
-1. Build the release image; `VERSION` in the tree is its number.
+1. Build the release image; `VERSION` in the tree is its number. Keep the
+   images of the two releases before it in the repo's folder
+   (`dArkOS_rg52mini_<N-1>.img`, `<N-2>.img`): they are make-ota's bases, and
+   the new image becomes one for the next two releases. Tag the commit the
+   image was built from `v<new>` and make the GitHub release from that tag,
+   as a draft, with the image's 7z volumes (only on the owner's word).
 2. `sudo ota/make-ota.py <previous release>.img <new>.img -o <dir>
    --url-base https://github.com/mamaich/dArkOS_rg52mini/releases/download/v<new>
    --feed ota/rg52mini.json`.
@@ -289,7 +294,13 @@ may change, so the client checks free space and assumes no sizes.
 3. Upload the package as an asset of the release, next to the image volumes.
 4. Only then commit and push `ota/rg52mini.json`; devices see the update from
    that moment.
-5. Bump `VERSION` for the next release.
+5. Bump `VERSION` for the next release, and bring the docs in step in the same
+   commit (72bbc08 and 819f30d show the set): the table row and the
+   "Готовится" line in README.md; in docs/README.md the current release, "In
+   master for N" turned into "New in N", and "Checked for N"; the loader
+   paragraph of HARDWARE.md; the feed's count and the example at the top of
+   this page; the release's section in TODO.md marked released; the titles in
+   KNOWN-ISSUES.md that say "for N" or "in master for N" turned into "in N".
 
 Comparing two images takes about three minutes. Between 10072026 and 10082026
 the difference was 99 changed files of 295 MiB and 39 deletions on the root,

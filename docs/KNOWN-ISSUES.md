@@ -2,7 +2,7 @@
 
 All of these are visible in the build log. `make rg52mini` ends with an audit
 that names them, so start there rather than reading 70 000 lines. Build
-20261108184714 (release 1.8), the same as every release's since 1.2:
+20261112155920 (release 1.9):
 
     ==================== COMPONENT AUDIT ====================
       ---
@@ -12,15 +12,18 @@ that names them, so start there rather than reading 70 000 lines. Build
         none
 
       Packages that failed to install:
-        Could not install needed library libfuse2.
-        Could not install needed library libpcap0.8.
+        none
 
       Cached failures (an empty tarball under a key that still matches,
       so every later build restores the failure instead of retrying):
         none
     ========================================================
 
-`libfuse2` and `libpcap0.8` do not exist in trixie under those names.
+Up to 1.8 the audit named `libfuse2` and `libpcap0.8` here: they do not exist
+in trixie under those names, and apt now takes libfuse2t64 and libpcap0.8t64
+for them. The audit runs before `cleanup_filesystem.sh`; after it the log has
+"Could not install needed library" for liblc3-0 and libreadline7, which are
+deliberate (Smaller things).
 
 ## Components that did not build
 
@@ -229,6 +232,11 @@ the file is overwritten, as a PortMaster update does, the path unit restores
 the guard within a few seconds; after a reboot with the file restored, the
 service adds it again (`/roms` is mounted by then).
 
+PortMaster 2026.11 fills the variable from all of gamecontrollerdb.txt in
+`get_controls` itself, and a port that does not source `mod_dArkOS.txt` (GTA
+San Andreas) failed again; since 1.9 the guard is in `control.txt` too
+("PortMaster: the latest version, and ports copied by hand", below).
+
 The limit of the fix: SDL reads `SDL_GAMECONTROLLERCONFIG_FILE` from 2.0.22 on.
 A port that bundles an older SDL gets no mapping for the built-in pad and sees
 it as a plain joystick. The complete fix belongs in PortMaster: a
@@ -434,7 +442,7 @@ AutoTune off, -6/3, the GS back thread, NominalScalar 0.85. The owner: steady,
 the tempo a bit low; set aside for now. The owner's own load on the console
 reached 85-86 C on the charger, where throttling adds to the swings.
 
-**For 1.6: the EE down to 21%, and movies at its full rate** (2026-11-02,
+**In 1.6: the EE down to 21%, and movies at its full rate** (2026-11-02,
 the owner wanted the full tempo). A profile of the heavy part (perf, a
 build with symbols) put the EE thread's time in the game's JIT code, in
 `spu2Mix` (~18% of the thread: the SPU2's 48 voices every sample, each
@@ -460,10 +468,11 @@ Burnout 3's demo has a video behind its title screen, so the EE ran at its
 full rate there, 37-42 vps against 44-46 (by design; the switch turns it off
 per game). Settings for Guitar Hero, per game: EE Cycle Rate 21%, EE Cycle
 Skipping Maximum Underclock, MTVU on, Automatic Performance Tuning off, Full
-EE Speed in Movies on, GS Multi-threading Enabled. `spu2Mix` is next (TODO).
+EE Speed in Movies on, GS Multi-threading Enabled. `spu2Mix` was tried next
+and not kept (TODO.md, "For 1.6").
 
 
-**For 1.6: ARMSX2 master, and EE Cycle Skip 4** (2026-11-03). With master
+**In 1.6: ARMSX2 master, and EE Cycle Skip 4** (2026-11-03). With master
 f6df1e69 and its profile, from the owner's savestate on fresh-card settings
 (-3/1), 55.3 vps against 51.9 for 1.5's ARMSX2 (docs/TODO.md). EE Cycle Skip 4
 ("Extreme Underclock", pcsx2-0008, set by hand per game) at the same rate:
@@ -792,7 +801,7 @@ user's config that names a soundfont that is not there. Day of the Tentacle
 starts straight into its intro, the music through FluidSynth (about half a
 core of the A53).
 
-## XRoar and openMSX did not start — fixed in 1.4
+## XRoar and openMSX did not start — openMSX fixed in 1.4, XRoar in 1.5
 
 Both link `libGL.so.1`: their OpenGL output is built because the chroot has
 GL headers, and neither configure can be told to leave it out. The image has
@@ -1076,10 +1085,10 @@ anyway. It now presents right through the layer.
 Two Vulkan drivers can run the Mali-G52: Arm's own, in libmali, and malisx2
 (github.com/bmdhacks/malisx2), Mesa's shader compilers and Vulkan runtime over
 Arm's kernel driver, written for the ARMSX2 PS2 emulator; GammaOS ships it for
-azahar-nano on the G52. Measured here (TODO.md, "malisx2"): it compiles
-pipelines about six times faster (a game's first run stutters less), but draws
+azahar-nano on the G52. Measured here in 1.3 (TODO.md, "malisx2"): it compiled
+pipelines about six times faster (a game's first run stutters less), but drew
 Castlevania: Lords of Shadow – Mirror of Fate a quarter slower and God of War 5%
-slower, implements Vulkan 1.1 with 24 device extensions against libmali's 1.3
+slower, implemented Vulkan 1.1 with 24 device extensions against libmali's 1.3
 with 135, and in 1.3 Dolphin did not start on it (it does since 1.3.1, below). So
 libmali stays the default, except for ARMSX2 since 1.4: malisx2 1c45a6e (IDVS,
 index ranges on the GPU) draws God of War and Jak and Daxter in game 10-12%
@@ -1090,7 +1099,9 @@ ships d398141, and ARMSX2's launcher sets `MALISX2_V7_FP16=1` (fragment shader
 arithmetic in FP16 where nothing needs 32 bits): God of War another 5-8%, Jak
 level (TODO.md, "malisx2 for 1.4").
 Azahar and Dolphin stay on libmali: Castlevania 13-20% slower on malisx2, the
-ND Demo 41.4 fps against 45.7.
+ND Demo 41.4 fps against 45.7 (figures of 1.3 and 1.4; on 0.5.0, in 1.9, the
+smoke set's scenes are level on the two drivers, and libmali stays ahead at
+2x-3x resolution in Azahar, below).
 
 The choice below replaces the old "Vulkan Driver Toggle" tool, which is no
 longer in the image.
@@ -1186,7 +1197,7 @@ Atomiswave's KOV7 30 as before, Azahar's Super Mario 3D Land 60, Dolphin's
 ND Demo 46, the Mina the Hollower port 60; no GPU faults. The malisx2
 session checked Luigi's Mansion 2, Castlevania, ARMSX2 and Metroid Prime.
 
-**malisx2 0.3.2 (467251a, for 1.7).** Upstream's 0.3.2 and four v7
+**malisx2 0.3.2 (467251a, in 1.7).** Upstream's 0.3.2 and four v7
 commits of pjperez' fork (malisx2's docs/changes.md). What a user sees: the
 shader cache ID changes (8f2c44eb427e), so every game compiles its pipelines
 once more on its first start after the update, and ARMSX2 keeps the old cache
@@ -1199,7 +1210,7 @@ picks MALISX2 gets it, on 2026-11-04: Azahar's Castlevania and Super Mario
 3D Land, PPSSPP's Final Fantasy, flycast's Crazy Taxi and Dolphin's ND Demo
 start and draw right, no crash lines, no GPU faults.
 
-**malisx2 bde09ad (for 1.7).** 0.3.2 with three changes to Bifrost's shader
+**malisx2 bde09ad (in 1.7).** 0.3.2 with three changes to Bifrost's shader
 compiler (Mesa 81f988c): spill slots aligned, if conditions known from
 uniforms folded, a loop's "PC == label" flags from one counter, and cheap
 values recomputed where they are used rather than kept in registers. Luigi's
@@ -1233,7 +1244,7 @@ The shader cache ID changes, so each game compiles its pipelines once more
 after the update. After 1.7 -> 1.8 the God of War demo runs on it as ES
 starts it.
 
-**malisx2 0.4.1 (02ca776, in master for 1.9).** Upstream's 0.4.1 merged
+**malisx2 0.4.1 (02ca776; in the third 1.9 test build only, no release has it).** Upstream's 0.4.1 merged
 (seven commits by pjperez, written for Vita3K); Mesa (3b0e036) and the profile
 (2026-11-08's) as before: the draw path is not touched, only the functions
 that compile shaders and enumerate devices miss their profile data. What it
@@ -1258,7 +1269,7 @@ earlier releases). On the console after the update: God of War and Jak start
 on it, GameCube and 3DS as before, no GPU fault.
 
 **malisx2 0.5.0 with the whole FAU block for fragment shaders (86b16a8, in
-master for 1.9).** Upstream's 0.5.0 merged (the Mali-G610 and G710 and the
+1.9).** Upstream's 0.5.0 merged (the Mali-G610 and G710 and the
 other Malis of arches 7 to 11: nothing new for the G52), and one change of
 ours: a shader's uniform words go into the whole FAU block, 64 words where 32
 were, for fragment shaders; vertex shaders keep 32. Mesa (3b0e036) and the
@@ -1283,7 +1294,8 @@ the RetroArch launcher sets it, and only for the Azahar core (the owner's
 word, 2026-11-12), as ARMSX2's launcher sets MALISX2_V7_FP16. driverInfo says
 0.5.0 and the shader cache ID changes (7b4bf7cb-... for 822e9997-...), so
 each game compiles its pipelines once more after the update. The third 1.9
-test build (20261111204040) has 0.4.1.
+test build (20261111204040) has 0.4.1; 1.9 as released (20261112155920) has
+0.5.0.
 
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
@@ -1682,6 +1694,14 @@ core ES offers ran Crazy Taxi and Knights of Valour - The Seven Spirits
 upright. retrorun reads only the pad named in `retrorun_extra_evdev_name`, so
 input injected through another device (a uinput pad, as the test tools use)
 does not reach it.
+
+**Saturn on retrorun did not start at all — fixed in 1.9.**
+`yabasanshiro/saturn.sh`, which the build installs over
+`retrorun/scripts/saturn.sh`, lacked that file's retrorun and retrorun32
+branches (retrorun's config, `--triggers`, DEVICE_NAME): no frame, and the
+game ended at once. With christianhaitian's 06738b308 ported (159a688):
+Resident Evil 59.9 fps on retrorun and 60.0 on retrorun32, upright (TODO.md,
+"Upstream updates for 1.9").
 
 ## The build cache is keyed by upstream version, not by build flags
 
@@ -2281,10 +2301,12 @@ A report on 1.0: the battery ran flat "in sleep". Measured on revision B on
 
 ## Nintendo 3DS: Azahar in RetroArch (1.3)
 
-The 3DS system runs `azahar_libretro` in RetroArch: Azahar 2126.1.2 (the
-libretro build of Citra's successor) with GammaOS's azahar-nano changes on top,
-then our patches `azahar-patch-001` to `-018` (`rk3562_core_builds/patches/`;
-009 and 015 are later azahar-nano commits). Its folder is `/roms/3ds`; on a
+The 3DS system runs `azahar_libretro` in RetroArch: Azahar 2126.2 (the
+libretro build of Citra's successor; 2126.1.2 up to 1.3.1) with GammaOS's
+azahar-nano changes on top (`azahar-patch-000`), then our patches
+`azahar-patch-001` to `-029` and `-034` (`rk3562_core_builds/patches/`; 009,
+015, 019 and 020 are later azahar-nano commits; 030-033, the OpenGL ES fixes,
+are parked on the branch `parked/azahar-gles`). Its folder is `/roms/3ds`; on a
 dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
 
 - **azahar-nano** is TheGammaSqueeze's fork for GammaOS: about 130 commits of
@@ -2660,11 +2682,12 @@ game controller, which keeps the triggers apart from the right stick; a
 camera turning there has another cause, not looked into (their stick dead
 zones are 0 in `re3.ini`/`reVC.ini`).
 
-## HDMI output does nothing
+## HDMI output did nothing — hotplug, sound and RetroArch's picture fixed in 1.4
 
 Reported from the device on 2026-10-01: plugging a cable produces no reaction
-at all. Not being worked on yet; recorded so the next session does not start
-from scratch — or from the wrong guess, which is what happened here first.
+at all. Fixed in 1.4 (below); the first findings are kept because two of the
+three were wrong, and the next session should not start from the wrong guess
+again.
 
 **The kernel is not the problem, and this was checked rather than assumed.**
 HDMI on this board does not come from the SoC. The panel is DSI, and HDMI comes
@@ -2985,7 +3008,7 @@ restarted once at the disconnect. With the PC's cable back, the port was a
 device again, the gadget bound again (umtprd logged one read error and
 carried on), and Windows listed the ROMs.
 
-## 351Files: a black screen on the RG52 Mini and the RG43H
+## 351Files: a black screen on the RG52 Mini and the RG43H — fixed in 1.7
 
 351Files started and showed nothing; the log it writes next to itself
 (`/opt/351Files/351Files.log`) was full of `Unable to load image
@@ -3004,8 +3027,9 @@ expects: `str.replace` does nothing then, and the image would carry a
 half-patched app.
 
 Checked on an RG43V Pro (built in the aarch64 chroot, installed in
-`/opt/351Files`): the file list is there again. The RG52 Mini's build compiles;
-it was not run on the device. 351Files on the other devices of the project is
+`/opt/351Files`): the file list is there again. On the RG52 Mini 1.6's 351Files
+starts on a blank screen and the patched build shows the /roms list
+(2026-11-04, TODO.md, "For 1.7"). 351Files on the other devices of the project is
 the same upstream code and may show the same black screen when built from
 today's master; they were not looked at.
 
@@ -3080,8 +3104,8 @@ today's master; they were not looked at.
   instead of 54, Zelda's title (frames 1200-3000) at 57 instead of 52
   (TODO.md, 2026-10-24). An updated card gets the option from
   `ota/hooks/1.3-mupen64plus-threaded.sh` unless the user set it. N64 still
-  starts `parallel_n64` in retroarch32 by default; mupen64plus_next is a
-  choice in ES.
+  starts `parallel_n64` in retroarch32 by default; mupen64plus_next and,
+  since 1.9, armN64 are choices in ES.
 * **RetroArch with mupen64plus_next can outlive a SIGTERM.** On 2026-10-25
   `systemctl stop` of a transient unit running it (SIGTERM to the whole
   cgroup: the bash launcher, n64.sh and RetroArch) left RetroArch running,
@@ -3102,7 +3126,7 @@ today's master; they were not looked at.
   the message says `ignored`. `cleanup_filesystem.sh` removes eatmydata while
   `LD_PRELOAD` still names it. The loader carries on with a real `fsync`.
 
-## J2ME: the freej2me core on the system OpenJDK 21
+## J2ME: the freej2me core on the system OpenJDK 21 (since 1.7)
 
 * **What was wrong.** The `freej2me` core runs `freej2me-lr.jar`, which is
   compiled for Java 21, but `/usr/local/bin/freej2me.sh` (upstream's) downloads
@@ -3163,14 +3187,15 @@ ES is unchanged (TODO.md).
 * **The update** adds the system to a user's own `es_systems.cfg` and makes
   `/roms/zeebo` (`ota/hooks/1.8-zeebo.sh`).
 
-## PS2: PCSX2's game patches in ARMSX2 (patches.zip) — in master for 1.9
+## PS2: PCSX2's game patches in ARMSX2 (patches.zip) — in 1.9
 
 * **What was missing.** Up to 1.8 every game start logged "Failed to open
   patches.zip. Built-in game patches are not available": PCSX2's per-game
   patches (PCSX2/pcsx2_patches: widescreen, no-interlacing, 60 fps and other
   fixes) are a separate download that ARMSX2's source does not carry.
 * **What the build does** (`build_pcsx2sa.sh`, 23f58f5): zips pcsx2_patches at a
-  pinned commit (192ee9b, 2026-10-31, 4719 files) as their CI does and installs
+  pinned commit (b919d7f, 2026-11-09, 4719 files; 192ee9b when it was added,
+  the one checked below) as their CI does and installs
   it as `/opt/pcsx2/share/PCSX2/resources/patches.zip`. The zip is cached under
   that commit, apart from ARMSX2's own cache.
 * **Nothing changes by itself.** ARMSX2 2.9.2 enables unlabelled patches on its
@@ -3197,7 +3222,7 @@ ES is unchanged (TODO.md).
   in all three. A widescreen patch draws more of the scene, so a heavy game can
   run slower with it; PCSX2 warns that these patches "can cause issues".
 
-## BIOS check before a game starts — in master for 1.9
+## BIOS check before a game starts — in 1.9
 
 * **What it was.** Most emulators started without a BIOS they need quit at
   once and say nothing on the screen. RetroArch exits with status 1 and logs
@@ -3290,7 +3315,7 @@ ES is unchanged (TODO.md).
   - The switch both ways: off, the same start went back to ES in silence as
     before; on again, the box.
 
-## Opera (3DO) and SwanStation (PS1) from upstream — in master for 1.9
+## Opera (3DO) and SwanStation (PS1) from upstream — in 1.9
 
 * **Why.** The image downloaded rg503's builds of both: Opera 67a29e6
   (2024-10-25) and SwanStation 7a27436 (2024-06-07). Both cores have since got
@@ -3332,7 +3357,7 @@ ES is unchanged (TODO.md).
     empty folder over /roms/bios, the new one started the game on OpenBIOS
     (60.0, title screen).
 
-## OpenCL, and FFmpeg 4 for 32-bit ports — in master for 1.9
+## OpenCL, and FFmpeg 4 for 32-bit ports — in 1.9
 
 * **OpenCL.** Both Mali blobs carry OpenCL 3.0: the 64-bit g29p1 and the
   32-bit g13p0 (`ARM Platform`, device `Mali-G52 r1p0`). A program linked to
@@ -3389,7 +3414,7 @@ ES is unchanged (TODO.md).
   Postal 2, Doom 3, Mina the Hollower, PortMaster's window) started, with the
   right picture and the usual frame rates.
 
-## PortMaster: the latest version, and ports copied by hand — in master for 1.9
+## PortMaster: the latest version, and ports copied by hand — in 1.9
 
 * **What happened** (2026-11-09). The owner copied Postal 2 into /roms/ports by
   hand, and neither of its scripts started.
@@ -3458,3 +3483,65 @@ ES is unchanged (TODO.md).
   - The mouse cursor stays within about 730x400 until the first click, then
     reaches the whole screen. One click (R2) after the menu appears is enough.
     The cause was not looked into further (the owner, 2026-11-09).
+
+## N64: the armN64 core (since 1.9)
+
+armN64 (MagnominusGit/armN64, the armGBA author's low-level Nintendo 64 core)
+is offered last in N64's `retroarch` list of EMULATOR SETTINGS; parallel_n64
+in retroarch32 stays the default. It can start games the other cores do not.
+
+As upstream has it the core draws on the CPU here, at two thirds of the speed
+and with three threads busy: RetroArch answers GET_PREFERRED_HW_RENDER with
+false when driver switching is off, as dArkOS ships it, and the core takes
+that for "no GL". Two patches of ours make its GL renderer work in RetroArch's
+gl driver:
+
+- `armn64-patch-0001`: the frontend's answer is used whatever the call
+  returns, and the core gets a GLES 3.1 context.
+- `armn64-patch-0002`: the core and RetroArch draw in one context, and
+  RetroArch's gl driver on GLES points the bound vertex array's attributes at
+  its own quad and disables them on the way back, so the core drew without
+  vertex attributes: a picture with only the fills. The renderer now sets its
+  layout again where it already puts back what the frontend may have left.
+
+With both, Zelda's title runs at 59.8 frames a second with 11-16% of the four
+cores (42.4 and 50-75% as upstream has it). At twice the console's resolution
+the GPU is the limit, so the image starts the core at `armn64_resolution =
+"1"`, and the update hook `1.9-es-armn64.sh` adds the core to a kept
+`es_systems.cfg` and sets that option once in a kept core options file.
+RetroArch's vulkan driver and the core's standalone app were tried and left.
+TODO.md, "Upstream updates for 1.9", has the table and what was tried.
+
+## Options -> Update passed over a damaged package without a word — fixed in 1.9
+
+A user's report of 2026-11-09: a 1.7 -> 1.8 package put into `update/` was not
+offered, and the menu said only "up to date" or showed a network error. The
+file was 92 bytes: GitHub's 504 page for that one asset, saved under the
+package's name. The client skipped anything in the folder it could not read
+as a package.
+
+Since 1.9 `darkos-ota local-problems` names what is in the update folders and
+cannot be installed, and Options -> Update shows it before it asks the
+network: a .tar whose manifest cannot be read (cut short, or not a package at
+all), a package made for another build, a package-like file that is not a
+.tar. "Up to date" names the build as well (c1e97ed; OTA.md, the commands).
+
+## OTA rollback forgot packages installed after the update — fixed in 1.9
+
+A rollback put the old build's package database back whole. What had been
+installed, removed or upgraded with apt after the update was then wrong in
+dpkg's list, while the files stayed as they were. Since 1.9 a rollback merges
+the database entry by entry: what the update changed goes back to the old
+build's, files included, and the rest stays as it is on the device
+(`darkos-ota rollback --dry-run` prints both lists). Checked on the console
+on 2026-11-09: 27 packages installed after the update stayed, the three the
+update had changed came back, `dpkg --audit` found nothing (81f5fe5; OTA.md,
+"The package database").
+
+## ES idle in its menu took a fifth of a core — fixed in 1.8
+
+ES asked for the backlight level every 40 ms while it was on the screen, and
+each time through a shell, brightnessctl and awk. `es-0008-brightness-from-sysfs.patch`
+reads the backlight's own files instead (bcab12f): the whole system 56% of a
+core in the menu before, 36% after. PERFORMANCE.md, "ES at rest: no
+brightnessctl twenty times a second", has the measurement.

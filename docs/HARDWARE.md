@@ -150,15 +150,18 @@ game) sets the amplifier for the new path at once; before, it was set only at
 the next unmute, so the speaker kept playing beside the headphones.
 KNOWN-ISSUES, "Headphones: the speaker played too".
 
-## Input and sound changes since 1.4
+## Kernel changes since 1.4
 
 | Kernel | Release | What |
 |---|---|---|
-| eba0d6e | 1.4 | `sai1` (the RK628's HDMI sound) moved to the `i2s1m1` pins: the sound card had no pins, so HDMI was silent (KNOWN-ISSUES, "HDMI output does nothing") |
+| eba0d6e | 1.4 | `sai1` (the RK628's HDMI sound) moved to the `i2s1m1` pins: the sound card had no pins, so HDMI was silent (KNOWN-ISSUES, "HDMI output did nothing") |
 | d188e7c | 1.5 | the RK817 codec's amplifier follows a playback path switched during playback (above) |
 | 1c9d338 | 1.5 | xpad built in, with LEDs and force feedback, and the init read some Xbox 360 clones wait for before they report (KNOWN-ISSUES, "USB pads in Xbox 360 mode did nothing") |
 | 5a6d2f3 | 1.5 | `rk3562-joystick`: Select's release counts only after 100 ms without an edge, the other keys keep 5 ms (KNOWN-ISSUES, "Select on ES's screen") |
 | 4e1991c | 1.6 | `rk3562-joystick`: the triggers' dead zone at rest 1600 of 32767, was 800 (KNOWN-ISSUES, "L2 pressed by itself") |
+| 84be124 | 1.8 | VOP2 on the RK3562 shows RGB888 with red and blue the right way round (KNOWN-ISSUES, "retrorun: red and blue swapped") |
+
+The submodule is pinned at 84be12412 since 1.8; 1.9 has the same kernel.
 
 ## Babble filter
 

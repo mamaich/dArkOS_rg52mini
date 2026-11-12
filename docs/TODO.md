@@ -275,8 +275,9 @@ llj503/dArkOS_ngp45ht (a port to the XIFAN NGP45HT, nothing since 2026-10-20),
 doster00's forks (every branch is in our master but his own OTA channel for
 the RG43H).
 
-**As built, with the second look in it**: the fourth 1.9 test build
-(20261112155920, built 2026-11-12 from bc9ef41 in 125 min, installed by OTA
+**As built, with the second look in it**: the fourth 1.9 test build, which
+became the release (20261112155920, tag v1.9 at bc9ef41, built 2026-11-12 in
+125 min, installed by OTA
 over the third test build; the package is 37 MiB, the one from 1.8 56 MiB and
 carries the armN64 hook). The image's files are the repo's; malisx2 says
 `v1.r44p1-malisx2.0.5.0.s16d8fde8ac24`, cache UUID 7b4bf7cb-…, and the launcher
@@ -327,7 +328,7 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
 | retrorun | 0784f21 -> 4eeeedd (3.2.5) | Crazy Taxi 40.2 / 40.1, Hyper Final Fight 3 59.8 / 59.9 |
 | ARMSX2 | **not taken**: 2.9.2 (ba68927) with 1.7's profile | Jak 31.6 against 34.8 (-9%, 3 rounds, steady), Burnout 3 from boot 37.3 / 36.9, GoW's save 50 / 50 (a PAL menu, tells nothing) |
 | ARMSX2 | **taken** (the owner's word, 2026-11-08): 2.9.2 with its own profile (`pcsx2/pgo/armsx2-20261108.profdata.gz`; our patches apply as they are, and of our PCSX2.ini it reads the same keys as 1.7; 2026-11-08: the instrumented build played on Jak and GoW from the owner's saves and Burnout 3 from boot, merged with 1.7's profile at equal weight) | Jak 35.7 / 34.5 / 35.1 against 1.7's 35.1 / 35.2 / 35.1 (level), Burnout 3 37.6 / 37.5 / 37.0 against 36.5 / 36.8 / 36.9 (+1.7%, every round) |
-| ARMSX2 patches.zip | **for 1.9** (in master after 1.8's build of 2026-11-08) (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console (bound over the resources, 2026-11-08): the warning gone, Jak and Daxter "Found 3 game patches in SCES-50361_9C712FF0.pnach"; 2026-11-09 on 1.8, Jak from the owner's save: none on by itself (all 4719 files keep their patches in named groups, ARMSX2 auto-enables only unlabelled ones), EnableWideScreenPatches gives "Enabled patch: Widescreen 16:9" and a 16:9 picture, a per-game `[Patches] Enable = No-Interlacing` enables that one; flips the same (12.5/12.6/12.5, the game on its memory-card notice) |
+| ARMSX2 patches.zip | **in 1.9** (in master after 1.8's build of 2026-11-08; 1.9 ships the database at b919d7f) (the owner: "надо его к нам добавить", not into the build already running): PCSX2's game patch database, made from PCSX2/pcsx2_patches 192ee9b (2026-10-31) as their CI makes it, 4719 .pnach at the zip's root, in /opt/pcsx2/share/PCSX2/resources; reported by the malisx2 session: every game start logged "Failed to open patches.zip" | the zip the same list as upstream's "latest"; on the console (bound over the resources, 2026-11-08): the warning gone, Jak and Daxter "Found 3 game patches in SCES-50361_9C712FF0.pnach"; 2026-11-09 on 1.8, Jak from the owner's save: none on by itself (all 4719 files keep their patches in named groups, ARMSX2 auto-enables only unlabelled ones), EnableWideScreenPatches gives "Enabled patch: Widescreen 16:9" and a 16:9 picture, a per-game `[Patches] Enable = No-Interlacing` enables that one; flips the same (12.5/12.6/12.5, the game on its memory-card notice) |
 | Zeebo | in master (merge 1948065): core_builds a900997, `zeebx-patch-0001` (black screen) and `0002` (speed) | see below |
 
 * **Zeebo (zeebx).** christianhaitian's recipe clones NextOs-Ports/zeebx-nextos,
@@ -491,14 +492,14 @@ Diddy Kong Racing and Castlevania DoS, Daphne Dragon's Lair (lair.zip + DLCDROM)
   EMULATOR SETTINGS only with the stock `/etc/emulationstation/es_systems.cfg`;
   where the owner of a device had edited the file, the update keeps it (the new
   one beside it as `.ota-new`) and nothing adds `<core>armgba</core>` there, as
-  `1.5-es-retroarch-next.sh` does for retroarch-next. Done for 1.6:
+  `1.5-es-retroarch-next.sh` does for retroarch-next. Done in 1.6:
   `ota/hooks/1.6-es-armgba.sh` adds it after mgba in GBA's `retroarch` and
   `retroarch-next` emulators of a kept file; tried on copies of the console's
   file (the image's untouched, a 1.5 file without armgba made byte for byte the
   image's, a 1.4 file without retroarch-next, a second run changing nothing).
 
 - **A missing BIOS shows as "the emulator does not work"** (the owner,
-  2026-11-02, to do after Guitar Hero). **Done for 1.9** (2026-11-09, the
+  2026-11-02, to do after Guitar Hero). **Done in 1.9** (2026-11-09, the
   owner: "да, возьмись", with a switch to turn it off): `darkos-bios-check`
   before the start, RetroArch's log after a failed one (KNOWN-ISSUES, "BIOS
   check before a game starts"). Some emulators, started without the
@@ -685,7 +686,9 @@ cached rootfs as the image build does, and tried on the console against
   later ARMSX2 needs that again.
 * **Dolphin 2609a** turned AccurateFmadds and PrecisionFrameTiming on; off
   again in our Dolphin.ini and, once, in a user's (dolphin.sh).
-* **Not tried yet:** Dolphin on malisx2 (it starts there since 1.3.1),
+* **Not tried yet** (as of 1.4; Dolphin, PPSSPP, flycast and a port were
+  tried on malisx2 since: KNOWN-ISSUES, "malisx2 0.3.1"; Don't Starve on the
+  image's gl4es: "Upstream updates for 1.9"): Dolphin on malisx2 (it starts there since 1.3.1),
   flycast on its other renderers, gl4es 1891af3 with a port that uses the
   system's, openMSX and XRoar with real games.
 
@@ -828,7 +831,7 @@ with the next change there:
   of the recipe (v2026.4.0) while our fork built v2026.3.0 — fixed on
   2026-10-28 for it and seven more recipes (KNOWN-ISSUES, the build cache).
 - **Patches without a header** (what and why): `azahar-patch-001`,
-  `retrorun-patch-0002`, `ppsspp-patch-010`, `dolphinsa-patch-011`, the core
+  `retrorun-patch-0002`, `ppsspp-patch-010`, the core
   builds' `sdl2-patch-0005-drm-connector`, this repo's `sdl2-patch-0004` and
   `-0005`, `kodi-patch-001`; and upstream's `gametank-002`,
   `flycast-patch-makefile` and `ecwolf-001` as we edited them for the A53
@@ -844,17 +847,16 @@ with the next change there:
 
 ## Found while testing 1.2 (2026-10-18)
 
-* **ScummVM's MIDI device** — done for 1.4: ScummVM is built with
+* **ScummVM's MIDI device** — done in 1.4: ScummVM is built with
   FluidSynth and the config names Debian's FluidR3_GM soundfont
   (KNOWN-ISSUES, "ScummVM opened every game on a dialog").
 * **Speaker volume.** The DAC stays at −20 dB, which is what keeps the
   low-battery reset away (KNOWN-ISSUES). If the speaker is to get louder,
   take the battery-dependent limit the GammaOS port is writing for the rk817
   codec rather than raising the DAC.
-* **`create_image.sh` packs every `*.img` in the build directory** into 7z,
-  so OTA base images kept next to the build (1.1, older test builds) cost a
-  few minutes and 4 GB each per build. Keep them in another directory, or
-  pack only the image just made.
+* **`create_image.sh` packed every `*.img` in the build directory** into 7z,
+  so OTA base images kept next to the build cost a few minutes and 4 GB each
+  per build — fixed in 1.9 (0adb2f5): only the image the build made is packed.
 * **`ota/make-ota.py -o DIR`** fails at the very end, after three minutes of
   comparing, when DIR does not exist. Create it first, or let the script.
 * **`retroarch32` with `parallel_n64` ignored SIGTERM** in the test harness:
@@ -923,9 +925,10 @@ nes-box folder (KNOWN-ISSUES). Left:
   Calls in `retro_load_game`, `retro_unserialize` and `retro_unload_game`
   would give the faster first seconds after a boot or a state load.
 * **A newer azahar-nano** means a new `azahar-patch-000`: the diff of their
-  tree against the 2126.1.2 tag with its submodules, made as its header says,
-  then 002-005 checked on top. (Since 2026-10-25 that is 001-018; 009 and 015
-  are azahar-nano commits a newer 000 would already have.)
+  tree against the tag the recipe builds (2126.2 since 1.4) with its
+  submodules, made as its header says, then 001-029 and 034 checked on top
+  (009, 015, 019 and 020 are azahar-nano commits a newer 000 would already
+  have).
 * **At 600 MHz**, a CPU cap used only for measuring, every build (2126.2 too)
   stops drawing about a minute into Super Mario 3D Land. Not seen at 816 MHz
   and up.
@@ -954,7 +957,7 @@ first, with the times of the 2026-10-19 build:
   Kodi's 71 addons spent most of a 43-hour build there (KNOWN-ISSUES); it is
   cached, so this matters only when it has to be built again.
 
-## Dolphin on malisx2: why it did not start (found 2026-10-26, fixed for 1.3.1)
+## Dolphin on malisx2: why it did not start (found 2026-10-26, fixed in 1.3.1)
 
 1.3 left Gamecube out of the systems that offer MALISX2: Dolphin did not
 start on malisx2. Two causes, both fixed (KNOWN-ISSUES.md, "Dolphin on
@@ -1364,7 +1367,7 @@ Left:
 * **No `patches.zip`.** ARMSX2 logs "Failed to open patches.zip. Built-in game
   patches are not available": PCSX2's per-game patches (pcsx2_patches) are a
   separate download, not in the source, and the old fork's build lacked them
-  too. GameIndex.yaml's fixes do apply. **In master for 1.9** (23f58f5: the
+  too. GameIndex.yaml's fixes do apply. **In 1.9** (23f58f5: the
   recipe zips pcsx2_patches at a pinned commit; "Upstream updates for 1.8").
 
 ## Heavy emulators: compiler flags measured, none kept (1.3, 2026-10-20)
@@ -1582,13 +1585,16 @@ the image).
     set `AccurateFmadds = False`.
   * Next backports to try: the dispatcher series from #11737.
   * Measure with `PerfMapDir=/tmp` and perf.
+  * (Done since: Dolphin 2609a in 1.4, then upstream's master; db2afcb in
+    1.9.)
 * **ARMSX2.**
   * IOP recompiler fast paths: koundinyalanka1 61deb199d6 and 9c28867a00. They
     do not apply to our tree (2,600 lines, a port of 1-2 days), and the IOP is
     a small part of the CPU thread: the JIT of EE and IOP together is 19% of
     all samples in Jak.
   * A rebase onto ARMSX2's master, 29 commits, among them a CPU sprite path
-    (85ce3417f1). The profile must be trained again after it.
+    (85ce3417f1). The profile must be trained again after it. (Done since:
+    master f6df1e69 in 1.6, 2.9.2 in 1.8, each with a profile trained anew.)
   * Cached readback memory on Mali: one line, but perf first.
   * Worth watching: bmdhacks/malisx2, Mesa's Vulkan on kbase, at parity with
     libmali. (Since 2026-10-25 in the image as a choice beside libmali, see
@@ -1838,14 +1844,15 @@ Done since:
   owner's save (100-800) 1.9%; Jak and Daxter and Castlevania within the
   spread. Tiler work 16% less, tile writes to memory 20% less, texture reads
   14-17% less. The profile stays the one trained on b74141a.
-* Then 262ad73 (98a8fdf's code, 2026-10-28; for 1.4): IDVS on v7, the
+* Then 262ad73 (98a8fdf's code, 2026-10-28; in 1.4): IDVS on v7, the
   compiler splits a vertex shader into its position and varying parts and a
   draw is one Indexed Vertex job instead of Vertex + Tiler (1.2 jobs a draw
   in God of War instead of 2, GPU per quad 1-2% less). Castlevania 1.9 and
   5.6% faster (two rounds), God of War and Jak and Daxter within the spread
   (-0.9 to +1.3%), the same picture. `MALISX2_V7_IDVS=0` turns it off and has
   its own pipeline cache; the pipelineCacheUUID changes, so games compile
-  their pipelines again once. Not tried yet with PPSSPP, flycast or ports.
+  their pipelines again once. Not tried then with PPSSPP, flycast or ports
+  (tried since: KNOWN-ISSUES, "malisx2 0.3.1").
 * Where Castlevania's time goes on it, see below. The vertex side is the work:
   IDVS and descriptors/uniforms written by the CPU, in malisx2 (upstream's to
   do).
@@ -2016,7 +2023,7 @@ is in the v09292026 assets. What is left is whether panel-kick is still needed:
 3. Does v09162026 also go black on revision A? Still unasked, and it says
    whether something between the releases introduced it.
 
-## HDMI: find the real connector name, then make detection follow the cable
+## HDMI: find the real connector name, then make detection follow the cable (done in 1.4)
 
 **Status 2026-10-28.** Steps 1-3 were checked on the device (see KNOWN-ISSUES,
 "Measured on the device"): the connector is `HDMI-A-1`, index 1 is right, and
@@ -2138,7 +2145,11 @@ Notes:
   "usb"), and the session held up to 2 s without it; a pull is noticed after
   2 s. Write-up: GammaOSNext-RG52mini doc/rg52mini/02-план.md (186bfe160e4).
   To take only if an A board shows the same drops on dArkOS (owner's word).
-* **L2's noise passes the kernel's dead zone** (2026-10-26). With a game
+* **L2's noise passed the kernel's dead zone** (2026-10-26) — done in 1.6: a
+  game did react (Guitar Hero in ARMSX2), and kernel 4e1991c doubled the dead
+  zone to 1600 (KNOWN-ISSUES, "L2 pressed by itself in ARMSX2"). Still open
+  from that run: the right stick's Y showed one jump to -4793, and its dead
+  zone is unchanged. As found then: with a game
   running and nobody pressing it, ABS_Z rose to 1073 and 1272 a few times in
   30 s (`TRIG_DZ_OUTPUT` 800 in `rk3562-joystick.c`, whose comment has the
   noise peaking at 536); R2 stayed 0. Harmless to programs that read the
@@ -2330,6 +2341,12 @@ this.
   * 44a041cf96: decompress use-after-free, by hand.
 
 ## Worth sending upstream
+
+### armN64: its GL renderer in RetroArch's gl driver
+
+`armn64-patch-0001` and `-0002` ("Upstream updates for 1.9", above): without
+them the core draws on the CPU wherever RetroArch runs with driver switching
+off. Not sent; the owner decides.
 
 Six build-system defects were fixed in this fork. Four of them have nothing
 to do with this hardware and would help anyone building dArkOS, so they belong

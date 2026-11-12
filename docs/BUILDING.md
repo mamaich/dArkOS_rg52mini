@@ -13,17 +13,27 @@ alone. Only `make clean_complete` throws them away.
 note in KNOWN-ISSUES first, because Kodi's dependency resolution has broken
 other components before.
 
+The image is `dArkOS_rg52mini_<VERSION>.img` in the repo's folder (`VERSION`
+in the tree; a rebuild overwrites it), and `create_image.sh` packs that one
+image into `.7z.001`... volumes of 1950 MB. `/etc/darkos-release` in it has the
+build's id, the UTC time of the build unless `DARKOS_BUILD_ID` gives one. The
+older release images lying beside it are the bases of the update packages
+(OTA.md, "Release procedure") and are left alone.
+
 ## Before a build: what is new upstream
 
     tools/upstream/check.py            # at most once a day; --force to repeat
     tools/upstream/check.py --only ARMSX2 Dolphin
 
-It lists, for every component the image builds or downloads, what upstream has
-past the version we use: newer releases of what we pin, commits after a pinned
+It lists, for every component with a row in `tools/upstream/components.json`,
+what upstream has past the version we use: newer releases of what we pin, commits after a pinned
 commit, upstream commits our forks lack, and what changed on the branches the
 build follows by itself. Our versions are read from the recipes;
 `tools/upstream/components.json` says where each pin is written, and needs a
 new row when a recipe gets a new component or moves its pin to another file.
+A pinned recipe without a row is not checked at all: armGBA fell 75 commits
+behind that way, and Opera, SwanStation, zeebx and the second RetroArch
+(`retroarch-next`) had no row until 2026-11-12.
 State and the reports are kept in `~/.cache/darkos-upstream/`.
 
 The owner's rule (2026-10-27): run it before a full build, at most once a day,
@@ -117,6 +127,36 @@ another inode or ctime goes into the archive, with the directory it is in, and
 a path that is gone into `rootfs-deps.removed`. ctime changes with anything
 done to a file, its contents, mode, owner or links, and cannot be set back;
 the mtime cannot tell, because dpkg sets it from the package.
+
+## One component without the whole image
+
+Nearly every change to an emulator, a core or EmulationStation was built and
+tried this way before a full build had it; "bound over the installed file" in
+the other pages means this.
+
+1. A chroot of its own, not `Arkbuild` (a build may be using that): unpack
+   `Arkbuild_package_cache/rk3562/rootfs-bootstrap.tar.zst` into an empty
+   folder as root, then `rootfs-deps.tar.zst` over it (about 6 GB). Bind
+   `/dev` into it and mount `proc`; `chroot` works through the same qemu
+   binfmt as the build.
+2. Put the recipe's tree where the build has it: `rk3562_core_builds` as
+   `/home/ark/rk3562_core_builds` in the chroot. Inside, a core or an
+   emulator is `./builds-alt.sh <target>`, the line its `build_<name>.sh`
+   runs (`build_retroarch.sh` for the cores); what it makes lands in
+   `cores64/`, `cores32/` or the component's own folder there. A component
+   built from this repo's scripts (EmulationStation, malisx2, ARMSX2) is
+   built by the commands of its `build_*.sh`, by hand. ES compiles with the
+   chroot's gcc only, about ten minutes; the cross clang of `xtool.sh` is what
+   `build_pcsx2sa.sh`, `build_malisx2.sh` and Azahar use.
+3. Copy the result to the console beside the installed file, and try it in
+   its place with `sudo mount --bind new installed`: nothing on the card is
+   overwritten, and a reboot (or `umount`) has the installed one back. Start
+   the game the way ES starts it and measure both, taking turns
+   (PERFORMANCE.md, "If you want to measure").
+4. Unmount `proc` and `/dev` before deleting the chroot.
+
+The next full build makes the same thing from the same recipe and patches,
+and caches it under the key of both.
 
 ## WSL
 
@@ -311,6 +351,12 @@ ended the fourth attempt. That one is only survivable by being able to resume:
 keep the image and rootfs files, re-attach and re-mount them, and restart from
 the step after the kernel. Verify the content rather than the mounts before
 continuing — a mounted filesystem proves nothing about what is in it.
+`resume_rg52mini.sh` (with `RESUME_BUILD_DATE=MMDDYYYY`) does this, running
+the steps in `resume_body.sh`. That list was cut from `build_rg52mini.sh` in
+September 2026 and has not followed it since: as of 1.9 it lacks
+`build_vkselect.sh`, `build_malisx2.sh`, `build_trigaxesoff.sh`,
+`build_gl4es.sh` and `commit_rootfs_cache`, and it has the path of the machine
+it was written on. Bring it in step with `build_rg52mini.sh` before using it.
 
 **Silent losses.** Most `build_<emu>sa.sh` scripts have no `verify_action`: a
 component that fails to patch or clone prints one line among tens of thousands
