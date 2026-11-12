@@ -46,7 +46,7 @@ in `.gitmodules` meant submodules only resolved for people with an SSH key.
 
 ## State of the port
 
-The current release is 1.8 (build 11082026, 2026-11-08); from 1.1 on, a card
+The current release is 1.9 (build 11122026, 2026-11-12); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -256,7 +256,7 @@ between cameras with a black wedge under both retroarch32 builds. The
 packages from 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 and 1.1 were made the same way
 from the published images and not installed.
 
-In master for 1.9, not released yet (VERSION says 1.9):
+New in 1.9 (build 11122026, 2026-11-12):
 
 - Options -> Update says what is wrong with a file in the update folder
   instead of passing over it: damaged or cut short in the download, made for
@@ -323,7 +323,7 @@ In master for 1.9, not released yet (VERSION says 1.9):
   core 3% faster, 4.5% with the same for vertex shaders, which the RetroArch
   launcher asks for when it starts that core; God of War and the ND Demo as
   they were. A new shader cache ID once more (KNOWN-ISSUES.md, "Vulkan: Arm's
-  driver or malisx2"). Not in the third test build: the pin moved after it.
+  driver or malisx2").
 
 - malisx2 0.4.1 (02ca776, Mesa 3b0e036 and the profile as in 1.8; handed
   over by the malisx2 session on 2026-11-11 with the owner's word): upstream's
@@ -332,7 +332,7 @@ In master for 1.9, not released yet (VERSION says 1.9):
   instead of reading past the layout). The speed of ARMSX2, Dolphin and Azahar
   is the same. Its shader cache ID is new, so emulators on malisx2 rebuild
   their pipeline caches once (KNOWN-ISSUES.md, "Vulkan: Arm's driver or
-  malisx2"). Not in the second test build: the pin moved after it.
+  malisx2").
 
 - Saturn on retrorun and retrorun32 starts again: the launcher the image
   installed called retrorun without its config and without the RG52 Mini's
@@ -352,14 +352,37 @@ In master for 1.9, not released yet (VERSION says 1.9):
 - Over USB (MTP) a PC sees files and folders whose names start with a dot,
   such as `/roms/.darkos`; up to 1.8 umtp-responder was told to hide them.
 
-- The image's PortMaster installer installs the latest PortMaster (2026.11.02
-  now). The installer in PortMaster's release was not rebuilt and installed
+- The image's PortMaster installer installs the latest PortMaster (2026.11.12-1059
+  in 1.9's image). The installer in PortMaster's release was not rebuilt and installed
   2026.06.23, which knows no newer runtime and cannot read newer ports'
   port.json; the build puts the release's PortMaster.zip into it
   (`scripts/rk3562/pm-installer-update.py`). A card made from an earlier image
   keeps its PortMaster, which lives on the ROMs partition that an update does
   not touch: PortMaster offers its own update when started with Wi-Fi
   (KNOWN-ISSUES.md, "PortMaster: the latest version, and ports copied by hand").
+
+- The Azahar core no longer binds null descriptors on Arm's driver
+  (`azahar-patch-034`): a 3DS game that sampled one lost the Vulkan device on
+  the stock libmali and RetroArch ended, as Super Mario 3D Land did entering
+  world 6-3 (KNOWN-ISSUES.md, "No null descriptors on Arm's driver").
+
+- Options -> Tools: DDR Overclock and LED Settings say "Select + Start to
+  Exit" on their exit button.
+
+Checked for 1.9: the release build (20261112155920) on the owner's dual-boot
+test card, installed from `ROMs/update` over the test build before it (the
+tests before the release were four builds, each put over the last by a
+package; the first went on over 1.8). No failed unit, `dpkg --audit` clean,
+the files the repo's, the owner's emulator settings kept; then each as ES
+starts it, with sound and the right picture: ARMSX2, Dolphin and Azahar on
+both Vulkan drivers, DraStic and DSperate, PPSSPP, N64 on parallel_n64 and on
+armN64, Dreamcast, Atomiswave, Saturn standalone and on retrorun, Zeebo, GBA
+on both cores, SNES, linapple, PS1 on both cores, Sega CD, and the ports Don't
+Starve, GTA San Andreas, Postal 2, Doom 3 and Mina the Hollower (TODO.md,
+"Upstream updates for 1.9", has the numbers). Super Mario 3D Land's world 6-3
+runs on both drivers. The packages from 1.8 and 1.7 were made the same way
+from the published images and not installed as released; their one new hook
+(`1.9-es-armn64.sh`) was run on the console by hand, twice.
 
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.

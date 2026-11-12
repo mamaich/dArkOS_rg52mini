@@ -70,6 +70,7 @@ EmulationStation-fcamod, RetroArch и около тридцати отдельн
 
 | Выпуск | Дата | Коротко |
 |---|---|---|
+| [1.9](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.9) (сборка 11122026) | 12.11.2026 | ARMSX2 (PS2) получил базу патчей игр PCSX2; проверка файлов BIOS перед запуском игры; 3DO и PS1 (SwanStation) запускаются без BIOS; malisx2 0.5.0; новое ядро Nintendo 64 armN64; исправлен вылет в играх 3DS на штатном драйвере Vulkan; Dolphin с CRT-шейдерами, armGBA 1.5, DSperate 3.4.1+; свежий PortMaster и исправления запуска портов; OpenCL через штатный загрузчик; обновление по сети с 1.8 и 1.7, с более старых — в два шага |
 | [1.8](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.8) (сборка 11082026) | 08.11.2026 | malisx2 0.4.0; ARMSX2 2.9.2 (PS2) заново оптимизирован, DSperate 3.4.0, Dolphin и retrorun обновлены, у retrorun правильные цвета; новая система Zeebo; утилита разгона памяти DDR Overclock в Options → Tools; ES запускается на 1,5 с быстрее и в меню на треть меньше нагружает процессор; RetroArch не теряет звук HDMI при первом запуске; загрузчик U-Boot 1.6; обновление по сети с 1.7, 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 и 1.1 |
 | [1.7](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.7) (сборка 11062026) | 06.11.2026 | malisx2 с улучшенным компилятором шейдеров, часть игр 3DS на нём заметно быстрее; ARMSX2 (PS2), Dolphin, DSperate 3.3.0 и отдельный mupen64plus обновлены, linapple на SDL2; 351Files снова показывает файлы и имена на CJK; J2ME без скачивания Java (исправления doster00); загрузчик U-Boot 1.5; обновление по сети с 1.6, 1.5, 1.4, 1.3.1, 1.3, 1.2 и 1.1 |
 | [1.6](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v1.6) (сборка 11032026) | 04.11.2026 | ARMSX2 (PS2) обновлён и заново оптимизирован, EE до 21%, ролики на полной скорости EE, EE Cycle Skip «Extreme Underclock»; DSperate 3.2.0, Dolphin и linapple обновлены; L2 больше не нажимается сам |
@@ -82,7 +83,7 @@ EmulationStation-fcamod, RetroArch и около тридцати отдельн
 | [1.0](https://github.com/mamaich/dArkOS_rg52mini/releases/tag/v10082026) (сборка 10082026) | 09.10.2026 | Vulkan-программы (RetroArch на Vulkan, порты вроде Mina the Hollower) больше не рисуют боком — свой слой поворота; RetroArch пересобран со всеми патчами, исправлен драйвер «oga»; свежий DSperate; работа на общей карте с GammaOS Next |
 | [Предыдущие релизы](https://github.com/mamaich/dArkOS_rg52mini/releases) (v09162026 — v10072026) | 19.09 — 08.10.2026 | Свой загрузчик и ядро: заставка, Bluetooth со звуком и геймпадами, USB host, лог загрузки через `pstore`; исправлены чёрный экран и перезагрузка по кнопке питания на ревизии A; возвращён потерянный `-O3` (flycast, fake-08); Kodi 21.3; новый эмулятор DS — DSperate, заново собраны Yabasanshiro, freej2me-plus, GameTank, Hypseus Singe; порты PortMaster снова запускаются, порты от других прошивок — без правок; режим «overclock» и разгон памяти до 928 МГц по желанию; пониженное разрешение для тяжёлых игр; звук после PSP и PS2, zram |
 
-**Готовится 1.9**, образа пока нет. Что уже в master — в [docs/README.md](docs/README.md#state-of-the-port).
+**Готовится 1.10**, образа пока нет. Что уже в master — в [docs/README.md](docs/README.md#state-of-the-port).
 
 ## Подробности
 

@@ -112,7 +112,7 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
-## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS)
+## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS; released 2026-11-12)
 
 `tools/upstream/check.py` of 2026-11-11 before the next full build; no pull
 request or issue open in our nine repos. Each one taken was built in the test
