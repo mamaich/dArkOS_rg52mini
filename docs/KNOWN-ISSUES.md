@@ -2523,6 +2523,23 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
   They are kept on rk3566_core_builds' branch `parked/azahar-gles` (patches
   030-033 and the LD_PRELOAD shim the vertex array fix was proven with; 032 as
   committed is not enough, its commit says why).
+  Where the frame goes on GLES (2026-11-12, the owner asked whether GLES could
+  be made to win at 2x-3x; the build of 2026-11-09, Super Mario 3D Land from a
+  savestate at 1x, an LD_PRELOAD timer around the core's GL calls and
+  RetroArch's eglSwapBuffers): 22 frames a second where Vulkan shows 60, a
+  frame of 45 ms = 20 ms in the swap + 7 ms in about 2000 GL calls + 17.5 ms of
+  everything else on the emulation thread. That one thread needs 24.5 ms a
+  frame before the GPU is counted, a ceiling near 40: the GL rasterizer has to
+  stay on the emulation thread (patch 030), where Vulkan spreads the same work
+  over the GPU worker and its own workers and leaves the emulation thread 7.7
+  ms a frame. The 20 ms in the swap are the GPU not finishing the frame within
+  a refresh (every program has a geometry stage on this path; about 20
+  framebuffer switches a frame). And each new program is linked on the
+  emulation thread at about 1.2 s (38 links in one half minute; the game stood
+  for over a minute after the state loaded), with no cache between runs. With
+  vertex shaders on the CPU (`citra_use_hw_shader` off) 19. A higher
+  resolution only adds GPU time, so GLES does not overtake Vulkan there. Left
+  as it is; the lever for 2x-3x is the Vulkan driver.
 - The core keeps its NAND and SD card in an `Azahar` folder next to the games,
   as RetroArch keeps saves next to them here.
 - Theme: nes-box has no 3ds folder, and ours goes into the theme (both of the
