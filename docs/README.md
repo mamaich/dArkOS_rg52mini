@@ -384,6 +384,14 @@ runs on both drivers. The packages from 1.8 and 1.7 were made the same way
 from the published images and not installed as released; their one new hook
 (`1.9-es-armn64.sh`) was run on the console by hand, twice.
 
+In master for 1.10, not released yet (VERSION says 1.10):
+
+- The screen keeps its brightness over a power-off with the backlight off
+  (the sleep hook's power-off after two hours on battery, a power-off under
+  ES's black screensaver); up to 1.9 the next boot came up at 5%
+  (`darkos-backlight-keep`, KNOWN-ISSUES.md, "The screen at 5% brightness
+  after a start").
+
 Built but never launched: freej2me-plus. It had been silently missing from
 earlier images and now exists — whether it runs is another question.
 Yabasanshiro was in the same state until 2026-10-24, when the one game tried

@@ -1,0 +1,13 @@
+#!/bin/sh
+# Run by darkos-backlight-keep.service at shutdown, after systemd-backlight has saved the backlight
+# level: a saved 0 (the screen was dark: ES's black screensaver, or the sleep hook's power-off) is
+# replaced with the last level other than 0, kept in /run/darkos-brightness by
+# 99-darkos-brightness.rules. Without this the next boot starts at systemd's floor, 5%.
+b=$(cat /run/darkos-brightness 2> /dev/null)
+case "$b" in ''|0|*[!0-9]*) exit 0 ;; esac
+for f in /var/lib/systemd/backlight/*; do
+  [ -f "$f" ] || continue
+  read -r saved < "$f"
+  [ "$saved" = 0 ] && echo "$b" > "$f"
+done
+exit 0

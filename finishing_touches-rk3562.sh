@@ -682,6 +682,14 @@ echo 'ACTION=="add", SUBSYSTEM=="devfreq", KERNEL=="*.gpu", ATTR{max_freq}="9000
 # Emulationstation/scripts.rk3562).
 echo 'SUBSYSTEM=="backlight", ACTION=="add|change", ATTR{brightness}!="0", RUN+="/bin/sh -c '\''echo $attr{brightness} > /run/darkos-brightness'\''"' | sudo tee Arkbuild/etc/udev/rules.d/99-darkos-brightness.rules
 
+# ...and what a power-off with the screen dark leaves for the next boot: systemd-backlight saves the
+# level the screen has at shutdown, which is 0 under that screensaver and in the sleep hook (it
+# powers the device off after two hours asleep on battery), and at boot takes a saved 0 for its
+# floor, 5%. The unit puts the last level other than 0 in the saved 0's place.
+sudo install -m 755 scripts/rk3562/darkos-backlight-keep Arkbuild/usr/local/sbin/darkos-backlight-keep
+sudo install -m 644 scripts/rk3562/darkos-backlight-keep.service Arkbuild/etc/systemd/system/darkos-backlight-keep.service
+sudo chroot Arkbuild/ bash -c "systemctl enable darkos-backlight-keep"
+
 # Joystick button swap persistence -- restore swap state on boot if flag file exists
 echo 'ACTION=="add", SUBSYSTEM=="platform", DRIVER=="rk3562-joystick", RUN+="/bin/sh -c '\''test -f /home/ark/.config/.SWAP_START_HOME && echo 1 > /sys%p/swap_start_home'\''"' | sudo tee Arkbuild/etc/udev/rules.d/99-joystick-swap.rules
 

@@ -528,6 +528,46 @@ once).
 **The 1.5 notes advise** unplugging USB devices before sleep, and plugging a
 charger or a PC into a console that is awake.
 
+## The screen at 5% brightness after a start — fixed for 1.10
+
+A user's report of 2026-11-12: "after the console starts the screen is at 5%;
+I have to raise it every time". Not a setting lost at random: systemd-backlight
+saves the backlight level at shutdown and puts it back at boot, and what it
+saves is the level the screen has at that moment. Two things here turn the
+backlight off by writing 0 to `brightness`: the sleep hook
+(`scripts/sleep.rk3562`) and ES's "black" screensaver. So a power-off from
+either saves 0:
+
+- the sleep hook's own power-off after two hours asleep on battery — the
+  everyday case: the power key, the console left alone, and it is off by the
+  next time;
+- a power-off or a reboot while the black screensaver is on.
+
+At the next boot systemd-backlight says "Saved brightness 0 is too low;
+increasing to 12", and 12 of 255 is the 5%. A power-off from ES's menu with
+the screen lit keeps the level. On the owner's console (1.9, 2026-11-12): a
+reboot at 150 came back at 150; a reboot with 0 written over 150 came back at
+12. Every release with the black screensaver or the sleep power-off has it,
+1.9 included.
+
+The fix: `darkos-backlight-keep.service` is ordered before
+systemd-backlight's unit, so at shutdown it stops after that one has saved,
+and its stop script (`/usr/local/sbin/darkos-backlight-keep`) replaces a saved
+0 with the last level other than 0, which `99-darkos-brightness.rules` keeps
+in `/run/darkos-brightness`. On the console with the unit installed by hand:
+150, then 0, reboot: 150 again; 100 with the screen lit, reboot: 100.
+
+Two things met on the way. An `ExecStop=/bin/sh -c '...'` line did nothing:
+systemd expands `$name` in a unit's command lines itself, to nothing when the
+variable is not in its environment, so the shell got a script with the
+variables gone; hence a script file. And systemd-backlight writes the saved
+value over the old file without cutting it: "0" over "150" leaves two lines,
+"0" and "0", so the script reads the first line only.
+
+On 1.9 and older: the level set in ES holds until the console next powers off
+with the screen dark; powering it off from the menu instead of leaving it
+asleep avoids the reset.
+
 ## Headphones: the speaker played too — fixed in 1.5
 
 Reported by the owner, 2026-11-01: with headphones in, the sound came out of the

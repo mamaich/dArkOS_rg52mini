@@ -1,0 +1,21 @@
+# The backlight level over a power-off with the screen dark. systemd-backlight saves the level the
+# screen has at shutdown and puts it back at boot; ES's "black" screensaver and the sleep hook turn the
+# backlight off by writing 0, so a power-off from either (the sleep hook powers the device off after
+# two hours on battery) saved 0, and the next boot came up at systemd's floor, 5%. This unit is ordered
+# before systemd-backlight, hence stops after it: a saved 0 is replaced with the last level other than
+# 0, which 99-darkos-brightness.rules keeps in /run/darkos-brightness.
+[Unit]
+Description=Keep the backlight level over a power-off with the screen dark
+DefaultDependencies=no
+Before=systemd-backlight@backlight:backlight.service shutdown.target
+Conflicts=shutdown.target
+RequiresMountsFor=/var/lib/systemd/backlight
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/local/sbin/darkos-backlight-keep
+
+[Install]
+WantedBy=sysinit.target
