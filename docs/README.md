@@ -137,7 +137,7 @@ New in 1.5 (build 11012026, 2026-11-02):
 | Headphones | with headphones in, the speaker is silent, during a game too: the playback path follows the jack (`headphone-path.sh`, run by a udev rule), and the codec turns the speaker's amplifier off when the path changes mid-stream (kernel d188e7c); with HDMI in, headphones win ([KNOWN-ISSUES](KNOWN-ISSUES.md#headphones-the-speaker-played-too--fixed-in-15)) |
 | EmulationStation | UI Settings > Show Clock shows the clock (at the bottom right, it was below the screen); the battery's percent at the top right is on the screen; nes-box shows a game's logo whole, in the bar at the bottom (es-0004, `1.5-nesbox-marquee.sh`; [KNOWN-ISSUES](KNOWN-ISSUES.md#es-no-clock-the-batterys-percent-off-the-screen-a-games-logo-in-the-corner--fixed-in-15)) |
 | PortMaster | its window fills the screen, no black bars on the sides: `portmaster-e2big.sh` gives it the screen's size ([KNOWN-ISSUES](KNOWN-ISSUES.md#portmasters-window-had-black-bars-on-the-sides--fixed-in-15)) |
-| RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f, 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |
+| RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f up to 1.9, a4d0a85 for 1.10; 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |
 | XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--openmsx-fixed-in-14-xroar-in-15)) |
 | Sleep | not changed, but the notes advise unplugging USB devices before sleep and plugging a charger into an awake console: a USB headset on the port turns deep sleep into a loop of wakes ([KNOWN-ISSUES](KNOWN-ISSUES.md#usb-devices-on-the-port-in-sleep-it-woke-again-and-again--advice-in-15-not-fixed)) |
 
@@ -409,6 +409,9 @@ In master for 1.10, not released yet (VERSION says 1.10):
   ES's black screensaver); up to 1.9 the next boot came up at 5%
   (`darkos-backlight-keep`, KNOWN-ISSUES.md, "The screen at 5% brightness
   after a start").
+- `retroarch-next`, the second RetroArch, is built from master of 2026-11-12
+  (a4d0a85; fab8d5f of 2026-10-31 up to 1.9). Nothing changes in how it is
+  offered or set up (KNOWN-ISSUES.md, "RetroArch from master").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

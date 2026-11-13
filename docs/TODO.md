@@ -112,6 +112,35 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
+## Upstream updates for 1.10
+
+**retroarch-next: fab8d5f -> a4d0a85** (libretro/RetroArch master of
+2026-11-12, 717 commits; the owner, 2026-11-12: update it for 1.10). The
+twelve patches of `patches/retroarch-next/` apply with offsets only; built in
+the test chroot (`cb.sh retroarch-next`, 17 minutes). On the owner's dual-boot
+card (1.9) on 2026-11-13, the new binary bound over
+`/opt/retroarch-next/bin/retroarch` for its runs, each game started as ES
+does with the `retroarch-next` emulator, 25 s to settle and 15 s counted:
+
+| Game (core) | fab8d5f | a4d0a85 |
+|---|---|---|
+| GBA, Goodboy Galaxy demo (mgba_rumble) | 60.00 fps, CPU 8% of the four cores | 60.00, 12% |
+| SNES, 240p Test Suite (snes9x2010) | 60.07, 12% | 60.07, 9% |
+| Mega Drive, Miniplanets (genesis_plus_gx) | 60.07, 11% | 60.07, 13% |
+| FBNeo, sparkman | 60.00, 15% | 60.00, 13% |
+| PS1, Double Dragon (DuckStation core) | 60.00, 10% | 60.00, 12% |
+| GBC, Tobu Tobu Girl Deluxe (gambatte) | 60.00, 7% | 60.00, 6% |
+
+Sound playing and no crash lines in all twelve runs; the screen grabs match
+pair by pair (upright, same colours). The CPU figures are one run each and
+differ by less than they vary between runs. RGUI on the new binary: Quick
+Menu, the main menu with ArkOS, the battery, Reboot and Shutdown. Network
+commands (patch 12), switched on for one run: the port on 127.0.0.1 only,
+VERSION and GET_STATUS answered there and not from the network, QUIT twice
+ends the game; the settings file came back unchanged but for the switch.
+Not checked with this pin: HDMI, a 50 Hz game, the oga driver, Ozone and
+Material UI (KNOWN-ISSUES.md, "RetroArch from master", has what 1.5 checked).
+
 ## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS; released 2026-11-12)
 
 `tools/upstream/check.py` of 2026-11-11 before the next full build; no pull

@@ -2890,7 +2890,8 @@ are left out: those scripts tell emulators apart by name.
 
 How it is made:
 - `rk3562_core_builds/scripts/retroarch-next.sh` builds a pinned master commit
-  (fab8d5f, 2026-10-31) with the 64-bit configure of `retroarch.sh`, and
+  (fab8d5f of 2026-10-31 in 1.5 to 1.9; a4d0a85 of 2026-11-12 for 1.10, below)
+  with the 64-bit configure of `retroarch.sh`, and
   `patches/retroarch-next/`, the release's patches ported to master, numbered
   in the order they apply. `build_retroarch.sh` puts it at
   `/opt/retroarch-next/bin/retroarch` on the RG52 Mini, cached by the commit
@@ -2944,6 +2945,20 @@ in the right colours (RGB565 scanout); v1.22.2's oga swaps red and blue on
 this panel and tears. On HDMI, oga turns the picture 90 degrees, in v1.22.2
 as here: it is made for the panel, use gl there. Master's own oga turns
 (ROT_270) show the panel upside down, as patch 0016 says.
+
+**The pin moved to a4d0a85 for 1.10** (master of 2026-11-12, 717 commits
+after fab8d5f; the owner, 2026-11-12: update it). All twelve patches apply as
+they are, with line offsets only. Checked on the console on 2026-11-13, the
+new binary bound over the installed one, each game started as ES starts it
+with the `retroarch-next` emulator, the old binary and the new one in turn:
+GBA (mgba_rumble), SNES (snes9x2010), Mega Drive (genesis_plus_gx), FBNeo,
+PS1 (the DuckStation core) and GBC (gambatte) at 60 fps on both, sound
+playing, no crash lines, the pictures the same (upright, same colours);
+RGUI's Quick Menu and its main menu (ArkOS, the battery, Reboot, Shutdown);
+with network commands switched on the port listens on 127.0.0.1 only,
+answers VERSION and GET_STATUS there, nothing from the network, and QUIT
+sent twice ends the game. Not checked again with this pin: HDMI, a 50 Hz
+game, the oga driver, Ozone and Material UI.
 
 **An update keeps the user's es_systems.cfg** (OTA: a file under `etc/` that
 differs from both builds stays, the new one beside it as `.ota-new`), and the
