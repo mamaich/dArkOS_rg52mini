@@ -141,6 +141,15 @@ ends the game; the settings file came back unchanged but for the switch.
 Not checked with this pin: HDMI, a 50 Hz game, the oga driver, Ozone and
 Material UI (KNOWN-ISSUES.md, "RetroArch from master", has what 1.5 checked).
 
+**malisx2: 86b16a8 -> 4636921** (upstream's main, 17 commits after 0.5.0,
+merged by the malisx2 session; the owner, 2026-11-13: that session tests it
+and decides, and the full build waits for its word). Taken on its word of
+2026-11-15, with `malisx2/pgo/malisx2-20261113.profdata.gz`, which has to go
+with the commit. Measured by that session on the console with its own
+builds; the table is in KNOWN-ISSUES.md, "malisx2 with upstream's main after
+0.5.0". The launchers are unchanged. Left for after the image build: its
+library goes to the malisx2 session, which compares it with its own.
+
 ## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS; released 2026-11-12)
 
 `tools/upstream/check.py` of 2026-11-11 before the next full build; no pull

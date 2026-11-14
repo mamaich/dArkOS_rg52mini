@@ -100,12 +100,25 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="86b16a84da9980c524bfb6149bfbcea790eff9c2"
+MALISX2_COMMIT="46369219e6eadda051cf6a52b8ad3e82e1ffea6a"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained by the malisx2
-# session on 0e4732c (0.4.0's code, Mesa 3b0e036) on an RG52 Mini
-# (2026-11-08), and kept for 0.4.1: on its code only the functions that
+# session on f228314's code (upstream's main of 2026-11-12 merged, 17 commits
+# after 0.5.0; Mesa 3b0e036) on an RG52 Mini on 2026-11-13, with the set named
+# below. It goes with that code: 2026-11-08's profile lost the hot draw path
+# on it (draw and prepare_draw of v7, 5.8% of its weight, the barriers,
+# build_submit, pack_rsd, the image copies), and a loss like that cost God of
+# War 3% on 0.4.0. The malisx2 session's numbers on the console, its build of
+# this code with this profile against 0.5.0 with 2026-11-08's, three runs
+# each with the order turned: Castlevania 19.06/19.17/19.32 against
+# 18.78/18.83/18.86 (+1.9%) and 19.28/20.34/20.43 against 19.85/19.89/19.41
+# (+1.5%), God of War 17.84/17.79/18.28 against 17.72/18.10/17.78, Jak and
+# Daxter 14.40/14.45/14.51 against 14.39/14.60/14.47, the ND Demo and Metroid
+# Prime within the spread, the same GPU memory, fitest 7/7 and 12/12
+# indirect, bctest's 6 formats, no GPU fault.
+# 2026-11-08's profile, trained on 0e4732c (0.4.0's code, Mesa 3b0e036) on
+# 2026-11-08, was kept for 0.4.1: on its code only the functions that
 # compile shaders and enumerate devices miss their data, the draw path is as
 # it was (the malisx2 session on 2026-11-11, its build of this code against
 # 0.4.0's: God of War 17.66/18.00 against 17.77-18.05, Jak and Daxter 14.29
@@ -145,8 +158,8 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # (Mesa's reach the compiler by absolute paths), so it is made for this tree
 # at /home/ark/malisx2, where the chroot builds it, with the build directory
 # in it (malisx2's docs/building.md).
-PGO="malisx2/pgo/malisx2-20261108.profdata.gz"
-PGO_SHA256="ecb83502401001052a27cb624be9026157e4b40c56e969bcbb0fe986e3d64618"
+PGO="malisx2/pgo/malisx2-20261113.profdata.gz"
+PGO_SHA256="5846fa5ca54520f34543660f37e7c264dd9dbb871beba45ba1e23209cf81d61e"
 # Meson from its release, run from the tree: Debian trixie's 1.7.0 fails to
 # write the build of the Rust crate Mesa makes of structured sources
 # ("'CustomTargetIndex' object has no attribute 'subdir'"); 1.12.1 builds it.

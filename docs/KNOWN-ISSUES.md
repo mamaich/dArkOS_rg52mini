@@ -1297,6 +1297,43 @@ each game compiles its pipelines once more after the update. The third 1.9
 test build (20261111204040) has 0.4.1; 1.9 as released (20261112155920) has
 0.5.0.
 
+**malisx2 with upstream's main after 0.5.0 (4636921, for 1.10).** Seventeen
+upstream commits after 0.5.0, without a tag, most of them v7 work done for
+Vita3K. A pipeline barrier's requirements are worked out one barrier at a
+time, so a pass's tiling no longer waits for the fragment work of the pass
+before it; the tiler heap ring grows in one more case; transfers that would
+wait for fragment work run on the fragment slot; an indexed draw with the
+indices of the one before reuses its range; a vec4 global load is one
+instruction. Mesa stays at 3b0e036. The profile is new (2026-11-13's, the
+same training set): 2026-11-08's lost the draw path on this code.
+driverInfo still says 0.5.0 (`v1.r44p1-malisx2.0.5.0.s57ef6690777f`); the
+shader cache ID changes (41f9e0da-... for 7b4bf7cb-...), so each game
+compiles its pipelines once more after the update. The Azahar launcher's
+`MALISX2_V7_UBO_PUSH_VS=64` stays, and there is no new knob. The malisx2
+session's numbers on the console, 2026-11-13, its build of the merge with the
+new profile against 0.5.0 as 1.9 has it (LTO and a profile in both, three
+runs each with the order turned):
+
+| | 0.5.0 | the merge |
+|---|---|---|
+| God of War, 1x, frames 100-800 | 17.72 / 18.10 / 17.78 | 17.84 / 17.79 / 18.28 |
+| Jak and Daxter, 1x, frames 100-800 | 14.39 / 14.60 / 14.47 | 14.40 / 14.45 / 14.51 |
+| Castlevania (3DS), frames 60-360 | 18.78 / 18.83 / 18.86 | 19.06 / 19.17 / 19.32 (+1.9%) |
+| Castlevania, frames 360-660 | 19.85 / 19.89 / 19.41 | 19.28 / 20.34 / 20.43 (+1.5%) |
+| ND Demo (GameCube), frames 300-1300 | 46.70 / 46.70 / 46.55 | 46.55 / 46.52 / 47.29 |
+| ND Demo, frames 1300-2100 | 46.65 / 48.59 / 47.96 | 47.91 / 48.39 / 48.78 (+1.3%) |
+| Metroid Prime (GameCube), frames 300-1300 | 43.70 / 43.58 / 43.70 | 43.67 / 43.70 / 43.67 |
+
+In Castlevania the vertex and tiler work now runs beside the fragment work:
+a frame has only the vertex slot busy for 4.7-5.4 ms where it was 12.6, and
+both slots busy for 11.0-12.4 ms where it was 5.2. The gain in frames is
+smaller than that: the CPU was dropping its clock in those rounds (the SoC at
+73-74 degrees with both builds). PS2 and GameCube are within the spread. GPU
+memory is the same, fitest passes 7 of 7 and 12 of 12 indirect, bctest its 6
+formats, Castlevania's frames match, no GPU fault and no device lost. These
+are the malisx2 session's builds; the image's recipe builds the same commit
+with the same profile.
+
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
 `citra_resolution_factor` raised through a copy. The title demo, three rounds
