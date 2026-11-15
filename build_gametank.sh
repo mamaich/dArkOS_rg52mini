@@ -4,8 +4,12 @@
 # The recipe and its patches are part of the cache key, as in build_fake08.sh:
 # a flag changed there (the patch said -mcpu=cortex-a55, whose LSE atomics this
 # Cortex-A53 cannot run) would otherwise never reach the image.
+# The commit is the recipe's pin (2026-11-15): the key was upstream's head as GitHub's API named it,
+# so a commit upstream made between two builds rebuilt the emulator from code nobody had tried, and
+# on 2026-11-13 one of those no longer took our patch.
+GAMETANK_COMMIT=$(grep -oP '(?<=^commit=")[0-9a-f]+' ${CHIPSET}_core_builds/scripts/gametank.sh)
 GAMETANK_RECIPE_SHA=$(cat ${CHIPSET}_core_builds/scripts/gametank.sh ${CHIPSET}_core_builds/patches/gametank-patch* 2>/dev/null | sha1sum | cut -c1-12)
-if [ -f "Arkbuild_package_cache/${CHIPSET}/gametank.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/gametank.commit)" == "$(curl -s https://api.github.com/repos/clydeshaffer/gametankemulator/commits/main | jq -r '.sha')-${GAMETANK_RECIPE_SHA}" ]; then
+if [ -f "Arkbuild_package_cache/${CHIPSET}/gametank.tar.gz" ] && [ "$(cat Arkbuild_package_cache/${CHIPSET}/gametank.commit)" == "${GAMETANK_COMMIT}-${GAMETANK_RECIPE_SHA}" ]; then
     sudo tar -xvzpf Arkbuild_package_cache/${CHIPSET}/gametank.tar.gz
 else
 	call_chroot "cd /home/ark &&
@@ -24,7 +28,7 @@ else
 	fi
 	if [ -f Arkbuild/opt/gametank/GameTankEmulator ]; then
 	  sudo tar -czpf Arkbuild_package_cache/${CHIPSET}/gametank.tar.gz Arkbuild/opt/gametank/
-	  echo "$(curl -s https://api.github.com/repos/clydeshaffer/gametankemulator/commits/main | jq -r '.sha')-${GAMETANK_RECIPE_SHA}" | sudo tee Arkbuild_package_cache/${CHIPSET}/gametank.commit >/dev/null
+	  echo "${GAMETANK_COMMIT}-${GAMETANK_RECIPE_SHA}" | sudo tee Arkbuild_package_cache/${CHIPSET}/gametank.commit >/dev/null
 	fi
 fi
 sudo cp gametank/config/gametank.gptk Arkbuild/opt/gametank/gametank.gptk

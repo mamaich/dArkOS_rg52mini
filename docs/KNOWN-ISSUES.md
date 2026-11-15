@@ -3597,3 +3597,31 @@ each time through a shell, brightnessctl and awk. `es-0008-brightness-from-sysfs
 reads the backlight's own files instead (bcab12f): the whole system 56% of a
 core in the menu before, 36% after. PERFORMANCE.md, "ES at rest: no
 brightnessctl twenty times a second", has the measurement.
+
+## A full build stopped at GameTank and still said "completed" — fixed for 1.10
+
+The first 1.10 build (2026-11-15) ended after 37 minutes with "RG52 Mini build
+completed. Final image is ready." and status 0. The image file was there
+under its final name, with an empty root. Two causes:
+
+- `rk3562_core_builds/scripts/gametank.sh` built upstream's head, whatever it
+  was that day. On 2026-11-13 upstream's b352039 ("GLIBC 2.39 backwards
+  compatibility") added `-include src/compat.h` to the Makefile line that
+  `gametank-patch-002-performance-tweak` edits, and the patch no longer
+  applied. The recipe is pinned now at acc608a, the commit 1.6 to 1.9 were
+  built from (the cache of 2026-11-03), and `build_gametank.sh` keys its cache
+  by that pin instead of asking GitHub's API for the head at every build.
+- `build_rg52mini.sh` runs the whole build in a subshell piped into `tee`. A
+  step's `exit 1` (verify_action: "Exiting build with return code 1") ended
+  the subshell only, and the pipe's status was tee's: the script went on to
+  say "completed" and returned 0. It takes the subshell's status now
+  (`PIPESTATUS`), says FAILED and returns it. In a log of an older build,
+  search for "Exiting build with return code".
+
+Checked: the pinned recipe builds in the test chroot (`cb.sh gametank`, both
+patches apply, the source at acc608a). Upstream's two commits after the pin
+only add that compatibility header, for binaries run on an older glibc than
+they were built with; nothing for an emulator built in the image's own
+chroot. Other recipes still build a branch's head (the "follow" rows of
+`tools/upstream/components.json`) and can stop a build the same way where
+they carry a patch of ours: TODO.md, "Upstream updates for 1.10".

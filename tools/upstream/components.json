@@ -67,7 +67,7 @@
     {"name": "AppleWin (sa2)", "mode": "follow", "repo": "audetto/AppleWin"},
     {"name": "linapple (christianhaitian)", "mode": "follow", "repo": "christianhaitian/linapple"},
     {"name": "piemu", "mode": "follow", "repo": "YonKuma/piemu", "branch": "modernize"},
-    {"name": "GameTankEmulator", "mode": "follow", "repo": "clydeshaffer/GameTankEmulator"},
+    {"name": "GameTankEmulator", "mode": "commit", "repo": "clydeshaffer/GameTankEmulator", "branch": "main", "pin": {"file": "rk3562_core_builds/scripts/gametank.sh", "regex": "^commit=\"([0-9a-f]+)\""}, "note": "light: take what upstream has; gametank-patch-002 edits the Makefile's Linux flags and must still apply (b352039 of 2026-11-13 moved that line)"},
     {"name": "ti99sim (rg503 branch)", "mode": "follow", "repo": "christianhaitian/ti99sim", "branch": "rg503"},
     {"name": "EmulationStation-fcamod (503noTTS)", "mode": "follow", "repo": "christianhaitian/EmulationStation-fcamod", "branch": "503noTTS", "cache": {"file": "Arkbuild_package_cache/rk3562/emulationstation.commit", "regex": "^([0-9a-f]{40})"}},
     {"name": "gl4es", "mode": "commit", "repo": "ptitSeb/gl4es", "pin": {"file": "build_gl4es.sh", "regex": "^GL4ES_COMMIT=([0-9a-f]+)"}},

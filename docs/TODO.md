@@ -150,6 +150,15 @@ builds; the table is in KNOWN-ISSUES.md, "malisx2 with upstream's main after
 0.5.0". The launchers are unchanged. Left for after the image build: its
 library goes to the malisx2 session, which compares it with its own.
 
+**GameTankEmulator pinned at acc608a** (2026-11-15): the recipe built
+upstream's head, upstream moved the Makefile line our patch 002 edits, and
+the first 1.10 build stopped there while reporting success (KNOWN-ISSUES.md,
+"A full build stopped at GameTank"). To do: go through the "follow" rows of
+`tools/upstream/components.json` (46 of them), find the ones the image builds
+from a branch's head with a patch of ours, and pin each at the commit its
+cache holds; the same upstream move would stop a build at any of them. And
+port patch 002 to GameTank's head when that emulator is next looked at.
+
 ## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS; released 2026-11-12)
 
 `tools/upstream/check.py` of 2026-11-11 before the next full build; no pull

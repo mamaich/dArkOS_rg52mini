@@ -139,5 +139,13 @@ source ./create_image.sh
 # The chroot stages this build kept (rootfs_cache.sh) are good to use
 commit_rootfs_cache
 ) 2>&1 | tee -a build.log
+# The build runs in a subshell piped into tee: a step's "exit 1" (verify_action) ends the subshell
+# only, and the pipe's own status is tee's. Without this the script said "completed" and returned 0
+# after a failed step, with an unfinished image under the finished one's name (2026-11-15).
+rc=${PIPESTATUS[0]}
+if [ "${rc}" != "0" ]; then
+  echo "RG52 Mini build FAILED with return code ${rc}: see build.log. The image is not finished."
+  exit "${rc}"
+fi
 
 echo "RG52 Mini build completed. Final image is ready."
