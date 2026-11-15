@@ -3625,3 +3625,56 @@ they were built with; nothing for an emulator built in the image's own
 chroot. Other recipes still build a branch's head (the "follow" rows of
 `tools/upstream/components.json`) and can stop a build the same way where
 they carry a patch of ours: TODO.md, "Upstream updates for 1.10".
+
+## A prebuilt core nobody asked for: 64-bit parallel_n64 without 3D — fixed for 1.10
+
+The RetroArch cores the image does not build itself come as zips from
+christianhaitian/retroarch-cores, branch rg503, and `build_retroarch.sh`
+downloaded each from the branch's head at every build. On 2026-11-14 the
+branch got a new aarch64 parallel_n64 (2c6afa7, "core to commit f56f7a2"; the
+one before was 51aefbd of 2026-04-23), and the 1.10 build of the next morning
+(20261115031005) took it. No commit of ours had asked for it. It showed as
+one line in the list of files of the update package from 1.9:
+`home/ark/.config/retroarch/cores/parallel_n64_libretro.so`, 6.5 MB where
+1.9 has 1.95 MB.
+
+On the console, N64 with the `retroarch` emulator and the `parallel_n64` core
+(a choice in EMULATOR SETTINGS, not the default), the owner's options
+(`parallel-n64-gfxplugin = "auto"`), the screen grabbed 20, 30, 40 and 55 s
+after the start, the old core bound over the new one from the update's
+snapshot:
+
+| | 1.9's core (51aefbd) | the new prebuilt (f56f7a2) |
+|---|---|---|
+| Zelda: Ocarina of Time, the title | the scene behind the logo, 19.9 fps | the logo and the text on black, no 3D in any of the four grabs; 59.9 fps |
+| AeroGauge, the demo race | the race, 30.0 fps | black in all four; 59.9 fps |
+
+The new core prints "glN64 config stream read error." where the old one
+starts Glide64 ("plugin_start_gfx success", "Gfx RomOpen"): at "auto" it
+picks another video plugin, and that one draws nothing here. Why, and whether
+another plugin of the new core works, was not looked into (TODO.md). The
+smoke run did not catch it: it starts N64 on the default choice (retroarch32
+with the 32-bit parallel_n64, a file that did not change) and on armN64; the
+run added afterwards showed 60 fps, sound and no crash, and only the picture
+told.
+
+Fix: the branch is read at a commit, `RETROARCH_CORES_COMMIT` in
+`build_retroarch.sh`, for the 64-bit and the 32-bit cores alike: 996dfd5
+(2026-10-31), the head 1.6 to 1.9 were built from. np2kai keeps its older
+pin. The upstream checker has the branch as a pinned row and lists what it
+got since. The image was built again.
+
+Checked before that build: the zip at the pinned commit unpacks to 1.9's file
+(1,954,960 bytes, md5 4d051003...), and every core the two lists ask for
+is there; the branch's head differs from it by that one zip and a prebuilt
+armN64 the image does not use.
+
+For the next release: the list of files in the package from the previous
+release is the whole difference between two images, and every line of it
+needs a reason, which is a commit since that release, a Debian update, or a
+file that carries its build date (the kernel and its initrd, gl4es, root's
+crontab, plymouth's text theme). OTA.md, "Release procedure", has it as a
+step. The same list of 1.10 had one more line without a commit of ours:
+`zfast_crt_geo.glsl` in both RetroArch shader folders (libretro/glsl-shaders
+a350698 of 2026-11-12, "match vertex uniform precision with the fragment
+shader"), from a clone of that repository's head; left as it came.

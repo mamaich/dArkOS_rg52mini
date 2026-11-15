@@ -283,6 +283,15 @@ may change, so the client checks free space and assumes no sizes.
    Create `<dir>` first: the script fails at the very end, after the three
    minutes of comparing, when it does not exist (TODO.md, "Found while
    testing 1.2").
+   Read the list of files the package brings (`tar -xOf <package>
+   manifest.json`, its "files"): it is the whole difference between the two
+   images, and every line needs a reason, which is a commit since the
+   previous release, a Debian update, or a file that carries its build date
+   (the kernel and its initrd, gl4es, root's crontab, plymouth's text theme).
+   A line without one is something the build fetched from a branch's head:
+   try it on the console before the release, or pin it back. 1.10's first
+   image had a prebuilt core that way, drawing no 3D (KNOWN-ISSUES.md, "A
+   prebuilt core nobody asked for").
    Then the same for the release before the previous one (N-2 -> N), and no
    older: from 1.9 on older cards go through the releases in between (top of
    this page). The client picks the newest entry for its build. A package

@@ -1,6 +1,13 @@
 #!/bin/bash
 
 # Build and install Retroarch
+# rg52mini: the prebuilt cores (christianhaitian/retroarch-cores, branch rg503) are taken at this
+# commit of that branch, not at its head (2026-11-15). The head got a new aarch64 parallel_n64 on
+# 2026-11-14 that draws no 3D on the RG52 Mini, and the 1.10 build of the next morning took it
+# unasked (KNOWN-ISSUES.md, "A prebuilt core nobody asked for"). 996dfd5 (2026-10-31) is the head
+# 1.6 to 1.9 were built from. Moving it: tools/upstream/check.py lists what the branch has since;
+# try each changed core on the console first.
+RETROARCH_CORES_COMMIT=996dfd5681a49cf006a3619471c71b25c27ebb93
 # For rk3562, use local submodule (bmdhacks fork with rotation patch)
 if [ "$CHIPSET" == "rk3562" ]; then
   RETROARCH_TAG=$(grep -oP '(?<=tag=").*?(?=")' rk3562_core_builds/scripts/retroarch.sh)
@@ -145,7 +152,7 @@ fi
 if [ "$CHIPSET" == "rk3326" ]; then
   CORE_REPO="master"
 else
-  CORE_REPO="rg503"
+  CORE_REPO="${RETROARCH_CORES_COMMIT}"
 fi
 ARCH="aarch64"
 sudo mkdir -p Arkbuild/home/ark/.config/retroarch/cores
@@ -155,7 +162,7 @@ while read RETROARCH_CORE; do
     CORE_REF="$CORE_REPO"
     # np2kai on rg503 since 2026-09-07 (NP2kai 5939e0c) leaves ymzadpcm_*
     # undefined and RetroArch cannot open it; take the build before that one.
-    if [ "$CORE_REPO" == "rg503" ] && [ "$RETROARCH_CORE" == "np2kai" ]; then
+    if [ "$CORE_REPO" != "master" ] && [ "$RETROARCH_CORE" == "np2kai" ]; then
       CORE_REF="e2a8f88be5"
     fi
     wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REF"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
@@ -501,7 +508,7 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 	if [ "$CHIPSET" == "rk3326" ]; then
 	  CORE_REPO="master"
 	else
-	  CORE_REPO="rg503"
+	  CORE_REPO="${RETROARCH_CORES_COMMIT}"
 	fi
 	ARCH="arm7hf"
 	sudo mkdir -p Arkbuild/home/ark/.config/retroarch32/cores

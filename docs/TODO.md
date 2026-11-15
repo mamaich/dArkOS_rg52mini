@@ -154,10 +154,23 @@ library goes to the malisx2 session, which compares it with its own.
 upstream's head, upstream moved the Makefile line our patch 002 edits, and
 the first 1.10 build stopped there while reporting success (KNOWN-ISSUES.md,
 "A full build stopped at GameTank"). To do: go through the "follow" rows of
-`tools/upstream/components.json` (46 of them), find the ones the image builds
-from a branch's head with a patch of ours, and pin each at the commit its
-cache holds; the same upstream move would stop a build at any of them. And
-port patch 002 to GameTank's head when that emulator is next looked at.
+`tools/upstream/components.json` (45 of them after the two pinned for 1.10),
+find the ones the image builds from a branch's head, and pin each at the
+commit its cache holds or 1.9 was built from: one with a patch of ours can
+stop a build as GameTank did, and any of them can bring a binary nobody has
+tried, as the prebuilt cores did. And port patch 002 to GameTank's head when
+that emulator is next looked at.
+
+**The prebuilt cores pinned at 996dfd5** (2026-11-15; christianhaitian's
+retroarch-cores, branch rg503, was read at its head): the second 1.10 build
+took a new 64-bit parallel_n64 that draws no 3D on the console
+(KNOWN-ISSUES.md, "A prebuilt core nobody asked for"). To look at before the
+pin moves: that core (f56f7a2, three times the size of 51aefbd) ran Zelda's
+title and AeroGauge at a full 60 where the old one gives 20 and 30, drawing
+only 2D; at `parallel-n64-gfxplugin = "auto"` it starts glN64 where the old
+one starts Glide64. Try it with each plugin named: if one draws right at that
+speed, the 64-bit core becomes worth offering first. The branch also has a
+prebuilt armN64 (96ba6ad) since that day; ours is built from source.
 
 ## Upstream updates for 1.9 (2026-11-11, the owner: take the ones proposed, and look at christianhaitian's dArkOS; released 2026-11-12)
 

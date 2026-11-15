@@ -61,12 +61,23 @@ there).
 
 ## How the work is done here
 
-**Pins.** Every outside component is built at a commit or tag written in its
-recipe; `tools/upstream/components.json` says where. A pin stands for "this
-version was tried on the device". Moving one means: build the component (the
-chroot from the cache, BUILDING.md), run it on the console beside the version
-it replaces, on the same game, and write the numbers into TODO.md. Do not move
+**Pins.** The emulators, cores and drivers this port has changed or measured
+are built at a commit or tag written in their recipe;
+`tools/upstream/components.json` says where. A pin stands for "this version
+was tried on the device". Moving one means: build the component (the chroot
+from the cache, BUILDING.md), run it on the console beside the version it
+replaces, on the same game, and write the numbers into TODO.md. Do not move
 a pin because upstream is newer.
+
+Not everything is pinned: the rows marked "follow" in that file (45 on
+2026-11-15, mostly small emulators and tools inherited from dArkOS) are built
+from a branch's head on the day of the build. Twice that changed an image no
+commit had changed: a recipe with a patch of ours stopped the build, and a
+prebuilt core arrived that draws no 3D (KNOWN-ISSUES.md, its last two
+sections). So before a release, read the list of files in the update package
+from the previous release: it is the whole difference between the two images,
+and every line needs a reason (OTA.md, "Release procedure"). Pin a "follow"
+row when you touch it.
 
 **A component is cached by its commit and by a hash of its recipe and
 patches** (`Arkbuild_package_cache/`). Adding or changing a patch rebuilds that
