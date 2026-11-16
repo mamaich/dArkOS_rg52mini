@@ -3754,3 +3754,20 @@ step. The same list of 1.10 had one more line without a commit of ours:
 `zfast_crt_geo.glsl` in both RetroArch shader folders (libretro/glsl-shaders
 a350698 of 2026-11-12, "match vertex uniform precision with the fragment
 shader"), from a clone of that repository's head; left as it came.
+
+## USB Drive Mount: the stick is gone after ES restarts — not fixed
+
+Seen by the owner, 2026-11-16: a USB stick mounted with Options -> Tools ->
+USB Drive Mount (`/mnt/usbdrive`) was unmounted when EmulationStation
+restarted, and ES restarts on every HDMI plug and pull (hdmi-hotplug.sh), so
+plugging a cable in loses the stick. The stick was NTFS.
+
+The likely cause, not checked on the console: the tool runs from ES, so
+`mount -t ntfs-3g` starts its FUSE daemon inside emulationstation.service's
+cgroup, and stopping the service ends every process in it, the daemon too.
+A FAT or exFAT stick is mounted by the kernel and would not go that way. A
+fix would mount through `systemd-mount` (or `systemd-run`), so that the
+daemon lives in a unit of its own; until then: run USB Drive Mount again
+after an HDMI plug. The tool itself is upstream's (`dArkOS_Tools/USB Drive
+Mount.sh`), mounts `/dev/sda1` only, as uid 1002 (ArkOS's ark; dArkOS' is
+1000; NTFS, FAT and exFAT give everybody write access anyway).
