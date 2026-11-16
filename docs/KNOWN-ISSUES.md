@@ -2792,8 +2792,9 @@ It cannot work as written, for three independent reasons:
 3. `drmConn=1` assumes the HDMI connector is index 1, which is a guess rather
    than something read from the card.
 
-The kernel command line carries `video=HDMI-A-1:1280x720@60` and names the same
-possibly non-existent connector.
+The kernel command line carried `video=HDMI-A-1:1280x720@60` and named the same
+possibly non-existent connector (the name is right, below; the mode was
+dropped on 2026-11-16: "A 3DS game went to the panel").
 
 Where to start is in TODO.
 
@@ -2807,6 +2808,9 @@ the third.
   has a 256-byte EDID and a mode list starting at 1920x1080; extcon `4-0050`
   (the RK628) reports `HDMI=1`. So the hardcoded name, and with it
   `video=HDMI-A-1:1280x720@60` on the kernel command line, are fine (reason 1).
+  The mode itself was not: the kernel's console set 720p on HDMI whenever
+  nothing held the display, and the line has no `video=` for HDMI since
+  2026-11-16 ("A 3DS game went to the panel", below).
 * **`drmConn=1` is the right index** (reason 3): EmulationStation started with
   it comes up on `HDMI-A-1`.
 * **There is one CRTC.** VOP2 exposes only `video_port0`, shared by `DSI-1` and

@@ -2120,8 +2120,9 @@ In order, and the first step is one command:
    HDMI arrives through `route-rgb` and the RK628, so expect something other
    than `HDMI-A-1`. Whatever the name is, it has to replace the hardcoded one
    in `scripts/rk3562/hdmi-test.sh` and in `KCMD_VIDEO` in
-   `finishing_touches-rk3562.sh`, which currently says
-   `video=HDMI-A-1:1280x720@60`.
+   `finishing_touches-rk3562.sh`, which then said
+   `video=HDMI-A-1:1280x720@60`. (The name was right; the mode was dropped
+   on 2026-11-16, KNOWN-ISSUES.md, "A 3DS game went to the panel".)
 
 2. **Read the connector index rather than assuming it.** The script writes
    `drmConn=1` for HDMI and `0` for the panel. The index EmulationStation and
