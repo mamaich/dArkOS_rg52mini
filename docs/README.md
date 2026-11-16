@@ -418,6 +418,10 @@ In master for 1.10, not released yet (VERSION says 1.10):
   1.5-2% faster, PS2 and GameCube as before; each game compiles its
   pipelines once more (KNOWN-ISSUES.md, "malisx2 with upstream's main after
   0.5.0").
+- ES knows the ShanWan "PS3/PC Wired GamePad" (USB 2563:0523) without
+  CONFIGURE INPUT; up to 1.9 its buttons did nothing until it was configured.
+  An update adds its config to a device's own es_input.cfg unless the pad has
+  one there (KNOWN-ISSUES.md, "USB pads: ES ignored them").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

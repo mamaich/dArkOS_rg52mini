@@ -353,6 +353,31 @@ HID pad) and the console's controls, RetroArch appended the config and found
 both profiles; the owner played Zombies Ate My Neighbors (Mega Drive) with the
 two USB pads as players 1 and 2.
 
+**A pad with no config in es_input.cfg does nothing in ES** (2026-11-16, for
+1.10). Reported by the owner: a ShanWan pad's buttons did nothing in ES's menu,
+another USB pad worked. It comes up as "PS3/USB Corded Gamepad" (2563:0973),
+drops off within 0.1 s and comes back as "ShanWan PS3/PC Wired GamePad"
+(2563:0523), a HID joystick on hid-generic: four 8-bit axes, a hat and twelve
+buttons in a 7-byte report. Its Home button switches its own modes (in one the
+sticks act as the d-pad) and is not reported. Read from hidraw on the console
+while its buttons were pressed: the sticks, the hat and every button change
+their bits; SDL 2.32 opens it through evdev and has a mapping of its own for it
+("ShanWan USB Gamepad"). Nothing in the kernel or in a table of names stood in
+the way: es_input.cfg had no config for it, by GUID or by name, so ES left it
+alone, and with no ES mapping `ra-extpads.py` writes no RetroArch profile for
+it either. CONFIGURE INPUT in ES makes it work; the image has its config now
+(SDL's mapping, ES's "a" on the east button as for the console's controls,
+Select as the hotkey), and `ota/hooks/1.10-es-input-shanwan.sh` adds it to a
+device's own es_input.cfg unless that has one for the pad already.
+
+Checked on the console: the owner's own CONFIGURE INPUT of the pad gave the
+same buttons and axes as the image's config, without a hotkey; `ra-extpads.py`
+with the image's config makes the pad player 1, writes its profile (buttons,
+the hat as the d-pad, both sticks) and the hotkeys in its numbering (Select,
+Start to exit, X for the menu). Without a hotkey in the ES config RetroArch gets
+no hotkey for the pad. The hook, on copies of the console's file: added once,
+nothing on a second run, nothing where the owner's config of the pad is.
+
 ## ES: start on the system last played — since 1.5
 
 Asked for by the owner, 2026-11-01: after a reboot ES should open on the system

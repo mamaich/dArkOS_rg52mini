@@ -2614,4 +2614,34 @@
 		<input name="rightanalogleft" type="axis" id="3" value="-1" code="3" />
 		<input name="rightanalogright" type="axis" id="3" value="1" code="3" />
 	</inputConfig>
+	<!-- ShanWan PS3/PC Wired GamePad, USB 2563:0523 (the mode a ShanWan "PS3/USB Corded Gamepad",
+	     2563:0973, switches to on this console): SDL's mapping for it, A on the east button.
+	     Its Home button switches its own modes and is not reported; Select is the hotkey. -->
+	<inputConfig type="joystick" deviceName="ShanWan PS3/PC Wired GamePad" deviceGUID="03000000632500002305000010010000">
+		<input name="a" type="button" id="1" value="1" code="289" />
+		<input name="b" type="button" id="2" value="1" code="290" />
+		<input name="down" type="hat" id="0" value="4" code="16" />
+		<input name="hotkey" type="button" id="8" value="1" code="296" />
+		<input name="left" type="hat" id="0" value="8" code="16" />
+		<input name="leftanalogdown" type="axis" id="1" value="1" code="1" />
+		<input name="leftanalogleft" type="axis" id="0" value="-1" code="0" />
+		<input name="leftanalogright" type="axis" id="0" value="1" code="0" />
+		<input name="leftanalogup" type="axis" id="1" value="-1" code="1" />
+		<input name="leftthumb" type="button" id="10" value="1" code="298" />
+		<input name="lefttrigger" type="button" id="6" value="1" code="294" />
+		<input name="pagedown" type="button" id="5" value="1" code="293" />
+		<input name="pageup" type="button" id="4" value="1" code="292" />
+		<input name="right" type="hat" id="0" value="2" code="16" />
+		<input name="rightanalogdown" type="axis" id="3" value="1" code="5" />
+		<input name="rightanalogleft" type="axis" id="2" value="-1" code="2" />
+		<input name="rightanalogright" type="axis" id="2" value="1" code="2" />
+		<input name="rightanalogup" type="axis" id="3" value="-1" code="5" />
+		<input name="rightthumb" type="button" id="11" value="1" code="299" />
+		<input name="righttrigger" type="button" id="7" value="1" code="295" />
+		<input name="select" type="button" id="8" value="1" code="296" />
+		<input name="start" type="button" id="9" value="1" code="297" />
+		<input name="up" type="hat" id="0" value="1" code="16" />
+		<input name="x" type="button" id="0" value="1" code="288" />
+		<input name="y" type="button" id="3" value="1" code="291" />
+	</inputConfig>
 </inputList>

@@ -114,6 +114,13 @@ it. Confirmed on the device.
 
 ## Upstream updates for 1.10
 
+**Not released yet**: the build of 2026-11-15 (20261115080012, from 687d754)
+passed its package checks, and was put on the owner's console by its package,
+but the owner held 1.10 back on 2026-11-16 for a bug with HDMI. Its files are
+kept until the next build (`~/rg52/ota-1.10` on the build host); its feed
+entries were not committed.
+
+
 **retroarch-next: fab8d5f -> a4d0a85** (libretro/RetroArch master of
 2026-11-12, 717 commits; the owner, 2026-11-12: update it for 1.10). The
 twelve patches of `patches/retroarch-next/` apply with offsets only; built in
