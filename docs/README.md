@@ -422,6 +422,13 @@ In master for 1.10, not released yet (VERSION says 1.10):
   CONFIGURE INPUT; up to 1.9 its buttons did nothing until it was configured.
   An update adds its config to a device's own es_input.cfg unless the pad has
   one there (KNOWN-ISSUES.md, "USB pads: ES ignored them").
+- On HDMI: a 3DS game stays on the TV (it went to the panel: Arm's Vulkan
+  driver offers the first connected connector, so the panel's is forced off
+  while HDMI is chosen), ES fills the TV after the cable is put back, and the
+  TV no longer loses the picture for a moment between ES and a game (the
+  kernel's console set 720p on HDMI each time nothing held it; the command
+  line no longer asks for that). KNOWN-ISSUES.md, "A 3DS game went to the
+  panel".
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

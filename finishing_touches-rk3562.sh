@@ -28,8 +28,13 @@ sudo mkdir -p ${mountpoint}/extlinux
 # vt.global_cursor_default=0 hides the blinking cursor the logo would
 # otherwise sit behind (rg43h already carries this on rk3566).
 KCMD_BASE="root=/dev/mmcblk1p4 rootfstype=btrfs initrd=/uInitrd rootwait rw fsck.repair=yes quiet splash net.ifnames=0 console=ttyFIQ0,1500000 plymouth.ignore-serial-consoles consoleblank=0 vt.global_cursor_default=0 loglevel=5"
+# No video= for HDMI-A-1 (it was 1280x720@60 up to 1.9): with it the kernel's console set 720p on
+# HDMI whenever nothing held the display, between two starts of ES or two games, and ES took that
+# mode for the screen's size and drew 1280x720 in a corner of the 1920x1080 it then set; each change
+# made the TV pick the picture up again. Without it the console takes the TV's preferred mode, the
+# one ES and the emulators set.
 if [ "$UNIT" == "rg52mini" ]; then
-  KCMD_VIDEO="video=HDMI-A-1:1280x720@60 fbcon=rotate:1"
+  KCMD_VIDEO="fbcon=rotate:1"
 else
   # RG43 Pro: the vendor U-Boot draws no splash, so there is no logo for kernel
   # messages to spoil. console=tty1 gives the first-boot dialogs (expandtoexfat:

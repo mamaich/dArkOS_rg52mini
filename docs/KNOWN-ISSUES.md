@@ -2911,6 +2911,53 @@ prepares the PCM and writes again, up to 3 times. On the panel the sound plays
 as before; the HDMI case itself was not tried here, and the owner's HDMI checks
 of 2026-10-30 and 2026-11-01 had sound without it.
 
+### A 3DS game went to the panel; ES in a corner of the TV (2026-11-16, for 1.10)
+
+Reported by the owner: with HDMI in, a 3DS game moved the picture to the
+console's panel, where the other emulators stayed on the TV; and now and then
+the picture jumped as if the resolution changed, under ES or a game. Then, while
+checking the first fix: after the cable was pulled and put back, ES did not
+fill the TV.
+
+**Vulkan on the panel.** ES, libgo2 (RetroArch's GL drivers) and SDL's KMSDRM
+draw on the connector `/var/run/drmConn` names (`retroarch-patch-0014`,
+`sdl2-patch-0005`). A program on Vulkan takes a display from VK_KHR_display,
+and Arm's driver offers one: the first connected connector. Seen through
+`VK_LAYER_DARKOS_rotate`'s log, with HDMI chosen: one display, "ARM vulkan DRM
+display", 720x1280. So Azahar (on RetroArch's Vulkan driver) took the panel,
+and the panel and HDMI share the one CRTC: the kernel switched it to the DSI
+and HDMI went dark. Listing the panel after HDMI in the layer was tried first
+and does nothing, as HDMI is not in the list at all. What works is the
+connector's own status: `echo off > /sys/class/drm/card0-DSI-1/status` makes
+the panel read "disconnected" and the driver offers HDMI (1920x1080);
+`detect` undoes it. `hdmi-hotplug.sh` does that when it switches to HDMI and
+undoes it when it switches back, and `hdmi-test.sh` at boot when the cable is
+in. The panel is never shown while HDMI is chosen anyway. GL programs and ES
+pick the connector by its index, which the status does not change.
+
+**720p from the kernel's console.** The command line had
+`video=HDMI-A-1:1280x720@60` (from the first build of the port). Whenever
+nothing held the display, between a stop and a start of ES or around a game,
+the kernel's console took HDMI back at 1280x720, and the next program set
+1920x1080 again: each change made the TV pick the picture up anew. ES, started
+while the console's 720p was on, took it for the screen's size and drew
+1280x720 into the lower left of the 1920x1080 it set. That is not new: a
+restart of ES on HDMI did it with and without the panel forced off (measured
+on the console, the lit part of a kmsgrab frame: x 0-1279, y 360-1079 each
+time), so every plug-in ended so, unless ES happened to start after the
+console's mode change. Without `video=` the console takes the TV's preferred
+mode, the one ES sets: after a boot one mode change (to 1920x1080) and none
+after; ES fills the frame after a boot and after two restarts; a 3DS game and
+a SNES game started as ES starts them and quit changed the mode no time, the
+3DS game on HDMI. `finishing_touches-rk3562.sh` writes the line without it,
+and an update carries `extlinux/extlinux.conf` (the dual-boot card's loader
+takes the line from it too: seen in `/proc/cmdline`).
+
+Checked on the owner's dual-boot card (1.10 test build, HDMI in): a 3DS game
+on HDMI with the scripts as above and nothing bound or forced by hand; then the owner, on the TV: a 3DS game started from ES stays on HDMI and
+fills it, and ES fills the TV after the cable was pulled (ES on the panel)
+and put back.
+
 ## Scraper: ScreenScraper's developer login (since 1.4)
 
 ScreenScraper wants a developer login (devid, devpassword) in every request. ES

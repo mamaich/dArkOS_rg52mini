@@ -15,4 +15,7 @@ HDMI_STATUS=$(cat /sys/class/drm/card0-HDMI-A-1/status 2>/dev/null)
 
 if [ "$HDMI_STATUS" == "connected" ]; then
     echo 1 | sudo tee /var/run/drmConn > /dev/null
+    # The panel's connector reads "disconnected" while HDMI is chosen, so that Arm's Vulkan
+    # driver, which offers the first connected connector, offers HDMI (hdmi-hotplug.sh).
+    echo off | sudo tee /sys/class/drm/card0-DSI-1/status > /dev/null
 fi

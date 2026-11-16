@@ -14,6 +14,12 @@ flock -w 60 9 || exit 0
 exec 8>&-                        # running now: the next event may queue
 
 hdmi() { [ "$(cat /sys/class/drm/card0-HDMI-A-1/status 2>/dev/null)" = connected ] && echo 1 || echo 0; }
+# The panel's connector, forced off while HDMI is chosen. ES, libgo2 and SDL draw on the connector
+# drmConn names, but Arm's Vulkan driver offers a program on VK_KHR_display one display, the first
+# connected connector, which is the panel: a 3DS game (Azahar on Vulkan) went from HDMI to the
+# panel. Forced off, the panel reads "disconnected" and the driver offers HDMI; "detect" undoes it.
+# The panel and HDMI share the one CRTC, so the panel is never shown while HDMI is chosen anyway.
+panel() { echo "$1" > /sys/class/drm/card0-DSI-1/status 2>/dev/null; }
 sleep 2                          # let the bridge/EDID settle
 want=$(hdmi)
 cur=$(cat /var/run/drmConn 2>/dev/null || echo 0)
@@ -61,7 +67,8 @@ if busy; then
 fi
 
 echo "$want" > /var/run/drmConn
-logger -t hdmi-hotplug "HDMI $([ $want = 1 ] && echo connected || echo disconnected): drmConn $cur -> $want"
+if [ "$want" = 1 ]; then panel off; else panel detect; fi
+logger -t hdmi-hotplug "HDMI $([ $want = 1 ] && echo connected || echo disconnected): drmConn $cur -> $want, panel $(cat /sys/class/drm/card0-DSI-1/status 2>/dev/null)"
 # EmulationStation may also be failing on the output that went away: started on
 # HDMI by the previous change while the cable still bounced, it exits at once,
 # and after 5 failures in 10 s systemd stops restarting it (the start limit) and
