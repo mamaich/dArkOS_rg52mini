@@ -562,7 +562,7 @@ once).
 **The 1.5 notes advise** unplugging USB devices before sleep, and plugging a
 charger or a PC into a console that is awake.
 
-## The screen at 5% brightness after a start — fixed for 1.10
+## The screen at 5% brightness after a start — fixed in 1.10
 
 A user's report of 2026-11-12: "after the console starts the screen is at 5%;
 I have to raise it every time". Not a setting lost at random: systemd-backlight
@@ -1322,7 +1322,7 @@ each game compiles its pipelines once more after the update. The third 1.9
 test build (20261111204040) has 0.4.1; 1.9 as released (20261112155920) has
 0.5.0.
 
-**malisx2 with upstream's main after 0.5.0 (4636921, for 1.10).** Seventeen
+**malisx2 with upstream's main after 0.5.0 (4636921, in 1.10).** Seventeen
 upstream commits after 0.5.0, without a tag, most of them v7 work done for
 Vita3K. A pipeline barrier's requirements are worked out one barrier at a
 time, so a pass's tiling no longer waits for the fragment work of the pass
@@ -2915,7 +2915,7 @@ prepares the PCM and writes again, up to 3 times. On the panel the sound plays
 as before; the HDMI case itself was not tried here, and the owner's HDMI checks
 of 2026-10-30 and 2026-11-01 had sound without it.
 
-### A 3DS game went to the panel; ES in a corner of the TV (2026-11-16, for 1.10)
+### A 3DS game went to the panel; ES in a corner of the TV (2026-11-16) — fixed in 1.10
 
 Reported by the owner: with HDMI in, a 3DS game moved the picture to the
 console's panel, where the other emulators stayed on the TV; and now and then
@@ -2962,7 +2962,7 @@ on HDMI with the scripts as above and nothing bound or forced by hand; then the 
 fills it, and ES fills the TV after the cable was pulled (ES on the panel)
 and put back.
 
-### Kodi on HDMI: on its side, sound from the speaker; black panel after a pull (2026-11-17, for 1.10)
+### Kodi on HDMI: on its side, sound from the speaker; black panel after a pull (2026-11-17) — fixed in 1.10
 
 Reported by the owner, three things.
 
@@ -3004,7 +3004,7 @@ lit, taking connected DSI-1", "taking crtc 71").
 `build_kodi.sh`'s cache key gained `-rotportrait`, so a cache from before is
 rebuilt.
 
-### HDMI: the TV lost the picture once a minute (2026-11-17, for 1.10)
+### HDMI: the TV lost the picture once a minute (2026-11-17) — fixed in 1.10
 
 Reported by the owner: under ES, a game or Kodi the TV went dark for a moment
 now and then. Measured with an HDMI grabber (mean luma of every frame; a lost
@@ -3076,7 +3076,7 @@ are left out: those scripts tell emulators apart by name.
 
 How it is made:
 - `rk3562_core_builds/scripts/retroarch-next.sh` builds a pinned master commit
-  (fab8d5f of 2026-10-31 in 1.5 to 1.9; a4d0a85 of 2026-11-12 for 1.10, below)
+  (fab8d5f of 2026-10-31 in 1.5 to 1.9; a4d0a85 of 2026-11-12 in 1.10, below)
   with the 64-bit configure of `retroarch.sh`, and
   `patches/retroarch-next/`, the release's patches ported to master, numbered
   in the order they apply. `build_retroarch.sh` puts it at
@@ -3747,7 +3747,7 @@ reads the backlight's own files instead (bcab12f): the whole system 56% of a
 core in the menu before, 36% after. PERFORMANCE.md, "ES at rest: no
 brightnessctl twenty times a second", has the measurement.
 
-## A full build stopped at GameTank and still said "completed" — fixed for 1.10
+## A full build stopped at GameTank and still said "completed" — fixed in 1.10
 
 The first 1.10 build (2026-11-15) ended after 37 minutes with "RG52 Mini build
 completed. Final image is ready." and status 0. The image file was there
@@ -3775,7 +3775,7 @@ chroot. Other recipes still build a branch's head (the "follow" rows of
 `tools/upstream/components.json`) and can stop a build the same way where
 they carry a patch of ours: TODO.md, "Upstream updates for 1.10".
 
-## A prebuilt core nobody asked for: 64-bit parallel_n64 without 3D — fixed for 1.10
+## A prebuilt core nobody asked for: 64-bit parallel_n64 without 3D — fixed in 1.10
 
 The RetroArch cores the image does not build itself come as zips from
 christianhaitian/retroarch-cores, branch rg503, and `build_retroarch.sh`
