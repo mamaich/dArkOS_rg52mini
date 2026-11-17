@@ -412,7 +412,8 @@ New in 1.10 (build 11172026, 2026-11-17):
 - `retroarch-next`, the second RetroArch, is built from master of 2026-11-12
   (a4d0a85; fab8d5f of 2026-10-31 up to 1.9). Nothing changes in how it is
   offered or set up (KNOWN-ISSUES.md, "RetroArch from master").
-- malisx2 with upstream's main after 0.5.0 (4636921, handed over by the
+- malisx2 with upstream's main after 0.5.0 (our fork's 4636921, which merges
+  upstream's b5bc81a; handed over by the
   malisx2 session on 2026-11-15) and a profile trained on it: a pass's tiling
   no longer waits for the fragment work of the pass before it. Castlevania
   1.5-2% faster, PS2 and GameCube as before; each game compiles its

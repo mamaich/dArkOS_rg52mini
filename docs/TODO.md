@@ -151,7 +151,7 @@ ends the game; the settings file came back unchanged but for the switch.
 Not checked with this pin: HDMI, a 50 Hz game, the oga driver, Ozone and
 Material UI (KNOWN-ISSUES.md, "RetroArch from master", has what 1.5 checked).
 
-**malisx2: 86b16a8 -> 4636921** (upstream's main, 17 commits after 0.5.0,
+**malisx2: 86b16a8 -> 4636921** (our fork's main: upstream's main b5bc81a, 17 commits after 0.5.0,
 merged by the malisx2 session; the owner, 2026-11-13: that session tests it
 and decides, and the full build waits for its word). Taken on its word of
 2026-11-15, with `malisx2/pgo/malisx2-20261113.profdata.gz`, which has to go

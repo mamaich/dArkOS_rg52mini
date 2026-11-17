@@ -1322,7 +1322,7 @@ each game compiles its pipelines once more after the update. The third 1.9
 test build (20261111204040) has 0.4.1; 1.9 as released (20261112155920) has
 0.5.0.
 
-**malisx2 with upstream's main after 0.5.0 (4636921, in 1.10).** Seventeen
+**malisx2 with upstream's main after 0.5.0 (in 1.10: our fork's 4636921, which merges upstream's b5bc81a).** Seventeen
 upstream commits after 0.5.0, without a tag, most of them v7 work done for
 Vita3K. A pipeline barrier's requirements are worked out one barrier at a
 time, so a pass's tiling no longer waits for the fragment work of the pass
