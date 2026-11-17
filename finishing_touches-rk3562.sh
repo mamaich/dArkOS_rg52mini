@@ -498,7 +498,8 @@ sudo chroot Arkbuild/ bash -c "systemctl enable panel-kick"
 # whole gamecontrollerdb.txt (~470 KB) as SDL_GAMECONTROLLERCONFIG, past the
 # kernel's 128 KB limit, and every port fails with "Argument list too long".
 # portmaster-e2big appends PortMaster's own EmuELEC guard to mod_dArkOS.txt,
-# at boot and again whenever a PortMaster update rewrites it.
+# at boot and again whenever a PortMaster update rewrites it; at boot it also
+# drops PortMaster's cache of the screen's size (hdmi-hotplug.sh at each switch).
 sudo install -m 755 scripts/rk3562/portmaster-e2big.sh Arkbuild/usr/local/bin/portmaster-e2big.sh
 sudo install -m 644 scripts/rk3562/portmaster-e2big.service Arkbuild/etc/systemd/system/portmaster-e2big.service
 sudo install -m 644 scripts/rk3562/portmaster-e2big.path Arkbuild/etc/systemd/system/portmaster-e2big.path

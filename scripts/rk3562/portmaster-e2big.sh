@@ -23,13 +23,18 @@
 # which gl4es ports source instead of libgl_default.txt: the same, and the image's gl4es
 # (/usr/lib/gl4es, build_gl4es.sh) for a port without a gl4es of its own.
 #
-# And it gives PortMaster's window the whole screen: PortMaster has no entry for this device,
-# so its GUI (pugwash) took the default 640x480, a 4:3 window with black bars on each side of
-# the 16:9 panel. pugwash already asks SDL for the screen's size, but uses it only for a device
-# it calls "default"; the patch below uses it for any device its table lacks.
+# And it drops PortMaster's cache of what it found of the device (--drop-cache does only that).
+# PortMaster 2026.11 probes the device with device_info.txt, the screen's size from the first
+# connected DRM connector, and keeps the result in device_info_<cfw>_<device>.env until its
+# own script's version changes. The console switches between the panel (1280x720) and HDMI
+# (the TV's mode), so a cache made on one told PortMaster and the ports the other's size: its
+# window drew 1920x1080 on the panel after one start on the TV. Dropped at boot and by
+# hdmi-hotplug.sh at each switch, so the next start probes the output in use.
+# (Up to 1.10 this also patched pugwash, PortMaster's GUI, for the screen's size; since 2026.11
+# PortMaster finds the size itself and that code is gone.)
 #
 # PortMaster overwrites its files when it updates itself, so this runs at boot
-# and from portmaster-e2big.path whenever mod_dArkOS.txt or pugwash changes.
+# and from portmaster-e2big.path whenever mod_dArkOS.txt or control.txt changes.
 
 MARK="# dArkOS RG52 Mini: E2BIG guard"
 MARK_GL4ES="# dArkOS RG52 Mini: gl4es render-target fix"
@@ -63,35 +68,24 @@ print("patched")
 PY
 }
 
-# pugwash: a device PortMaster's HW_INFO lacks gets the screen's own size, as "default" does.
-# Prints what it did; exit 2 when the code it patches is not there (a PortMaster that changed
-# it, or one that knows this device), and then it leaves the file alone.
-pugwash_screen_size() {
-  python3 - "$1" <<'PY'
-import sys
-MARK = "# dArkOS RG52 Mini: screen size"
-OLD = """        if capabilities['device'] == 'default':
-            capabilities = harbourmaster.device_info(override_resolution=(self.display_width, self.display_height))
-"""
-NEW = OLD + """        elif capabilities['device'] not in harbourmaster.HW_INFO:
-            # dArkOS RG52 Mini: screen size (added by /usr/local/bin/portmaster-e2big.sh)
-            # PortMaster has no entry for this device, so it got the default 640x480: a 4:3
-            # window with black bars on the 16:9 screen. The screen's size, as for "default".
-            capabilities = harbourmaster.device_info(override_resolution=(self.display_width, self.display_height))
-"""
-p = sys.argv[1]
-s = open(p, encoding="utf-8", newline="").read()
-if MARK in s:
-    sys.exit(0)
-if s.count(OLD) != 1:
-    sys.exit(2)
-# in place: the file keeps its owner, mode and ACL
-open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD, NEW))
-print("patched")
-PY
+DIRS="/opt/system/Tools/PortMaster /roms/ports/PortMaster /roms2/ports/PortMaster /roms/tools/PortMaster"
+
+drop_cache() {
+  local dir c
+  for dir in $DIRS; do
+    for c in "$dir"/device_info_*.env; do
+      [ -f "$c" ] && rm -f "$c" && logger -t portmaster-e2big "dropped $c (the screen in use is probed again)"
+    done
+  done
 }
 
-for dir in /opt/system/Tools/PortMaster /roms/ports/PortMaster /roms2/ports/PortMaster /roms/tools/PortMaster; do
+if [ "$1" = --drop-cache ]; then
+  drop_cache
+  exit 0
+fi
+[ "$1" = --boot ] && drop_cache
+
+for dir in $DIRS; do
   f="$dir/mod_dArkOS.txt"
   [ -f "$f" ] || continue
   if ! grep -qF "$MARK_GL4ES" "$f" && [ -f /usr/lib/aarch64-linux-gnu/gl4es-fix/libGLESv2.so.2 ]; then
@@ -148,12 +142,6 @@ LIBGL
     r=$(control_e2big "$ct"); rc=$?
     [ "$r" = patched ] && logger -t portmaster-e2big "E2BIG guard added to get_controls in $ct"
     [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, left as it is"
-  fi
-  pw="$dir/pugwash"
-  if [ -f "$pw" ]; then
-    r=$(pugwash_screen_size "$pw"); rc=$?
-    [ "$r" = patched ] && logger -t portmaster-e2big "screen size added to $pw"
-    [ $rc = 2 ] && logger -t portmaster-e2big "$pw: code for the screen size not found, left as it is"
   fi
   grep -qF "$MARK" "$f" && continue
   cat >> "$f" <<'GUARD'

@@ -69,6 +69,10 @@ fi
 echo "$want" > /var/run/drmConn
 if [ "$want" = 1 ]; then panel off; else panel detect; fi
 logger -t hdmi-hotplug "HDMI $([ $want = 1 ] && echo connected || echo disconnected): drmConn $cur -> $want, panel $(cat /sys/class/drm/card0-DSI-1/status 2>/dev/null)"
+# PortMaster keeps the screen's size it found in a cache; made on the other output, it would
+# tell PortMaster and the ports the wrong size (KNOWN-ISSUES.md, "PortMaster kept the other
+# screen's size").
+/usr/local/bin/portmaster-e2big.sh --drop-cache
 # EmulationStation may also be failing on the output that went away: started on
 # HDMI by the previous change while the cable still bounced, it exits at once,
 # and after 5 failures in 10 s systemd stops restarting it (the start limit) and

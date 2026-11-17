@@ -724,6 +724,38 @@ smaller; it would also be lost on PortMaster's next update. The complete fix
 belongs in PortMaster: an `HW_INFO` entry for the RG52 Mini, or the screen's
 size for any device the table lacks.
 
+**Gone since PortMaster 2026.11** (removed from `portmaster-e2big.sh` for 1.11):
+`pugwash` is now a short launcher, its GUI code moved into `pylibs`, and
+PortMaster finds the device and the screen's size itself (`device_info.txt`,
+1280x720 on the panel), so the patch found nothing to patch ("code for the
+screen size not found, left as it is" in the journal; already so with
+2026.11.12-1059, the PortMaster of 1.9's and 1.10's image). What that probe
+got wrong instead: the next section.
+
+## PortMaster kept the other screen's size (2026-11-17) — fixed for 1.11
+
+Found while checking our PortMaster changes after the owner updated it to
+2026.11.17-0700. PortMaster 2026.11 learns the device with `device_info.txt`:
+the screen's size is the first mode of the first connected DRM connector. It
+keeps what it found in `device_info_<cfw>_<device>.env` in its folder and
+probes again only when that script's own version (`DEVICE_INFO_VERSION`)
+changes, never when the screen does. The console switches between the panel
+(720x1280, taken as 1280x720) and HDMI (the TV's mode; the panel reads
+"disconnected" then), so a cache made on one output told PortMaster and the
+ports the other's size. On the owner's console: the cache the GUI reads (it
+runs as root, the device named from the device tree, "AISLPC RG52 Mini") was
+made on 2026-11-16 with HDMI in, 1920x1080; on 2026-11-17 on the panel its
+log said "Display size: 1280x720" and then the device at 1920x1080. The
+window filled the screen (SDL scales it), the layout was the TV's. The ports
+read their own cache (`DEVICE_NAME` RG52MINI), made on the panel; after a
+first start on HDMI they would have kept that size on the TV too.
+
+**Fix:** `portmaster-e2big.sh` drops every `device_info_*.env` at boot (the
+service runs it with `--boot`) and `hdmi-hotplug.sh` at each switch
+(`--drop-cache`), so the next start probes the output in use. Checked on the
+console: both caches dropped, the probe again, as root and as ark, 1280x720.
+The switch with a cable in was not tried; it is the same call.
+
 ## v10052026: the power button rebooted revision A boards — fixed in the kernel
 
 The bootloader v10052026 ships (`uboot-oc-stocktee-shmkept.img`) has the BL31
