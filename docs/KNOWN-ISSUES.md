@@ -1391,6 +1391,28 @@ formats, Castlevania's frames match, no GPU fault and no device lost. These
 are the malisx2 session's builds; the image's recipe builds the same commit
 with the same profile.
 
+**malisx2 0.5.1 (eb79fed, for 1.11).** Upstream's 0.5.1 (308fe12) merged by
+the malisx2 session: on v7 logicOp, wide lines, shaderDrawParameters, 8-bit
+indices, primitive list restart, float controls, custom border colours,
+mirror clamp to edge, non-seamless cube maps; the 1555 formats
+(R5G5B5A1/B5G5R5A1) are sampled and rendered; image-to-buffer copies go
+through a linear render target; a vertex shader's stores are kept to the
+vertices an indexed draw names. Mesa moved to its November base (75e8561,
+branch rg52mini-20261117 of our Mesa fork: our compiler changes rebased; upstream
+now aligns Bifrost's spill slots itself). The profile is new (2026-11-17's,
+the same training set): 2026-11-13's loses 8.9% of its weight on this code.
+driverInfo says 0.5.1 (`v1.r44p1-malisx2.0.5.1.s06974f03ff30`); the shader
+cache ID changes (6ff1e8cc-...), so each game compiles its pipelines once more
+after the update. The launchers are unchanged (`MALISX2_V7_UBO_PUSH_VS=64` for
+Azahar stays). The malisx2 session's numbers on the console, 2026-11-17, its
+build (LTO and the new profile) against 4636921 as 1.10 has it, three rounds:
+God of War 17.89 against 18.00, Jak and Daxter 14.40 against 14.47,
+Castlevania 20.15 against 19.84, the ND Demo and Metroid Prime level, all
+within the spread; fitest 7/7 and 12/12 indirect, bctest 6/6, no GPU fault
+and no device lost, Castlevania's and Mario's shaders the same to the byte.
+Not checked on their own: which 1555 formats Azahar and PPSSPP now pick, so
+the 1.11 smoke looks at the 2D and menu pictures of 3DS and PSP games.
+
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
 `citra_resolution_factor` raised through a copy. The title demo, three rounds

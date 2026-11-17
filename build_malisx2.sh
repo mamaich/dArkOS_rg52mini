@@ -73,7 +73,12 @@
 # 32 as before; MALISX2_V7_UBO_PUSH_VS=64 gives them 64 too, which the
 # RetroArch launcher sets for the Azahar core (Castlevania +4.5%, where
 # Dolphin's ND Demo would lose 2%); driverInfo says 0.5.0, a new shader cache
-# ID again), and the work on the
+# ID again; eb79fed, with Mesa 75e8561: upstream's 0.5.1 merged (v7 logicOp,
+# wide lines, draw parameters, 8-bit indices, list restart, float controls,
+# custom border colours, the 1555 formats, image-to-buffer copies through a
+# linear render target) and Mesa moved to its November base with our compiler
+# changes rebased; driverInfo says 0.5.1, a new shader cache ID again), and
+# the work on the
 # driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
@@ -100,11 +105,20 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="46369219e6eadda051cf6a52b8ad3e82e1ffea6a"
+MALISX2_COMMIT="eb79fed7f2f006deaf5f61efd211daa1309e39e9"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained by the malisx2
-# session on f228314's code (upstream's main of 2026-11-12 merged, 17 commits
+# session on 0.5.1's code (eb79fed, Mesa 75e8561) on an RG52 Mini on
+# 2026-11-17, with the set named below; 2026-11-13's loses 8.9% of its weight
+# on this code. The malisx2 session's numbers on the console, its build of
+# this code with this profile against 4636921 with 2026-11-13's (LTO and a
+# profile in both, three rounds): God of War 17.89 against 18.00, Jak and
+# Daxter 14.40 against 14.47, Castlevania 20.15 against 19.84, the ND Demo
+# and Metroid Prime level, all within the spread; fitest 7/7 and 12/12
+# indirect, bctest 6/6, no GPU fault, no device lost, Castlevania's and
+# Mario's shaders the same to the byte.
+# 2026-11-13's profile served 4636921 (1.10): trained on f228314's code (upstream's main of 2026-11-12 merged, 17 commits
 # after 0.5.0; Mesa 3b0e036) on an RG52 Mini on 2026-11-13, with the set named
 # below. It goes with that code: 2026-11-08's profile lost the hot draw path
 # on it (draw and prepare_draw of v7, 5.8% of its weight, the barriers,
@@ -158,8 +172,8 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # (Mesa's reach the compiler by absolute paths), so it is made for this tree
 # at /home/ark/malisx2, where the chroot builds it, with the build directory
 # in it (malisx2's docs/building.md).
-PGO="malisx2/pgo/malisx2-20261113.profdata.gz"
-PGO_SHA256="5846fa5ca54520f34543660f37e7c264dd9dbb871beba45ba1e23209cf81d61e"
+PGO="malisx2/pgo/malisx2-20261117.profdata.gz"
+PGO_SHA256="d6d63ee7644b0629c127831bf8bacbf074aa27241efd161b8f1a212f9969ad10"
 # Meson from its release, run from the tree: Debian trixie's 1.7.0 fails to
 # write the build of the Rust crate Mesa makes of structured sources
 # ("'CustomTargetIndex' object has no attribute 'subdir'"); 1.12.1 builds it.
@@ -196,9 +210,10 @@ if [ ! -f "Arkbuild${MALISX2_LIB}" ]; then
     verify_action
     git -C "${MALISX2_SRC}" checkout -q --force FETCH_HEAD
     verify_action
-    # and Mesa at mesa/, at the commit malisx2's meson.build pins: branch
-    # rg52mini-ra of our fork of bmdhacks' armsx2-turnip (upstream Mesa with his
-    # kraid changes). Ours are in the Bifrost register allocator: large shaders
+    # and Mesa at mesa/, at the commit malisx2's meson.build pins: since 0.5.1
+    # branch rg52mini-20261117 of our fork of bmdhacks' armsx2-turnip (upstream
+    # Mesa with his kraid changes; rg52mini-ra up to 1.10, our changes rebased
+    # onto the November base). Ours are in the Bifrost register allocator: large shaders
     # that spill (Luigi's Mansion 2's, in Azahar) took minutes each and the game
     # never left its shader preload (f125984), and a round of allocation spills
     # for two failures, not one (17d9d33): that preload 119 -> 93 s, ARMSX2's

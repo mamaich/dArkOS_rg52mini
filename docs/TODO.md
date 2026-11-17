@@ -160,6 +160,17 @@ builds; the table is in KNOWN-ISSUES.md, "malisx2 with upstream's main after
 0.5.0". The launchers are unchanged. Left for after the image build: its
 library goes to the malisx2 session, which compares it with its own.
 
+**malisx2: 4636921 -> eb79fed** (0.5.1, merged by the malisx2 session and
+pushed with the owner's word, 2026-11-17), with
+`malisx2/pgo/malisx2-20261117.profdata.gz`, which has to go with the commit.
+The owner the same day: install it on the console and use it in the next
+build. Installed by hand from the malisx2 session's build (pgouse-051,
+sha256 72f0eb1b...; 1.10's library kept beside it as
+`libvulkan_malisx2.so.1.10-4636921`). Measured by that session; KNOWN-ISSUES.md,
+"malisx2 0.5.1". Left for the 1.11 build: its library goes to the malisx2
+session to compare with pgouse-051, and the smoke looks at 3DS and PSP 2D
+and menus (the 1555 formats).
+
 **GameTankEmulator pinned at acc608a** (2026-11-15): the recipe built
 upstream's head, upstream moved the Makefile line our patch 002 edits, and
 the first 1.10 build stopped there while reporting success (KNOWN-ISSUES.md,

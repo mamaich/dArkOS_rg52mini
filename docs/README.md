@@ -467,6 +467,11 @@ In master for 1.11, not released yet (VERSION says 1.11):
   GUI for the screen's size is gone: since 2026.11 PortMaster finds the size
   itself, and the code it patched is no longer there. KNOWN-ISSUES.md,
   "PortMaster kept the other screen's size".
+- malisx2 0.5.1 (eb79fed, Mesa on its November base; handed over by the
+  malisx2 session on 2026-11-17) and a profile trained on it: more Vulkan
+  features (logicOp, wide lines, draw parameters, 8-bit indices, the 1555
+  formats among them), speed as in 1.10; each game compiles its pipelines
+  once more (KNOWN-ISSUES.md, "malisx2 0.5.1").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini
