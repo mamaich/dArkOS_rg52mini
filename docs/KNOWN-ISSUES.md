@@ -3004,6 +3004,37 @@ lit, taking connected DSI-1", "taking crtc 71").
 `build_kodi.sh`'s cache key gained `-rotportrait`, so a cache from before is
 rebuilt.
 
+### HDMI: the TV lost the picture once a minute (2026-11-17, for 1.10)
+
+Reported by the owner: under ES, a game or Kodi the TV went dark for a moment
+now and then. Measured with an HDMI grabber (mean luma of every frame; a lost
+signal reads Y 6-7, the picture 59-137): the signal goes for 0.5 s, four times
+in about ten seconds (+0, +2.2, +7.3, +9.5 s), and the four come again every
+56-63 s, for as long as it runs. Not under GammaOS on the same card (the owner
+watched 3 minutes).
+
+What it was not: no HPD change and no kernel line at a blink; no I2C traffic to
+the RK628 (bus 4, 0x50) and no program started (ftrace, `i2c` and
+`sched_process_exec`); the memory, GPU and CPU clocks held fixed changed
+nothing. ES stopped, the kernel's console alone on HDMI: no blink in 200 s.
+
+What it was: sound at 44.1 kHz. ES keeps a stream open on the HDMI card all the
+time (SDL_mixer, 44100 Hz; `/proc/asound/card1/pcm0p/sub0/hw_params`), Kodi
+too. With ES stopped and `aplay` playing silence to the card at 44100 Hz the
+blinks came back, four groups in 220 s; at 48000 Hz none in 220 s. The RK628
+takes its I2S clock (`mclk_sai0`) from the audio PLL, HPLL at 983.04 MHz,
+which divides to 48 kHz's 12.288 MHz whole and to 44.1 kHz's 11.2896 MHz only
+through the fractional divider (11289598 Hz). Android plays at 48 kHz.
+
+**Fix:** `audio/.asoundrchdmi` (the `~/.asoundrc` while HDMI is in) sends
+everything through a `plug` with the card's rate fixed at 48000 (`pcm.hdmi48`),
+the default PCM and Kodi's `softvol` both. ES then opens the card at 48000
+(hw_params), and under ES no blink in 250 s, where 44.1 kHz gave four groups.
+RetroArch already played at 48000 (`audio_out_rate`). 44.1 kHz sound (ES's
+music, Kodi's CDs and MP3s) is converted by alsa-lib's linear converter; the
+image has no better one (no `libasound2-plugins`). A program that opens
+`hw:` itself would still get 44.1 kHz through; no config in this repo names the card.
+
 ## Scraper: ScreenScraper's developer login (since 1.4)
 
 ScreenScraper wants a developer login (devid, devpassword) in every request. ES

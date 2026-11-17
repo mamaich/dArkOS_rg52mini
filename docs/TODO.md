@@ -118,7 +118,10 @@ it. Confirmed on the device.
 passed its package checks, and was put on the owner's console by its package,
 but the owner held 1.10 back on 2026-11-16 for a bug with HDMI. Its files are
 kept until the next build (`~/rg52/ota-1.10` on the build host); its feed
-entries were not committed.
+entries were not committed. Fixed in master since, each checked on the console
+(KNOWN-ISSUES.md): a 3DS game on the panel and ES in a corner of the TV
+(c1268f5), Kodi on HDMI (a3a9fbd), the TV losing the picture once a minute
+(44.1 kHz sound to the RK628). The next 1.10 build waits for the owner's word.
 
 
 **retroarch-next: fab8d5f -> a4d0a85** (libretro/RetroArch master of

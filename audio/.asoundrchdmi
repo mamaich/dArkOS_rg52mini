@@ -1,8 +1,21 @@
 # HDMI: the RK628's sound card. audio-switch.sh copies this file to ~/.asoundrc while a
 # cable is in (and no headphones), .asoundrcbak back when it goes.
+#
+# Always 48 kHz to the card: at 44.1 kHz the TV lost the picture for half a second, four
+# times in ten seconds, once a minute, for as long as a stream was open (ES keeps one open
+# all the time, Kodi too). 44.1 kHz comes from a fractional divider of the audio PLL (HPLL
+# 983.04 MHz, made for 48 kHz), 48 kHz from a whole one; Android (GammaOS) plays at 48 kHz.
+pcm.hdmi48 {
+    type plug
+    slave {
+        pcm "hw:CARD=rockchiphdmirk6,DEV=0"
+        rate 48000
+    }
+}
+
 pcm.!default {
     type plug
-    slave.pcm "plughw:CARD=rockchiphdmirk6,DEV=0"
+    slave.pcm "hdmi48"
 }
 
 ctl.!default {
@@ -16,7 +29,7 @@ ctl.!default {
 # "Master" on it (at 100% when first made), which Kodi's sound goes through.
 pcm.softvol {
     type softvol
-    slave.pcm "plughw:CARD=rockchiphdmirk6,DEV=0"
+    slave.pcm "hdmi48"
     control {
         name "Master"
         card rockchiphdmirk6
