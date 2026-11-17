@@ -168,8 +168,8 @@ build. Installed by hand from the malisx2 session's build (pgouse-051,
 sha256 72f0eb1b...; 1.10's library kept beside it as
 `libvulkan_malisx2.so.1.10-4636921`). Measured by that session; KNOWN-ISSUES.md,
 "malisx2 0.5.1". Left for the 1.11 build: its library goes to the malisx2
-session to compare with pgouse-051, and the smoke looks at 3DS and PSP 2D
-and menus (the 1555 formats).
+session to compare with pgouse-051. The 3DS and PSP menus and 2D pictures
+(the 1555 formats): the owner saw no change on the console, 2026-11-17.
 
 **GameTankEmulator pinned at acc608a** (2026-11-15): the recipe built
 upstream's head, upstream moved the Makefile line our patch 002 edits, and

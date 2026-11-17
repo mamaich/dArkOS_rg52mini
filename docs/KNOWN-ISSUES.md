@@ -1410,8 +1410,9 @@ God of War 17.89 against 18.00, Jak and Daxter 14.40 against 14.47,
 Castlevania 20.15 against 19.84, the ND Demo and Metroid Prime level, all
 within the spread; fitest 7/7 and 12/12 indirect, bctest 6/6, no GPU fault
 and no device lost, Castlevania's and Mario's shaders the same to the byte.
-Not checked on their own: which 1555 formats Azahar and PPSSPP now pick, so
-the 1.11 smoke looks at the 2D and menu pictures of 3DS and PSP games.
+Which 1555 formats Azahar and PPSSPP now pick was not looked into; the owner
+played 3DS and PSP games on this build on 2026-11-17 and saw no change in
+their menus and 2D pictures.
 
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with
