@@ -112,16 +112,16 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
-## Upstream updates for 1.10
+## Upstream updates for 1.10 (released 2026-11-17)
 
-**Not released yet**: the build of 2026-11-15 (20261115080012, from 687d754)
-passed its package checks, and was put on the owner's console by its package,
-but the owner held 1.10 back on 2026-11-16 for a bug with HDMI. Its files are
-kept until the next build (`~/rg52/ota-1.10` on the build host); its feed
-entries were not committed. Fixed in master since, each checked on the console
-(KNOWN-ISSUES.md): a 3DS game on the panel and ES in a corner of the TV
-(c1268f5), Kodi on HDMI (a3a9fbd), the TV losing the picture once a minute
-(44.1 kHz sound to the RK628). The next 1.10 build waits for the owner's word.
+**Released as 1.10 on 2026-11-17**: build 20261117053629, from 95f7803 (tag
+v1.10). The build of 2026-11-15 (20261115080012, from 687d754) before it was
+put on the owner's console by its package, but the owner held 1.10 back on
+2026-11-16 for a bug with HDMI; fixed in master since, each checked on the
+console (KNOWN-ISSUES.md): a 3DS game on the panel and ES in a corner of the
+TV (c1268f5), Kodi on HDMI (a3a9fbd), the TV losing the picture once a minute
+(44.1 kHz sound to the RK628, 95f7803). What was checked on the release
+build: docs/README.md, "Checked for 1.10".
 
 
 **retroarch-next: fab8d5f -> a4d0a85** (libretro/RetroArch master of

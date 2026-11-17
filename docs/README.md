@@ -56,7 +56,7 @@ followed.
 
 ## State of the port
 
-The current release is 1.9 (build 11122026, 2026-11-12); from 1.1 on, a card
+The current release is 1.10 (build 11172026, 2026-11-17); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -402,7 +402,7 @@ runs on both drivers. The packages from 1.8 and 1.7 were made the same way
 from the published images and not installed as released; their one new hook
 (`1.9-es-armn64.sh`) was run on the console by hand, twice.
 
-In master for 1.10, not released yet (VERSION says 1.10):
+New in 1.10 (build 11172026, 2026-11-17):
 
 - The screen keeps its brightness over a power-off with the backlight off
   (the sleep hook's power-off after two hours on battery, a power-off under
@@ -436,6 +436,26 @@ In master for 1.10, not released yet (VERSION says 1.10):
 - HDMI: the TV no longer loses the picture for half a second four times every
   minute; sound to the RK628 is always 48 kHz (44.1 kHz did it). KNOWN-ISSUES.md,
   "HDMI: the TV lost the picture once a minute".
+
+Checked for 1.10: the release build (20261117053629) on the owner's dual-boot
+test card, installed by a package over the test build before it
+(20261115080012, which had gone on over 1.9). No failed unit, no bad kernel
+line, `dpkg --audit` clean, the files the repo's (the HDMI scripts,
+`.asoundrchdmi`, kodi-gbm as checked), the owner's es_input.cfg kept (the new
+one beside it as `.ota-new`). Then each as ES starts it, on the panel, with
+sound and the right picture, as fast as the test build or faster: ARMSX2,
+Dolphin and Azahar on both Vulkan drivers, DraStic and DSperate, PPSSPP, N64
+on three cores (parallel_n64 and armN64 among them), Dreamcast, Atomiswave, Saturn
+standalone and on retrorun, Zeebo, GBA on both cores and on retroarch-next,
+SNES and PS1 on both RetroArchs, WonderSwan, linapple, Sega CD, and the ports
+Don't Starve, GTA San Andreas, Postal 2, Doom 3 and Mina the Hollower. The
+HDMI fixes were checked on the TV before the build (the owner; the grabber
+for the blinks), not again on this image. The ShanWan hook
+(`1.10-es-input-shanwan.sh`, in the packages from 1.9 and 1.8, not in one
+between two 1.10 builds) was run by hand on copies of es_input.cfg: one with
+the pad left as it was, one without it got the entry. The packages from 1.9
+and 1.8 were made the same way from the published images and not installed
+as released.
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini
