@@ -409,8 +409,21 @@ index 70ae92e..7493db1 100644
      AddProperty(m_gui_plane, "CRTC_X", 0);
      AddProperty(m_gui_plane, "CRTC_Y", 0);
      //! @todo: disabled until upstream kernel changes are merged
+diff --git a/xbmc/windowing/gbm/drm/DRMConnector.h b/xbmc/windowing/gbm/drm/DRMConnector.h
+index cde242d..7f44b07 100644
+--- a/xbmc/windowing/gbm/drm/DRMConnector.h
++++ b/xbmc/windowing/gbm/drm/DRMConnector.h
+@@ -32,6 +32,8 @@ public:
+   std::string GetName();
+ 
+   uint32_t GetEncoderId() const { return m_connector->encoder_id; }
++  int GetEncodersCount() const { return m_connector->count_encoders; }
++  uint32_t GetEncoderIdForIndex(int index) const { return m_connector->encoders[index]; }
+   uint32_t* GetConnectorId() const { return &m_connector->connector_id; }
+   int GetModesCount() const { return m_connector->count_modes; }
+   drmModeModeInfoPtr GetModeForIndex(int index) const { return &m_connector->modes[index]; }
 diff --git a/xbmc/windowing/gbm/drm/DRMUtils.cpp b/xbmc/windowing/gbm/drm/DRMUtils.cpp
-index 3dd4ee9..9cf0c9f 100644
+index 3dd4ee9..b979672 100644
 --- a/xbmc/windowing/gbm/drm/DRMUtils.cpp
 +++ b/xbmc/windowing/gbm/drm/DRMUtils.cpp
 @@ -239,7 +239,9 @@ bool CDRMUtils::FindPlanes()
@@ -424,23 +437,91 @@ index 3dd4ee9..9cf0c9f 100644
    {
      m_gui_plane->SetFormat(DRM_FORMAT_XRGB2101010);
      CLog::Log(LOGDEBUG, "CDRMUtils::{} - using 10bit gui plane {}", __FUNCTION__,
-@@ -397,6 +399,15 @@ bool CDRMUtils::InitDrm()
-   if (m_fd < 0)
+@@ -461,6 +463,21 @@ bool CDRMUtils::InitDrm()
+   if (!FindConnector())
      return false;
  
-+  // dArkOS RK3562 (RG52 Mini): enable RGA software rotation when built with
-+  // -DKODI_GBM_ROTATE. Set before planes/resolutions are enumerated so the GUI
-+  // is configured landscape while the panel mode stays portrait.
++  // dArkOS RK3562 (RG52 Mini): RGA software rotation (built with -DKODI_GBM_ROTATE)
++  // for a portrait output only: the panel (720x1280) is turned, HDMI is not (it was
++  // turned too, and its picture lay on its side). Decided before the planes and
++  // resolutions are set up, so the GUI is configured landscape while the panel's
++  // mode stays portrait.
 +#ifdef KODI_GBM_ROTATE
-+  m_rotate = true;
-+  CLog::Log(LOGINFO, "CDRMUtils::{} - RGA software display rotation enabled (ROT_90)",
-+            __FUNCTION__);
++  {
++    drmModeModeInfoPtr first =
++        m_connector->GetModesCount() > 0 ? m_connector->GetModeForIndex(0) : nullptr;
++    m_rotate = first && first->vdisplay > first->hdisplay;
++    CLog::Log(LOGINFO, "CDRMUtils::{} - RGA software display rotation {} for {}", __FUNCTION__,
++              m_rotate ? "on (ROT_90)" : "off", m_connector->GetName());
++  }
 +#endif
 +
-   /* caps need to be set before allocating connectors, encoders, crtcs, and planes */
-   int ret = drmSetClientCap(m_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
-   if (ret)
-@@ -643,6 +654,14 @@ RESOLUTION_INFO CDRMUtils::GetResolutionInfo(drmModeModeInfoPtr mode)
+   if (!FindEncoder())
+     return false;
+ 
+@@ -541,6 +558,22 @@ bool CDRMUtils::FindConnector()
+                              { return connector->GetEncoderId() > 0 && connector->IsConnected(); });
+   }
+ 
++  // dArkOS RK3562 (RG52 Mini): the panel and HDMI share one CRTC, and fbcon's buffer is sized at
++  // boot for the output that was there: after booting on HDMI and pulling the cable, the panel's
++  // 720x1280 mode does not fit fbcon's 1920x1080 buffer, the kernel leaves the panel unlit, and
++  // Kodi found no connector with an encoder (black screen, menu sounds only). A connected one
++  // without an encoder is taken then; FindEncoder and FindCrtc pick its encoder and CRTC, and
++  // Kodi sets the mode itself.
++  if (connector == m_connectors.end())
++  {
++    connector = std::find_if(m_connectors.begin(), m_connectors.end(),
++                             [](auto& connector)
++                             { return connector->IsConnected() && connector->GetEncodersCount() > 0; });
++    if (connector != m_connectors.end())
++      CLog::Log(LOGINFO, "CDRMUtils::{} - no connector is lit, taking connected {}", __FUNCTION__,
++                connector->get()->GetName());
++  }
++
+   if (connector == m_connectors.end())
+   {
+     CLog::Log(LOGDEBUG, "CDRMUtils::{} - failed to find connected connector", __FUNCTION__);
+@@ -560,6 +593,15 @@ bool CDRMUtils::FindEncoder()
+     return encoder->GetEncoderId() == m_connector->GetEncoderId();
+   });
+ 
++  // dArkOS: an unlit connector (see FindConnector) has no current encoder: take its first one.
++  if (encoder == m_encoders.end() && m_connector->GetEncoderId() == 0 &&
++      m_connector->GetEncodersCount() > 0)
++  {
++    const uint32_t id = m_connector->GetEncoderIdForIndex(0);
++    encoder = std::find_if(m_encoders.begin(), m_encoders.end(),
++                           [id](auto& encoder) { return encoder->GetEncoderId() == id; });
++  }
++
+   if (encoder == m_encoders.end())
+   {
+     CLog::Log(LOGDEBUG, "CDRMUtils::{} - failed to find encoder for connector id: {}", __FUNCTION__,
+@@ -595,6 +637,22 @@ bool CDRMUtils::FindCrtc()
+     }
+   }
+ 
++  // dArkOS: an unlit encoder (see FindConnector) is on no CRTC: take the first it can use. Its
++  // mode is not valid, so FindPreferredMode picks the connector's preferred mode.
++  if (m_encoder->GetCrtcId() == 0)
++  {
++    for (size_t i = 0; i < m_crtcs.size(); i++)
++    {
++      if (m_encoder->GetPossibleCrtcs() & (1 << i))
++      {
++        m_orig_crtc = m_crtcs[i].get();
++        CLog::Log(LOGINFO, "CDRMUtils::{} - encoder is on no crtc, taking crtc {}", __FUNCTION__,
++                  m_orig_crtc->GetCrtcId());
++        return true;
++      }
++    }
++  }
++
+   return false;
+ }
+ 
+@@ -643,6 +701,14 @@ RESOLUTION_INFO CDRMUtils::GetResolutionInfo(drmModeModeInfoPtr mode)
    RESOLUTION_INFO res;
    res.iScreenWidth = mode->hdisplay;
    res.iScreenHeight = mode->vdisplay;

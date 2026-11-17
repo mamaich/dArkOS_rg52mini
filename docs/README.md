@@ -429,6 +429,10 @@ In master for 1.10, not released yet (VERSION says 1.10):
   kernel's console set 720p on HDMI each time nothing held it; the command
   line no longer asks for that). KNOWN-ISSUES.md, "A 3DS game went to the
   panel".
+- Kodi on HDMI: upright (it was turned for the panel on the TV too), its
+  sound on the TV (it went to the speaker), and on the panel after the cable
+  is pulled (black when the console had booted with HDMI in). KNOWN-ISSUES.md,
+  "Kodi on HDMI".
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

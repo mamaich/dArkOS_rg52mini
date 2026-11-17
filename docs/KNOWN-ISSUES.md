@@ -2962,6 +2962,48 @@ on HDMI with the scripts as above and nothing bound or forced by hand; then the 
 fills it, and ES fills the TV after the cable was pulled (ES on the panel)
 and put back.
 
+### Kodi on HDMI: on its side, sound from the speaker; black panel after a pull (2026-11-17, for 1.10)
+
+Reported by the owner, three things.
+
+**The picture lay on its side on the TV.** kodi-gbm draws on KMS itself, past
+the SDL that turns every other program, so `kodi-patch-001` turns its frame
+with the RGA (built with `-DKODI_GBM_ROTATE=90`). It did so whatever the
+output: the panel's 720x1280 needs it, HDMI's 1920x1080 does not. The patch
+now decides once the connector is chosen (`InitDrm`, after `FindConnector`):
+on when its first mode is taller than wide, off otherwise; kodi.log says
+which ("RGA software display rotation on (ROT_90) for DSI-1").
+
+**The sound went to the speaker.** Kodi's ALSA device is `softvol`
+(`guisettings.xml`), a PCM that only the speaker's `.asoundrcbak` defines.
+`audio-switch.sh` puts `.asoundrchdmi` in place while a cable is in, and that
+file had no `softvol`, so Kodi took the first card it found, the speaker.
+`.asoundrchdmi` now defines `softvol` on the RK628's card too (a "Master"
+control at 100%, which only Kodi goes through; the TV's remote sets the
+volume). The default PCM stays plain `plughw`: routing it through softvol as
+well made ES and Kodi fight over the card ("Device busy").
+
+**Black panel after a pull, the menu's sounds heard.** Kodi takes the first
+connector that is connected *and lit* (has an encoder bound). The kernel's
+console sizes its buffer once, at boot, for the output that is there: booted
+with HDMI in, 1920x1080. The panel's 720x1280 does not fit it, so after the
+cable is pulled the console leaves the panel off (`/sys/kernel/debug/dri/0/state`
+with Kodi running: the CRTC and every plane off, DSI-1 on no CRTC); ES picks
+its connector itself and showed, Kodi found nothing and drew nowhere
+("CWinSystemGbm::InitWindowSystem - failed to initialize Atomic DRM"). Not
+new: the same after any boot with HDMI in. `kodi-patch-001` now takes a
+connected connector that is not lit when none is, with its first encoder and
+the first CRTC that encoder can use, and sets the connector's preferred mode
+itself ("no connector is lit, taking connected DSI-1"). The kernel's console
+itself stays off on the panel in that case; ES and games do not need it.
+
+Checked by the owner on the dual-boot card (kodi-gbm bound over the image's):
+Kodi on HDMI upright, full screen, sound on the TV; Kodi on the panel turned
+right after a pull following a boot with HDMI in (kodi.log: "no connector is
+lit, taking connected DSI-1", "taking crtc 71").
+`build_kodi.sh`'s cache key gained `-rotportrait`, so a cache from before is
+rebuilt.
+
 ## Scraper: ScreenScraper's developer login (since 1.4)
 
 ScreenScraper wants a developer login (devid, devpassword) in every request. ES

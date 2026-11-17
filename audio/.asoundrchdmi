@@ -1,8 +1,24 @@
+# HDMI: the RK628's sound card. audio-switch.sh copies this file to ~/.asoundrc while a
+# cable is in (and no headphones), .asoundrcbak back when it goes.
 pcm.!default {
     type plug
     slave.pcm "plughw:CARD=rockchiphdmirk6,DEV=0"
 }
+
 ctl.!default {
     type hw
     card rockchiphdmirk6
+}
+
+# Kodi's audio device is "softvol" (opt/kodi/userdata/guisettings.xml), the speaker's softvol
+# in .asoundrcbak. Without a device of that name here Kodi took the first card it found, the
+# speaker, while HDMI was in. The card has no volume control of its own; this softvol adds a
+# "Master" on it (at 100% when first made), which Kodi's sound goes through.
+pcm.softvol {
+    type softvol
+    slave.pcm "plughw:CARD=rockchiphdmirk6,DEV=0"
+    control {
+        name "Master"
+        card rockchiphdmirk6
+    }
 }

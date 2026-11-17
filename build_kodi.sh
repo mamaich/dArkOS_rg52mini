@@ -14,7 +14,7 @@ if [ "$UNIT" == "rg52mini" ]; then
 else
   KODI_ROT=0
 fi
-KODI_CACHE_KEY="${KODI_VERSION_TAG}-${UNIT}-rot${KODI_ROT}-mali-egl3"
+KODI_CACHE_KEY="${KODI_VERSION_TAG}-${UNIT}-rot${KODI_ROT}-mali-egl3-rotportrait"
 mkdir -p Arkbuild_package_cache/${CHIPSET}
 
 # Install additional Kodi build dependencies
