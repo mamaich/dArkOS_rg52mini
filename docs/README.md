@@ -467,6 +467,9 @@ In master for 1.11, not released yet (VERSION says 1.11):
   GUI for the screen's size is gone: since 2026.11 PortMaster finds the size
   itself, and the code it patched is no longer there. KNOWN-ISSUES.md,
   "PortMaster kept the other screen's size".
+- CONFIGURE INPUT is left with Select + Start (it took a keyboard's ESC
+  only), and says so (es-0009; KNOWN-ISSUES.md, "CONFIGURE INPUT could be
+  left only with ESC").
 - Bluetooth gamepads that pair the old way and never bond give input again:
   BlueZ's `ClassicBondedOnly=false`, meant to be in the image since September,
   was skipped by the build (1.8 to 1.10 at least shipped without it). The

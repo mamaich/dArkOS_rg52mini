@@ -1,0 +1,67 @@
+dArkOS: CONFIGURE INPUT is left with Select + Start.
+ES's device picker (GuiDetectDevice) cancelled only on a keyboard's ESC, which a
+handheld does not have: the window could not be left without picking a device.
+Select and Start of one configured device, held together, now cancel it as ESC
+does, the way the other tools on the console are left; either alone, held for a
+second, still picks that device to configure. The line under the prompt says
+"PRESS SELECT + START OR ESC TO CANCEL." (the first run's F4 line as before).
+
+--- a/es-core/src/guis/GuiDetectDevice.cpp
++++ b/es-core/src/guis/GuiDetectDevice.cpp
+@@ -54,7 +54,8 @@ GuiDetectDevice::GuiDetectDevice(Window* window, bool firstRun, const std::funct
+ 	mMsg1 = std::make_shared<TextComponent>(mWindow, _("HOLD A BUTTON ON YOUR DEVICE TO CONFIGURE IT."), ThemeData::getMenuTheme()->TextSmall.font, ThemeData::getMenuTheme()->TextSmall.color, ALIGN_CENTER);
+ 	mGrid.setEntry(mMsg1, Vector2i(0, 2), false, true);
+ 
+-	std::string msg2str = firstRun ? _("PRESS F4 TO QUIT AT ANY TIME.") : _("PRESS ESC TO CANCEL.");
++	// dArkOS: a handheld has no ESC; Select + Start cancels, as in the other tools
++	std::string msg2str = firstRun ? _("PRESS F4 TO QUIT AT ANY TIME.") : _("PRESS SELECT + START OR ESC TO CANCEL.");
+ 	mMsg2 = std::make_shared<TextComponent>(mWindow, msg2str, ThemeData::getMenuTheme()->TextSmall.font, ThemeData::getMenuTheme()->TextSmall.color, ALIGN_CENTER);
+ 	mGrid.setEntry(mMsg2, Vector2i(0, 3), false, true);
+ 
+@@ -91,6 +92,33 @@ bool GuiDetectDevice::input(InputConfig* config, Input input)
+ 		return true;
+ 	}
+ 
++	// dArkOS: Select and Start of one configured device, held together, cancel as ESC does.
++	// Either alone, held for HOLD_TIME, still picks the device to configure.
++	if(!mFirstRun && config->isConfigured())
++	{
++		const bool isSelect = config->isMappedTo("select", input);
++		const bool isStart = config->isMappedTo("start", input);
++		if(isSelect || isStart)
++		{
++			if(mComboConfig != config)
++			{
++				mComboConfig = config;
++				mSelectHeld = false;
++				mStartHeld = false;
++			}
++			if(isSelect)
++				mSelectHeld = input.value != 0;
++			if(isStart)
++				mStartHeld = input.value != 0;
++			if(mSelectHeld && mStartHeld)
++			{
++				PowerSaver::resume();
++				delete this;
++				return true;
++			}
++		}
++	}
++
+ 	if(input.type == TYPE_BUTTON || input.type == TYPE_KEY ||input.type == TYPE_CEC_BUTTON)
+ 	{
+ 		if(input.value && mHoldingConfig == NULL)
+--- a/es-core/src/guis/GuiDetectDevice.h
++++ b/es-core/src/guis/GuiDetectDevice.h
+@@ -22,6 +22,10 @@ private:
+ 	bool mFirstRun;
+ 	InputConfig* mHoldingConfig;
+ 	int mHoldTime;
++	// dArkOS: Select and Start held on one configured device cancel, as ESC does
++	InputConfig* mComboConfig = NULL;
++	bool mSelectHeld = false;
++	bool mStartHeld = false;
+ 
+ 	NinePatchComponent mBackground;
+ 	ComponentGrid mGrid;

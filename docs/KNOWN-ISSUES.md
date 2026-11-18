@@ -759,7 +759,21 @@ update's reboot. On the owner's console it was set by hand on 2026-11-18
 (the old file in `/home/ark/comptest/input.conf.orig-20261118`) and bluetoothd
 restarted. A gamepad like this one connects from its side: `bluetoothctl
 connect` from the console failed with "Function not implemented (38)" in
-`control_connect_cb()`.
+`control_connect_cb()`. Once it connected again it came up as HARDWARE.md
+says (`GamepadPlus` js1 and `GamepadPlus Consumer Control`, still `Bonded:
+no`); the owner configured it in CONFIGURE INPUT and played with it in
+PortMaster.
+
+## CONFIGURE INPUT could be left only with ESC (2026-11-18) — fixed for 1.11
+
+Found by the owner: ES's device picker ("HOLD A BUTTON ON YOUR DEVICE TO
+CONFIGURE IT.", GuiDetectDevice) said "PRESS ESC TO CANCEL." and cancelled on a
+keyboard's ESC only, which the console does not have. es-0009: Select and
+Start of one configured device, held together, cancel it as ESC does, the way
+the other tools are left; either alone, held for a second, still picks that
+device. The line reads "PRESS SELECT + START OR ESC TO CANCEL." (the first
+run's F4 line as before). Checked on the console by the owner: the line fits,
+Select + Start closes the window, a held button starts the configuration.
 
 ## PortMaster kept the other screen's size (2026-11-17) — fixed for 1.11
 
