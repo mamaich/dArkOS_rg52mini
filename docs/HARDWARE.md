@@ -110,8 +110,11 @@ gamepads pair the old way and never bond: `bluetoothctl info` shows
 `Paired: yes`, `LegacyPairing: yes`, `Bonded: no`, and that is enough to be
 turned away.
 
-`finishing_touches-rk3562.sh` writes `ClassicBondedOnly=false` into
-`/etc/bluetooth/input.conf`. With it, the same pad brings up two nodes — the
+`cleanup_filesystem.sh` writes `ClassicBondedOnly=false` into
+`/etc/bluetooth/input.conf`, after the bluetooth packages are installed (from
+2026-09-19 `finishing_touches-rk3562.sh` did, and silently did nothing once
+bluez came later: KNOWN-ISSUES.md, "Bluetooth gamepads: paired, connected, no
+input"). With it, the same pad brings up two nodes — the
 joystick and a consumer-control keyboard — and EmulationStation picks them up
 without being restarted:
 

@@ -732,6 +732,35 @@ screen size not found, left as it is" in the journal; already so with
 2026.11.12-1059, the PortMaster of 1.9's and 1.10's image). What that probe
 got wrong instead: the next section.
 
+## Bluetooth gamepads: paired, connected, no input (2026-11-18) — fixed for 1.11
+
+Found by the owner: a Bluetooth gamepad (GamepadPlus, the one 4757a2a was made
+with in September) paired and connected, and ES's CONFIGURE INPUT did not see
+it. No input device came up; bluetoothd logged `hidp_add_connection()
+Rejected connection from !bonded device`, `bluetoothctl info` said `Bonded: no`
+and the device's entry under `/var/lib/bluetooth` had no link key. The kernel
+side was there (HIDP, `/dev/uhid`).
+
+The image had Debian's `/etc/bluetooth/input.conf` (its md5 as dpkg lists it),
+without the `ClassicBondedOnly=false` that HARDWARE.md describes. From
+2026-09-19 `finishing_touches-rk3562.sh` wrote it, but only into a file that
+was there: when bluealsa comes from the package cache, `build_bluealsa.sh`
+installs nothing, and bluez arrives later, from `bluetooth_needed_packages.txt`
+in `cleanup_filesystem.sh`. The build logs of 1.8, the 1.9 test builds and
+1.10 have no edit of the file; the 1.10 image does not have the line. The logs
+of 1.1 to 1.7 are gone; most likely they lacked it as well.
+
+**Fix:** `cleanup_filesystem.sh` sets it after the bluetooth packages are in,
+and stops the build if the file is missing or the line did not get in. The
+update to 1.11 brings the image's file where the device's is Debian's, and
+`ota/hooks/1.11-bt-classic-bonded.sh` adds the line to a file the user edited
+unless it sets `ClassicBondedOnly` itself; bluetoothd reads it after the
+update's reboot. On the owner's console it was set by hand on 2026-11-18
+(the old file in `/home/ark/comptest/input.conf.orig-20261118`) and bluetoothd
+restarted. A gamepad like this one connects from its side: `bluetoothctl
+connect` from the console failed with "Function not implemented (38)" in
+`control_connect_cb()`.
+
 ## PortMaster kept the other screen's size (2026-11-17) — fixed for 1.11
 
 Found while checking our PortMaster changes after the owner updated it to

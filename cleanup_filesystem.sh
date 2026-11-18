@@ -153,6 +153,37 @@ if [[ "$BUILD_BLUEALSA" == "y" ]]; then
   done <bluetooth_needed_packages.txt
 fi
 
+# RG52 Mini: BlueZ refuses HID from a device it does not consider bonded, and has
+# done by default since 5.6x (ClassicBondedOnly, true unless told otherwise).
+# Plenty of Bluetooth gamepads pair the old way and never bond, so they pair
+# happily, show up as Connected, and then produce no input device at all - the
+# only sign is one line in the daemon log:
+#
+#   profiles/input/device.c:hidp_add_connection()
+#   Rejected connection from !bonded device /org/bluez/hci0/dev_XX_XX_...
+#
+# The trade is real: an unbonded HID link can be spoofed, and a spoofed HID link
+# is keystrokes. On a handheld that stores no credentials and whose alternative
+# is "gamepads do not work", it is the right way round.
+# Here, after the loop above installs bluez: finishing_touches did it from
+# 2026-09-19 but skipped it silently once bluealsa came from the package cache
+# (bluez not installed yet), so 1.8 to 1.10 at least shipped without it. A
+# missing file now stops the build.
+if [ "$CHIPSET" == "rk3562" ] && [[ "$BUILD_BLUEALSA" == "y" ]]; then
+  if [ ! -f Arkbuild/etc/bluetooth/input.conf ]; then
+    echo "Arkbuild/etc/bluetooth/input.conf is missing after the bluetooth packages: cannot set ClassicBondedOnly=false.  Stopping here."
+    exit 1
+  fi
+  if ! grep -q '^ClassicBondedOnly' Arkbuild/etc/bluetooth/input.conf; then
+    sudo sed -i 's/^\[General\]/[General]\nClassicBondedOnly=false/' \
+      Arkbuild/etc/bluetooth/input.conf
+  fi
+  if ! grep -q '^ClassicBondedOnly=false' Arkbuild/etc/bluetooth/input.conf; then
+    echo "ClassicBondedOnly=false did not get into Arkbuild/etc/bluetooth/input.conf.  Stopping here."
+    exit 1
+  fi
+fi
+
 # RG52 Mini: divert the Debian files the Mali links below replace, so that apt
 # on the device neither puts Mesa back over them nor lets ldconfig point
 # libvulkan.so.1 and libwayland-egl.so.1 at Debian's (see the script). After
