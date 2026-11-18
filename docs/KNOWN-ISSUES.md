@@ -724,7 +724,7 @@ smaller; it would also be lost on PortMaster's next update. The complete fix
 belongs in PortMaster: an `HW_INFO` entry for the RG52 Mini, or the screen's
 size for any device the table lacks.
 
-**Gone since PortMaster 2026.11** (removed from `portmaster-e2big.sh` for 1.11):
+**Gone since PortMaster 2026.11** (removed from `portmaster-e2big.sh` in 1.11):
 `pugwash` is now a short launcher, its GUI code moved into `pylibs`, and
 PortMaster finds the device and the screen's size itself (`device_info.txt`,
 1280x720 on the panel), so the patch found nothing to patch ("code for the
@@ -732,7 +732,7 @@ screen size not found, left as it is" in the journal; already so with
 2026.11.12-1059, the PortMaster of 1.9's and 1.10's image). What that probe
 got wrong instead: the next section.
 
-## Bluetooth gamepads: paired, connected, no input (2026-11-18) — fixed for 1.11
+## Bluetooth gamepads: paired, connected, no input (2026-11-18) — fixed in 1.11
 
 Found by the owner: a Bluetooth gamepad (GamepadPlus, the one 4757a2a was made
 with in September) paired and connected, and ES's CONFIGURE INPUT did not see
@@ -764,7 +764,7 @@ says (`GamepadPlus` js1 and `GamepadPlus Consumer Control`, still `Bonded:
 no`); the owner configured it in CONFIGURE INPUT and played with it in
 PortMaster.
 
-## Ports: a USB pad plugged in after boot did nothing (2026-11-18) — fixed for 1.11
+## Ports: a USB pad plugged in after boot did nothing (2026-11-18) — fixed in 1.11
 
 Reported by a user (an Ampown Y7 USB pad worked in PortMaster ports on an older image, not now;
 ES and RetroArch used it) and reproduced by the owner in GTA 3 (re3): the console's controls
@@ -796,7 +796,7 @@ console's controls. Checked on the console by the owner: the setting is there wi
 GTA 3 plays with the USB pad on AUTO and with the console's controls on NO, Select + Start
 ends it, PortMaster's menu works with the console's buttons.
 
-## CONFIGURE INPUT could be left only with ESC (2026-11-18) — fixed for 1.11
+## CONFIGURE INPUT could be left only with ESC (2026-11-18) — fixed in 1.11
 
 Found by the owner: ES's device picker ("HOLD A BUTTON ON YOUR DEVICE TO
 CONFIGURE IT.", GuiDetectDevice) said "PRESS ESC TO CANCEL." and cancelled on a
@@ -807,7 +807,7 @@ device. The line reads "PRESS SELECT + START OR ESC TO CANCEL." (the first
 run's F4 line as before). Checked on the console by the owner: the line fits,
 Select + Start closes the window, a held button starts the configuration.
 
-## PortMaster kept the other screen's size (2026-11-17) — fixed for 1.11
+## PortMaster kept the other screen's size (2026-11-17) — fixed in 1.11
 
 Found while checking our PortMaster changes after the owner updated it to
 2026.11.17-0700. PortMaster 2026.11 learns the device with `device_info.txt`:
@@ -1466,7 +1466,7 @@ formats, Castlevania's frames match, no GPU fault and no device lost. These
 are the malisx2 session's builds; the image's recipe builds the same commit
 with the same profile.
 
-**malisx2 0.5.1 (eb79fed, for 1.11).** Upstream's 0.5.1 (308fe12) merged by
+**malisx2 0.5.1 (eb79fed, in 1.11).** Upstream's 0.5.1 (308fe12) merged by
 the malisx2 session: on v7 logicOp, wide lines, shaderDrawParameters, 8-bit
 indices, primitive list restart, float controls, custom border colours,
 mirror clamp to edge, non-seamless cube maps; the 1555 formats
@@ -3207,7 +3207,7 @@ are left out: those scripts tell emulators apart by name.
 How it is made:
 - `rk3562_core_builds/scripts/retroarch-next.sh` builds a pinned master commit
   (fab8d5f of 2026-10-31 in 1.5 to 1.9; a4d0a85 of 2026-11-12 in 1.10, below;
-  62eeee4 of 2026-11-18 for 1.11, docs/TODO.md)
+  62eeee4 of 2026-11-18 in 1.11, docs/TODO.md)
   with the 64-bit configure of `retroarch.sh`, and
   `patches/retroarch-next/`, the release's patches ported to master, numbered
   in the order they apply. `build_retroarch.sh` puts it at
