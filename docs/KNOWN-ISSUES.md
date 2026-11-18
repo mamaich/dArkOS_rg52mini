@@ -3206,7 +3206,8 @@ are left out: those scripts tell emulators apart by name.
 
 How it is made:
 - `rk3562_core_builds/scripts/retroarch-next.sh` builds a pinned master commit
-  (fab8d5f of 2026-10-31 in 1.5 to 1.9; a4d0a85 of 2026-11-12 in 1.10, below)
+  (fab8d5f of 2026-10-31 in 1.5 to 1.9; a4d0a85 of 2026-11-12 in 1.10, below;
+  62eeee4 of 2026-11-18 for 1.11, docs/TODO.md)
   with the 64-bit configure of `retroarch.sh`, and
   `patches/retroarch-next/`, the release's patches ported to master, numbered
   in the order they apply. `build_retroarch.sh` puts it at

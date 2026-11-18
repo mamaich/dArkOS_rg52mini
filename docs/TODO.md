@@ -112,6 +112,51 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
+## Upstream updates for 1.11 (2026-11-18, the owner: take the ones proposed)
+
+The check of 2026-11-18 22:13 (`report-20261118-2213.txt`). Taken, each built in
+the test chroot and tried on the owner's dual-boot card (1.10 with the hand
+installs of 2026-11-17/18), the new binary bound over the image's for its runs:
+
+**armGBA: b1c4a69 (v1.5) -> a06ea8c (v1.8)**, 106 commits: core and recompiler
+changes from ratherDashing's 3DS port (built with -fwrapv), states the same on 32
+and 64 bits and with compiled code or stepping, a Video Threads option, frames
+fast-forward will not show left undrawn, Device Motion for tilt and gyro
+cartridges, Mega Duck games, Action Replay and GameShark cartridges. Apotris as
+ES starts it: 60.00 fps, sound, no crash.
+
+**armN64: 58e58ca -> c5c1a4c (v1.3)**, 88 commits: GL and RDP fixes, HLE clipping
+and task timing, options that take effect while the game runs. Our patches
+armn64-patch-0001 and 0002 apply with offsets; neither is upstream. On
+RetroArch's gl driver as the image has it: Zelda's title 59.2 fps, AeroGauge
+60.07, Air Boarder 50.33 (1.9's build: 59.8 / 60.1 / 50.3), pictures right (the
+black wedge on two grabs is the grab catching a buffer the RGA is still writing:
+1.10's core shows it too), no GPU fault.
+
+**Opera: 595fd1d -> e01f1dc**, 4 commits (CHD hunks from the frontend's mapping,
+libretro-common resynced). Loads and reports itself; no 3DO game on the card to
+play.
+
+**XRoar: 1.12.1 -> 1.13.1.** Dragon 32 started as ES starts it: 50.3 fps, sound,
+no crash; the test file (a BASIC listing as text) shows the same picture on
+1.12.1, so it says nothing of either.
+
+**retroarch-next: a4d0a85 -> 62eeee4** (master of 2026-11-18, 418 commits:
+mostly Vulkan recording, streaming and DLSS; KMS pacing on the CRTC's vblanks).
+The twelve patches apply with offsets only. Against a4d0a85, each game as ES
+starts it with the `retroarch-next` emulator: GBA, SNES, Mega Drive, FBNeo,
+PS1 and GBC all at 60 fps with both, sound in all twelve runs, no crash lines,
+the grabs the same pair by pair.
+
+Not taken (the owner agreed): Dolphin master after db2afcb (no release; ARM64
+JIT details and `dcbx` not clearing the icache would need an A/B), ARMSX2 2.9.5
+(only if faster, with a profile retrained), SDL2's release-2.32.x after 2.32.10
+(no release), GameTank (glibc compatibility; our patch 002 would stop applying),
+retroarch-cores' rg503 zips (parallel_n64 f56f7a2 draws no 3D),
+christianhaitian's RetroArch HDMI-audio patch 6bd22be (its retry counter is reset
+on every pass of the loop; we carry 0026 for the same state). GammaOS's
+azahar-nano after 8d68e5e was judged before (below).
+
 ## Upstream updates for 1.10 (released 2026-11-17)
 
 **Released as 1.10 on 2026-11-17**: build 20261117053629, from 95f7803 (tag
