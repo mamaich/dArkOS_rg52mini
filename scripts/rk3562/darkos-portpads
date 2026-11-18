@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""dArkOS RG52 Mini: hide the console's own controls from a port's SDL when a pad is in.
+
+  darkos-portpads auto|yes|no
+
+prints the value for SDL_GAMECONTROLLER_IGNORE_DEVICES, or nothing. PortMaster's
+get_controls (control.txt, patched by portmaster-e2big.sh) runs it with DARKOS_HIDE_PAD,
+which ES sets from EMULATOR SETTINGS > HIDE BUILT-IN GAMEPAD of the Ports (es-0010).
+
+Most ports take SDL's first game controller as player 1 (re3, GTA 3: gamepad1), and the
+console's controls (rk3562-joystick, js0 from boot) come first; a pad plugged in later is
+second and the game does not read it. SDL cannot reorder its devices, but it leaves out
+the ones that hint lists, by USB vendor/product. The console's controls have none: SDL
+builds their GUID from the name, so they are 0x0000/0x0000, as is any device without a
+USB ID (a Bluetooth pad without PnP information, for one).
+
+- no: nothing hidden (the console's controls first, as before);
+- yes: 0x0000/0x0000 hidden whenever the console's controls are there, whatever else
+  shares that ID;
+- auto (the default): hidden only when a pad other than the console's is in that ES has
+  a mapping for (picked as ra-extpads.py picks it), and no other pad is 0000:0000, which
+  would be hidden with them.
+
+gptokeyb runs through sudo, which does not pass the variable on: it still sees the
+console's controls, and Select + Start still ends the port.
+"""
+import importlib.util
+import os
+import sys
+import xml.etree.ElementTree as ET
+
+IGNORE = "0x0000/0x0000"
+
+
+def load_extpads():
+    spec = importlib.util.spec_from_file_location("ra_extpads", "/usr/local/bin/ra-extpads.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def main():
+    mode = (sys.argv[1] if len(sys.argv) > 1 else "auto").strip().lower()
+    if mode == "no":
+        return
+    rx = load_extpads()
+    found = rx.pads()
+    if not any(p["name"] == rx.BUILTIN for p in found):
+        return
+    if mode == "yes":
+        print(IGNORE)
+        return
+    others = [p for p in found if p["name"] != rx.BUILTIN]
+    if not others or any(p["vendor"] == 0 and p["product"] == 0 for p in others):
+        return
+    if not os.path.exists(rx.ES_INPUT):
+        return
+    root = ET.parse(rx.ES_INPUT).getroot()
+    if any(rx.es_mapping(root, p) is not None for p in others):
+        print(IGNORE)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:  # never stop a port from starting
+        print("darkos-portpads: %s" % e, file=sys.stderr)

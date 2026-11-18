@@ -1,0 +1,54 @@
+dArkOS: EMULATOR SETTINGS of the Ports offers HIDE BUILT-IN GAMEPAD (AUTO, YES, NO).
+Most ports take SDL's first game controller as player 1, and the console's own controls come
+first: a pad plugged in after boot was second, and the game did not read it (GTA 3). PortMaster's
+get_controls, as portmaster-e2big.sh patches it, hides the console's controls from the port's SDL
+(SDL_GAMECONTROLLER_IGNORE_DEVICES) as darkos-portpads decides. The choice is kept as
+"ports.hidepad", and a port is launched with DARKOS_HIDE_PAD set to "yes" or "no"; AUTO leaves it
+unset, and darkos-portpads hides them only when a pad ES has a mapping for is in.
+
+--- a/es-app/src/FileData.cpp
++++ b/es-app/src/FileData.cpp
+@@ -353,8 +353,17 @@
+ 	else
+ 		unsetenv("DARKOS_VULKAN");
+ 
++	// dArkOS: HIDE BUILT-IN GAMEPAD of the Ports for PortMaster's get_controls (darkos-portpads);
++	// AUTO (unset) lets it decide by the pads that are in
++	const std::string hidePad = getSystemName() == "ports" ? Settings::getInstance()->getString("ports.hidepad") : "";
++	if (hidePad == "yes" || hidePad == "no")
++		setenv("DARKOS_HIDE_PAD", hidePad.c_str(), 1);
++	else
++		unsetenv("DARKOS_HIDE_PAD");
++
+ 	int exitCode = runSystemCommand(command, getDisplayName(), hideWindow ? NULL : window);
+ 	unsetenv("DARKOS_VULKAN");
++	unsetenv("DARKOS_HIDE_PAD");
+ 	if (exitCode != 0)
+ 	{
+ 		LOG(LogWarning) << "...launch terminated with nonzero exit code " << exitCode << "!";
+--- a/es-app/src/guis/GuiMenu.cpp
++++ b/es-app/src/guis/GuiMenu.cpp
+@@ -1893,6 +1893,23 @@
+ 		});
+ 	}
+ 
++	// dArkOS: the Ports only. Most ports take the first gamepad, and the console's own controls
++	// come first; PortMaster's get_controls can hide them from the game (darkos-portpads). AUTO:
++	// when a pad ES knows is in; YES: always; NO: never.
++	if (system->getName() == "ports")
++	{
++		auto hp_choice = std::make_shared<OptionListComponent<std::string>>(mWindow, _("HIDE BUILT-IN GAMEPAD"), false);
++		const std::string currentHp = Settings::getInstance()->getString("ports.hidepad");
++		hp_choice->add(_("AUTO"), "", currentHp != "yes" && currentHp != "no");
++		hp_choice->add(_("YES"), "yes", currentHp == "yes");
++		hp_choice->add(_("NO"), "no", currentHp == "no");
++		s->addWithLabel(_("HIDE BUILT-IN GAMEPAD"), hp_choice);
++		s->addSaveFunc([hp_choice]
++		{
++			Settings::getInstance()->setString("ports.hidepad", hp_choice->getSelected());
++		});
++	}
++
+ 	mWindow->pushGui(s);
+ }
+ 

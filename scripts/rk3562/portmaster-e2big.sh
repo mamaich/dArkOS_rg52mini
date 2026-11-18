@@ -33,6 +33,11 @@
 # (Up to 1.10 this also patched pugwash, PortMaster's GUI, for the screen's size; since 2026.11
 # PortMaster finds the size itself and that code is gone.)
 #
+# And get_controls hides the console's own controls from a port's SDL when a pad is in
+# (darkos-portpads, ES's EMULATOR SETTINGS > HIDE BUILT-IN GAMEPAD of the Ports, es-0010):
+# most ports take SDL's first game controller, and the console's controls come first. Not for
+# PortMaster's own menu (pm_launch.txt calls get_controls as well), which reads every pad.
+#
 # PortMaster overwrites its files when it updates itself, so this runs at boot
 # and from portmaster-e2big.path whenever mod_dArkOS.txt or control.txt changes.
 
@@ -55,6 +60,44 @@ NEW = OLD + '''  # dArkOS RG52 Mini: E2BIG guard in get_controls (added by /usr/
   if [ "${#sdl_controllerconfig}" -gt 100000 ]; then
     sdl_controllerconfig="$(sed -n '/^# Custom Entries/,$p' "${SDL_GAMECONTROLLERCONFIG_FILE}" | grep -v '^#')"
   fi
+'''
+p = sys.argv[1]
+s = open(p, encoding="utf-8", newline="").read()
+if MARK in s:
+    sys.exit(0)
+if s.count(OLD) != 1:
+    sys.exit(2)
+# in place: the file keeps its owner, mode and ACL
+open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD, NEW))
+print("patched")
+PY
+}
+
+# control.txt: get_controls hides the console's controls from SDL when darkos-portpads says so.
+# Same anchor and exit codes as control_e2big.
+control_hidepad() {
+  python3 - "$1" <<'PY'
+import sys
+MARK = "# dArkOS RG52 Mini: built-in pad hidden"
+OLD = '  sdl_controllerconfig="$(< "${SDL_GAMECONTROLLERCONFIG_FILE}")"\n'
+NEW = OLD + '''  # dArkOS RG52 Mini: built-in pad hidden from the port's SDL (added by /usr/local/bin/portmaster-e2big.sh)
+  # Most ports take SDL's first game controller, and the console's controls come first: with a
+  # pad in, they are left out (SDL_GAMECONTROLLER_IGNORE_DEVICES), as ES's HIDE BUILT-IN GAMEPAD
+  # of the Ports says (DARKOS_HIDE_PAD: auto when unset, yes, no). Not for PortMaster's own menu.
+  # gptokeyb runs through sudo, which drops the variable: Select + Start still ends the port.
+  case "${BASH_SOURCE[*]}" in
+    *pm_launch.txt*) ;;
+    *)
+      if [ -x /usr/local/bin/darkos-portpads ]; then
+        _darkos_ignore="$(/usr/local/bin/darkos-portpads "${DARKOS_HIDE_PAD:-auto}")"
+        if [ -n "$_darkos_ignore" ]; then
+          export SDL_GAMECONTROLLER_IGNORE_DEVICES="$_darkos_ignore"
+          echo "dArkOS: the console's controls hidden from the game (SDL_GAMECONTROLLER_IGNORE_DEVICES=$_darkos_ignore)"
+        fi
+        unset _darkos_ignore
+      fi
+      ;;
+  esac
 '''
 p = sys.argv[1]
 s = open(p, encoding="utf-8", newline="").read()
@@ -142,6 +185,9 @@ LIBGL
     r=$(control_e2big "$ct"); rc=$?
     [ "$r" = patched ] && logger -t portmaster-e2big "E2BIG guard added to get_controls in $ct"
     [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, left as it is"
+    r=$(control_hidepad "$ct"); rc=$?
+    [ "$r" = patched ] && logger -t portmaster-e2big "built-in pad hiding added to get_controls in $ct"
+    [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, no built-in pad hiding"
   fi
   grep -qF "$MARK" "$f" && continue
   cat >> "$f" <<'GUARD'

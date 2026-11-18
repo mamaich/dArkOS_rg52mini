@@ -764,6 +764,38 @@ says (`GamepadPlus` js1 and `GamepadPlus Consumer Control`, still `Bonded:
 no`); the owner configured it in CONFIGURE INPUT and played with it in
 PortMaster.
 
+## Ports: a USB pad plugged in after boot did nothing (2026-11-18) — fixed for 1.11
+
+Reported by a user (an Ampown Y7 USB pad worked in PortMaster ports on an older image, not now;
+ES and RetroArch used it) and reproduced by the owner in GTA 3 (re3): the console's controls
+played, the USB pad did not. re3 opens SDL's game controllers in order and takes the first as
+player 1 (`gamepad1`); the console's controls (`rk3562-joystick`, js0 from boot) are first, a
+pad plugged in later is second. Most ports do the same; RetroArch has had its own order since
+1.5 (`ra-extpads.py`), the ports had nothing. A pad plugged in before power-on can come first
+(the xpad section above), which is most likely how it worked before. Each of the owner's pads
+(two USB, GamepadPlus over Bluetooth and through its receiver, ShanWan 2563:0575) worked in
+PortMaster's own menu.
+
+SDL cannot reorder its devices, but `SDL_GAMECONTROLLER_IGNORE_DEVICES` leaves out the ones it
+lists by USB vendor/product. The console's controls have no USB ID (SDL builds their GUID from
+the name), so they are `0x0000/0x0000`; Bluetooth pads with PnP information have one
+(GamepadPlus is 1949:0402). Tried by hand in GTA 3's script: the USB pad played, the console's
+controls did not, and Select + Start still ended the port (gptokeyb runs through sudo, which
+drops the variable).
+
+**Fix:** EMULATOR SETTINGS of the Ports has HIDE BUILT-IN GAMEPAD (es-0010): AUTO (the default),
+YES, NO, kept as `ports.hidepad`; a port gets `DARKOS_HIDE_PAD=yes|no`, unset for AUTO.
+`portmaster-e2big.sh` patches PortMaster's `get_controls` (control.txt) to run
+`darkos-portpads`, which prints the value to export: NO never; YES whenever the console's
+controls are there, whatever else is 0000:0000; AUTO only when a pad other than the console's
+is in that ES has a mapping for (as `ra-extpads.py` finds it) and no other pad is 0000:0000,
+which would be hidden with them. PortMaster's own menu (pm_launch.txt also calls get_controls)
+is left alone. A port that runs its game through `$ESUDO` does not get the variable (sudo's
+list); left so, as gptokeyb is started with the same `$ESUDO`, and it has to keep seeing the
+console's controls. Checked on the console by the owner: the setting is there with AUTO,
+GTA 3 plays with the USB pad on AUTO and with the console's controls on NO, Select + Start
+ends it, PortMaster's menu works with the console's buttons.
+
 ## CONFIGURE INPUT could be left only with ESC (2026-11-18) — fixed for 1.11
 
 Found by the owner: ES's device picker ("HOLD A BUTTON ON YOUR DEVICE TO

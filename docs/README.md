@@ -136,7 +136,7 @@ New in 1.5 (build 11012026, 2026-11-02):
 | Select | on ES's screen Select puts the screen out and lights it again reliably: its release no longer restarts the screensaver, the black screensaver keeps its brightness (es-0007), and Select's release has a 100 ms debounce (kernel; [KNOWN-ISSUES](KNOWN-ISSUES.md#select-on-ess-screen-the-screen-went-out-again-presses-seemed-lost--fixed-in-15)) |
 | Headphones | with headphones in, the speaker is silent, during a game too: the playback path follows the jack (`headphone-path.sh`, run by a udev rule), and the codec turns the speaker's amplifier off when the path changes mid-stream (kernel d188e7c); with HDMI in, headphones win ([KNOWN-ISSUES](KNOWN-ISSUES.md#headphones-the-speaker-played-too--fixed-in-15)) |
 | EmulationStation | UI Settings > Show Clock shows the clock (at the bottom right, it was below the screen); the battery's percent at the top right is on the screen; nes-box shows a game's logo whole, in the bar at the bottom (es-0004, `1.5-nesbox-marquee.sh`; [KNOWN-ISSUES](KNOWN-ISSUES.md#es-no-clock-the-batterys-percent-off-the-screen-a-games-logo-in-the-corner--fixed-in-15)) |
-| PortMaster | the screen's size it finds is probed again at boot and at each HDMI switch: `portmaster-e2big.sh` drops its cache (KNOWN-ISSUES, "PortMaster kept the other screen's size"); up to 1.10 it also patched the GUI for the screen's size, which PortMaster 2026.11 finds itself |
+| PortMaster | its `get_controls` hides the console's own controls from a port when a pad is in (`darkos-portpads`, ES's HIDE BUILT-IN GAMEPAD of the Ports); the screen's size it finds is probed again at boot and at each HDMI switch: `portmaster-e2big.sh` drops its cache (KNOWN-ISSUES, "PortMaster kept the other screen's size"); up to 1.10 it also patched the GUI for the screen's size, which PortMaster 2026.11 finds itself |
 | RetroArch | a second choice in EMULATOR SETTINGS, `retroarch-next`: RetroArch from master (fab8d5f up to 1.9, a4d0a85 in 1.10; 64-bit), our patches ported to it, its own config; v1.22.2 stays the default ([KNOWN-ISSUES](KNOWN-ISSUES.md#retroarch-from-master-retroarch-next-a-second-choice-since-15)) |
 | XRoar | the Dragon 32 and the CoCo 1/2 get to BASIC: `-ram 2048` only for a CoCo 3; the Dragon 32 system's launcher `dragon.sh` is installed ([KNOWN-ISSUES](KNOWN-ISSUES.md#xroar-and-openmsx-did-not-start--openmsx-fixed-in-14-xroar-in-15)) |
 | Sleep | not changed, but the notes advise unplugging USB devices before sleep and plugging a charger into an awake console: a USB headset on the port turns deep sleep into a loop of wakes ([KNOWN-ISSUES](KNOWN-ISSUES.md#usb-devices-on-the-port-in-sleep-it-woke-again-and-again--advice-in-15-not-fixed)) |
@@ -467,6 +467,11 @@ In master for 1.11, not released yet (VERSION says 1.11):
   GUI for the screen's size is gone: since 2026.11 PortMaster finds the size
   itself, and the code it patched is no longer there. KNOWN-ISSUES.md,
   "PortMaster kept the other screen's size".
+- Ports: a pad plugged in after boot is player 1 (the ports took the
+  console's own controls, which come first). EMULATOR SETTINGS > Ports >
+  HIDE BUILT-IN GAMEPAD: AUTO (when a pad ES knows is in), YES, NO (es-0010,
+  `darkos-portpads`; KNOWN-ISSUES.md, "Ports: a USB pad plugged in after boot
+  did nothing").
 - CONFIGURE INPUT is left with Select + Start (it took a keyboard's ESC
   only), and says so (es-0009; KNOWN-ISSUES.md, "CONFIGURE INPUT could be
   left only with ESC").
