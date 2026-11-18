@@ -358,7 +358,8 @@ left alone by darkos-ota: 1.7 -> 1.8 on the owner's dual-boot card
 (2026-11-08) left p1, p2 and p5 as they were. 1.9 has the same p1 as 1.8
 (sha256 d5014cf6...): its package from 1.8 carries no loader, the one from
 1.7 carries it, gated on 1.5's sha256. 1.10 has the same p1 again: neither
-of its packages (from 1.9 and from 1.8) carries a loader.
+of its packages (from 1.9 and from 1.8) carries a loader. Nor do 1.11's (from
+1.10 and from 1.9): the same p1 once more.
 
 In 1.7 the image shipped the fork's release `rg52mini-1.5` (tag on
 6e4c1d91cb, `next-dev-g6e4c1d91cb`), its `uboot.img`: md5

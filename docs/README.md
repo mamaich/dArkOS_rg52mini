@@ -56,7 +56,7 @@ followed.
 
 ## State of the port
 
-The current release is 1.10 (build 11172026, 2026-11-17); from 1.1 on, a card
+The current release is 1.11 (build 11182026, 2026-11-19); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -458,7 +458,7 @@ the pad left as it was, one without it got the entry. The packages from 1.9
 and 1.8 were made the same way from the published images and not installed
 as released.
 
-In master for 1.11, not released yet (VERSION says 1.11):
+New in 1.11 (build 11182026, 2026-11-19):
 
 - PortMaster and its ports get the size of the screen in use: PortMaster
   2026.11 kept the size it found first, so after a start on the TV it laid
@@ -489,6 +489,35 @@ In master for 1.11, not released yet (VERSION says 1.11):
   features (logicOp, wide lines, draw parameters, 8-bit indices, the 1555
   formats among them), speed as in 1.10; each game compiles its pipelines
   once more (KNOWN-ISSUES.md, "malisx2 0.5.1").
+
+Checked for 1.11: the release build (20261118214530, from ee61fce) on the
+owner's dual-boot test card, installed by the release's own package over
+1.10. What had been put on the console by hand since 1.10 (PortMaster's cache
+fix, malisx2 0.5.1, BlueZ's input.conf, ES with es-0009 and es-0010,
+`darkos-portpads`, PortMaster's control.txt) was set back to 1.10's files
+first, so the package brought each. No failed unit, no bad kernel line,
+`dpkg --audit` clean, the files the repo's, the owner's settings kept;
+input.conf with `ClassicBondedOnly=false`, ES with both new lines, control.txt
+with the E2BIG guard and the pad hiding; malisx2's driverInfo and
+pipeline-cache UUID those of the malisx2 session's `pgouse-051` (the sha256
+differs: 8272c974... built in the image's chroot, 72f0eb1b... theirs);
+armGBA, armN64 and Opera byte for byte the builds tried before. The image's
+PortMaster installer has 2026.11.17-0700 (1.10's had 2026.11.12-1059), the
+version the console had updated itself to and the pad hiding was tried on;
+both control.txt patches apply to its file. Then each as ES starts it, on the
+panel, with sound and the right picture, at 1.10's speed: ARMSX2, Dolphin and
+Azahar on both Vulkan drivers, DraStic and DSperate, PPSSPP, N64 on three
+cores (armN64 among them), Dreamcast, Atomiswave, Saturn standalone and on
+retrorun, Zeebo, GBA on the default core, armGBA and retroarch-next, SNES and
+PS1 on both RetroArchs (PS1 on three cores), linapple, Sega CD, and the ports
+Don't Starve, GTA San Andreas, GTA 3, Postal 2 and Mina the Hollower (Doom 3
+is no longer on the card). Azahar's first run after the update was slow in
+its first seconds on both drivers (59.3 -> 55.8 fps on Arm's, 59.1 -> 48.4 on
+malisx2); a second run was as in 1.10 (59.6, 59.1). The hook
+`1.11-bt-classic-bonded.sh` was run on copies of input.conf: an edited file
+without the setting got it (once, when run twice), one with its own setting
+was left as it was. The package from 1.9 was made the same way from the
+published images and not installed.
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

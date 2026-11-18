@@ -112,7 +112,13 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
-## Upstream updates for 1.11 (2026-11-18, the owner: take the ones proposed)
+## Upstream updates for 1.11 (2026-11-18, the owner: take the ones proposed; released 2026-11-19)
+
+**Released as 1.11 on 2026-11-19**: build 20261118214530, from ee61fce (tag
+v1.11), with the fixes of 2026-11-17/18 (KNOWN-ISSUES.md: Bluetooth gamepads,
+the Ports' HIDE BUILT-IN GAMEPAD, CONFIGURE INPUT, PortMaster's screen size)
+and malisx2 0.5.1. What was checked on the release build: docs/README.md,
+"Checked for 1.11".
 
 The check of 2026-11-18 22:13 (`report-20261118-2213.txt`). Taken, each built in
 the test chroot and tried on the owner's dual-boot card (1.10 with the hand
