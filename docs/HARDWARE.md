@@ -163,8 +163,10 @@ KNOWN-ISSUES, "Headphones: the speaker played too".
 | 5a6d2f3 | 1.5 | `rk3562-joystick`: Select's release counts only after 100 ms without an edge, the other keys keep 5 ms (KNOWN-ISSUES, "Select on ES's screen") |
 | 4e1991c | 1.6 | `rk3562-joystick`: the triggers' dead zone at rest 1600 of 32767, was 800 (KNOWN-ISSUES, "L2 pressed by itself") |
 | 84be124 | 1.8 | VOP2 on the RK3562 shows RGB888 with red and blue the right way round (KNOWN-ISSUES, "retrorun: red and blue swapped") |
+| 4fe802d | 1.12 | the fbdev buffer 1920x1280 (`CONFIG_DRM_FBDEV_MIN_WIDTH`/`_HEIGHT`, new), the console takes the size of the output in use at each hotplug; the virtual size and `fb0/modes` as before (KNOWN-ISSUES, "The Options tools on a TV") |
 
-The submodule is pinned at 84be12412 since 1.8; 1.9 has the same kernel.
+The submodule was pinned at 84be12412 from 1.8 to 1.11; 4fe802d4a is in
+master for 1.12.
 
 ## Babble filter
 
