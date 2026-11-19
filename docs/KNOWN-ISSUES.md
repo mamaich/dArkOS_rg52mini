@@ -831,6 +831,36 @@ service runs it with `--boot`) and `hdmi-hotplug.sh` at each switch
 console: both caches dropped, the probe again, as root and as ark, 1280x720.
 The switch with a cable in was not tried; it is the same call.
 
+## Fix Audio with HDMI in left the sound on the speaker (2026-11-19) — fixed for 1.12
+
+Found by the owner: Options > Advanced > Fix Audio, run with a TV on HDMI,
+moved the sound to the console's speaker. The script killed EmulationStation
+first, as upstream's does. ES runs the Options tools as its children
+(`GuiTools::launchTool`, with its own sound and screen closed while the tool
+runs), so the script was inside `emulationstation.service`. ES killed, its
+wrapper (`emulationstation.sh`) exited with 137, systemd counted a failure
+(`Restart=on-failure`) and stopped the whole unit before starting it again,
+the script with it. How far the script got was a race. From the ES menu on
+2026-11-19 it died before its first step and nothing changed; in the owner's
+run it had copied `.asoundrcbak` (the speaker's) over `~/.asoundrc` and never
+reached `headphone-path.sh`, which hands the choice to `audio-switch.sh`
+(HDMI while a cable is in and no headphones). Run from ssh inside the same
+cgroup, the script won the race and the sound stayed on HDMI.
+
+**Fix:** the script resets the sound first and restarts ES last, through the
+wrapper's own mark (`/tmp/es-restart`, then the kill): the wrapper starts ES
+again, the service stays up and nothing in it is stopped. Checked on the
+console from the ES menu with HDMI in: every step ran (journal), the service
+was not restarted, ES came back with `~/.asoundrc` the HDMI one and HDMI's
+PCM playing. A tool must not kill ES any other way: the same would end it.
+
+Fix Audio also sets the volume ("Master", both cards) to 100%, as it did
+before: `/var/local/asound.state` exists only from a shutdown to the next
+boot (`spktoggle.sh` restores it and removes it), so `alsactl restore` falls
+back to `alsactl init`. That leaves the speaker's DAC at its -20 dB, which
+is what matters (a loud speaker on a nearly empty battery resets the
+console: "Smaller things").
+
 ## v10052026: the power button rebooted revision A boards — fixed in the kernel
 
 The bootloader v10052026 ships (`uboot-oc-stocktee-shmkept.img`) has the BL31

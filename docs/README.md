@@ -519,6 +519,14 @@ without the setting got it (once, when run twice), one with its own setting
 was left as it was. The package from 1.9 was made the same way from the
 published images and not installed.
 
+In master for 1.12, not released yet (VERSION says 1.12):
+
+- Options > Advanced > Fix Audio with a TV on HDMI no longer leaves the sound
+  on the speaker: it killed ES first, and systemd ended the script with ES's
+  service before it was done. ES is now restarted at the end, through its
+  own restart mark (KNOWN-ISSUES.md, "Fix Audio with HDMI in left the sound
+  on the speaker").
+
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini
 (2026-11-03, cause not found); since 1.7 the `freej2me` core on the image's
