@@ -526,6 +526,10 @@ In master for 1.12, not released yet (VERSION says 1.12):
   service before it was done. ES is now restarted at the end, through its
   own restart mark (KNOWN-ISSUES.md, "Fix Audio with HDMI in left the sound
   on the speaker").
+- The Options tools (Wifi, Bluetooth and the rest) are upright on a TV when
+  the console is started with HDMI in; they lay on their side. After a
+  switch of screens they still show nothing on the other one
+  (KNOWN-ISSUES.md, "The Options tools on a TV").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

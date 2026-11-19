@@ -861,6 +861,33 @@ back to `alsactl init`. That leaves the speaker's DAC at its -20 dB, which
 is what matters (a loud speaker on a nearly empty battery resets the
 console: "Smaller things").
 
+## The Options tools on a TV: on their side, or no picture (2026-11-19) — on their side fixed for 1.12
+
+Found by the owner: the text tools under Options (Wifi, Bluetooth and the
+rest: `dialog` on tty1) on a TV. The text console draws in a buffer the
+kernel's fbdev emulation makes once, at boot, for the output it finds:
+720x1280 for the panel, which `fbcon=rotate:1` (extlinux.conf) turns into
+landscape, or the TV's 1920x1080 with HDMI in at boot. The rotation comes from
+the kernel's command line, so it applied to the TV's buffer as well, and the
+tools came up turned by 90 degrees (seen through the HDMI grabber).
+
+**Fix, for a start with HDMI in:** `hdmi-test.sh` sets
+`/sys/class/graphics/fbcon/rotate_all` to 0 at boot when the buffer is
+landscape. Checked on the console: started with HDMI in, the buffer
+1920x1080, the rotation 0, the Wifi tool upright and centred on the TV. A
+start on the panel is left as it was (the buffer is portrait).
+
+**Not fixed: the other screen after a switch.** The buffer keeps its boot
+size. With a cable plugged in after a start on the panel, the 720x1280
+buffer is taller than the TV's 1080 lines, the console cannot be shown on
+HDMI (every plane off in `/sys/kernel/debug/dri/0/state`) and the tools run
+on a black TV; seen with the Wifi tool. A start with HDMI and the cable
+pulled should give the same on the panel, by the same cause (not tried).
+ES, the games and the ports are not affected: they set the mode themselves.
+This one needs the kernel: a buffer that fits both screens (1920x1280) and
+the console's size and rotation set at each switch, from
+`hdmi-hotplug.sh`, or the console made anew on hotplug.
+
 ## v10052026: the power button rebooted revision A boards — fixed in the kernel
 
 The bootloader v10052026 ships (`uboot-oc-stocktee-shmkept.img`) has the BL31
