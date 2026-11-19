@@ -861,7 +861,7 @@ back to `alsactl init`. That leaves the speaker's DAC at its -20 dB, which
 is what matters (a loud speaker on a nearly empty battery resets the
 console: "Smaller things").
 
-## The Options tools on a TV: on their side, or no picture (2026-11-19) — on their side fixed for 1.12
+## The Options tools on a TV: on their side, or no picture (2026-11-19) — fixed for 1.12
 
 Found by the owner: the text tools under Options (Wifi, Bluetooth and the
 rest: `dialog` on tty1) on a TV. The text console draws in a buffer the
@@ -871,22 +871,55 @@ landscape, or the TV's 1920x1080 with HDMI in at boot. The rotation comes from
 the kernel's command line, so it applied to the TV's buffer as well, and the
 tools came up turned by 90 degrees (seen through the HDMI grabber).
 
-**Fix, for a start with HDMI in:** `hdmi-test.sh` sets
-`/sys/class/graphics/fbcon/rotate_all` to 0 at boot when the buffer is
-landscape. Checked on the console: started with HDMI in, the buffer
-1920x1080, the rotation 0, the Wifi tool upright and centred on the TV. A
-start on the panel is left as it was (the buffer is portrait).
+The other screen, after a switch, showed no console at all. The buffer kept
+its boot size: with a cable plugged in after a start on the panel, the
+720x1280 buffer is taller than the TV's 1080 lines,
+`drm_client_modeset_probe()` drops every mode larger than the buffer, and the
+CRTC was left with no plane (every plane off in
+`/sys/kernel/debug/dri/0/state`): the tools ran on a black TV. The other way
+round the same, on the panel. ES, the games and the ports were not affected:
+they set the mode themselves.
 
-**Not fixed: the other screen after a switch.** The buffer keeps its boot
-size. With a cable plugged in after a start on the panel, the 720x1280
-buffer is taller than the TV's 1080 lines, the console cannot be shown on
-HDMI (every plane off in `/sys/kernel/debug/dri/0/state`) and the tools run
-on a black TV; seen with the Wifi tool. A start with HDMI and the cable
-pulled should give the same on the panel, by the same cause (not tried).
-ES, the games and the ports are not affected: they set the mode themselves.
-This one needs the kernel: a buffer that fits both screens (1920x1280) and
-the console's size and rotation set at each switch, from
-`hdmi-hotplug.sh`, or the console made anew on hotplug.
+**Fix, the rotation** (c229fdc, then with the kernel's change): the console
+is unrotated on the TV and rotated as the kernel's command line has it on the
+panel. `hdmi-test.sh` sets `/sys/class/graphics/fbcon/rotate_all` to 0 at
+boot with HDMI in, `hdmi-hotplug.sh` sets it at each switch, right after its
+debounce: before it waits for a game or tool to end, since the kernel moves
+the console at once when a tool holds the screen.
+
+**Fix, the size** (kernel 4fe802d4a, `CONFIG_DRM_FBDEV_MIN_WIDTH=1920` and
+`_HEIGHT=1280` in rg52mini_defconfig): the fbdev buffer is made 1920x1280,
+big enough for both screens, and after each hotplug the console takes the
+size of the output in use (`drm_fb_helper_follow_work()`, then
+`fbcon_fb_resized()` for every console on it). What programs read of fbdev
+stays as it was: the virtual size is the visible size, and
+`/sys/class/graphics/fb0/modes` shows only the mode found at boot, one line:
+`n64.sh`, `ppsspp.sh`, `pico8.sh`, `mvem.sh`, `mediaplayer.sh` and the daphne
+scripts read that file as the screen's size, and a second line would break
+them. Only the stride (7680 bytes, the buffer's width; a start on the panel
+had 2880) and the buffer's size (9.8 MB; 3.7 on a start on the panel, 8.3 on
+the TV) differ. PortMaster takes the size from DRM's connectors, not from
+fbdev.
+
+The first try kept the mode list closed instead. fbcon keeps each console's
+mode as a pointer into that list (`var_to_display()`), found none for the
+new size, and `fbcon_switch()` oopsed on the NULL at the first switch, with
+the console lock held: everything that opened a tty hung after it, and the
+console had to be rebooted through sysrq (the release kernel put back on p3
+first, over ssh). The kernel adds the new size to the list now, and
+`sysfs` shows only the oldest entry.
+
+Checked on the console (the output switched through the HDMI connector's
+`status`, off and detect, the cable staying in): started with HDMI in, the
+console moves to the panel (720x1280, rotation 1) and back (1920x1080,
+rotation 0), three times with ES holding the screen and both ways with the
+Wifi tool open; the tool upright on each screen (the HDMI grabber, kmsgrab),
+`modes` one line throughout, no oops or lockup, the same kernel errors as
+the release kernel. A tool that was open during the switch keeps its old
+layout on the new screen (`dialog` does not redraw on a resize); the next
+one fills it. A start on the panel with no cable was not tried on this
+kernel: it gives the state checked after a switch to the panel, but its boot
+logo was not seen.
 
 ## v10052026: the power button rebooted revision A boards — fixed in the kernel
 

@@ -526,9 +526,10 @@ In master for 1.12, not released yet (VERSION says 1.12):
   service before it was done. ES is now restarted at the end, through its
   own restart mark (KNOWN-ISSUES.md, "Fix Audio with HDMI in left the sound
   on the speaker").
-- The Options tools (Wifi, Bluetooth and the rest) are upright on a TV when
-  the console is started with HDMI in; they lay on their side. After a
-  switch of screens they still show nothing on the other one
+- The Options tools (Wifi, Bluetooth and the rest) show on a TV, upright,
+  and on the panel after a switch of screens: they lay on their side on a TV
+  the console was started with, and showed nothing on the other screen after
+  a switch. The kernel makes the console's buffer fit both screens
   (KNOWN-ISSUES.md, "The Options tools on a TV").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on

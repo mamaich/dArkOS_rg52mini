@@ -274,6 +274,16 @@ then resolved against the kernel tree and the linker vanished:
 Fixed — it is absolute now. It only ever bit when the toolchain was not
 installed system-wide in `/opt/toolchains`.
 
+**A kernel built by hand needs the image's compiler.** The image's kernel is
+built with Linaro GCC 6.3 from `prebuilts/` (`utils.sh` puts it first on
+`PATH`; `/proc/version` on the console names it). WSL also has Ubuntu's
+`aarch64-linux-gnu-gcc` 13: a plain `make` there regenerates `.config` with
+that compiler's options (pointer authentication, MTE, the shadow call stack)
+and rebuilds the whole kernel, a different one from the release's. For a test
+kernel put the Linaro `bin` first on `PATH` (under `sudo env PATH=...`, the
+tree's objects are root's) and diff `.config` against `.config.old` before
+building (2026-11-19).
+
 **A Windows reboot kills the build.** Everything else survives: the image, the
 caches, the mounts. If the build dies late, the mounts and loop devices are
 still in place and the remaining steps can be re-run by hand rather than

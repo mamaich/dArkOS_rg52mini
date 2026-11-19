@@ -30,6 +30,15 @@ for i in 1 2 3 4 5; do
   [ "$(hdmi)" = "$want" ] || exit 0
 done
 
+# The text console (the Options tools): unrotated on the TV, rotated on the panel as the
+# kernel's command line has it (fbcon=rotate:1). The kernel moves it to the new output and
+# gives it its size (CONFIG_DRM_FBDEV_MIN_WIDTH and _HEIGHT) as soon as nothing holds the
+# screen: at once when a tool from Options is open, which counts as busy below. So the
+# rotation is set here, before the wait; behind a game or ES the console is not shown.
+rot=$(sed -n 's/.*fbcon=rotate:\([0-3]\).*/\1/p' /proc/cmdline)
+[ "$want" = 1 ] && rot=0
+echo "${rot:-0}" > /sys/class/graphics/fbcon/rotate_all 2>/dev/null
+
 # EmulationStation stays alive while a game runs: the game is its child, and a
 # restart ends it with its unsaved progress.
 # The games started from Ports are not its children: the launchers run them in a

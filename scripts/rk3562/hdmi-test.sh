@@ -20,14 +20,11 @@ if [ "$HDMI_STATUS" == "connected" ]; then
     echo off | sudo tee /sys/class/drm/card0-DSI-1/status > /dev/null
 fi
 
-# The text console (the tools in Options: Wifi, Bluetooth and the rest) draws in the buffer
-# the kernel made for the screen it found at boot. The panel's is 720x1280, which
-# fbcon=rotate:1 (extlinux.conf) turns into landscape. With HDMI in at boot it is the TV's
-# 1920x1080, and that rotation put the tools on their side on the TV: a landscape buffer is
-# drawn unrotated. The buffer keeps its size until the next boot, so this is decided here,
-# once. (The other screen, after a cable is plugged in or pulled out, shows no console at
-# all: the buffer does not fit its mode.)
-read -r FB_W FB_H < <(tr ',' ' ' < /sys/class/graphics/fb0/virtual_size 2>/dev/null)
-if [ "${FB_W:-0}" -gt "${FB_H:-0}" ]; then
+# The text console (the tools in Options: Wifi, Bluetooth and the rest): fbcon=rotate:1 on the
+# kernel's command line turns it into landscape on the portrait panel; on a TV it is drawn
+# unrotated, or the tools lay on their side. The kernel gives the console the size of the
+# output in use (CONFIG_DRM_FBDEV_MIN_WIDTH and _HEIGHT); hdmi-hotplug.sh sets the rotation
+# again at each switch.
+if [ "$HDMI_STATUS" == "connected" ]; then
     echo 0 | sudo tee /sys/class/graphics/fbcon/rotate_all > /dev/null
 fi
