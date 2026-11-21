@@ -3612,7 +3612,35 @@ today's master; they were not looked at.
   the message says `ignored`. `cleanup_filesystem.sh` removes eatmydata while
   `LD_PRELOAD` still names it. The loader carries on with a real `fsync`.
 
-## J2ME: the freej2me core on the system OpenJDK 21 (since 1.7)
+## J2ME: both cores on the system OpenJDK 21 — not in the images from 1.7 to 1.11, fixed for 1.12
+
+**Found on 2026-11-21: the fix below never reached an image.** `finishing_touches-rk3562.sh`
+ran `patch-freej2me.py` and then, further down, copied `scripts/freej2me.sh`
+over it, the stock script. 1.11's `freej2me.sh` downloads JDK 11 for both
+cores, and the `freej2me` core dies on it with `UnsupportedClassVersionError`
+(class file 65); the J2ME list in `es_systems.cfg.rk3562`, the one the image
+installs, still offers `freej2me-plus` first (the reorder went into the
+`-64bit_Only` file only). The 1.7 check below was made on files edited on the
+console, not on a built image.
+
+**For 1.12:**
+- The patch runs after the copy.
+- It puts **both** cores on the image's OpenJDK 21. `freej2me-plus`'s jar is
+  built for Java 8 (`build_retroarch.sh`), so it runs there too, and neither
+  core downloads 197 MB over Wi-Fi any more.
+- The `freej2me-plus` core comes from rg503's build of 2026-11-17 (f4e04d7,
+  retroarch-cores 91b095c), taken alone in `build_retroarch.sh` as np2kai is;
+  the branch's head also has the parallel_n64 that draws no 3D. The core at
+  the pin (2025-10) with the current jar is what drew the white, torn picture.
+
+Checked on the console with MobileGame.jar (RehanSaeed/Shooter, MIT, MIDP 2.0),
+each change bound over the installed file: the stock script and the old core:
+the JDK 11 download, then nothing drawn in the window; the new core on JDK 11:
+the game's menu; the patched script, `freej2me` core: the menu at 43 fps;
+`freej2me-plus` with the new core on OpenJDK 21: in play at 60 fps, the
+picture right.
+
+The rest of this section is as written for 1.7:
 
 * **What was wrong.** The `freej2me` core runs `freej2me-lr.jar`, which is
   compiled for Java 21, but `/usr/local/bin/freej2me.sh` (upstream's) downloads

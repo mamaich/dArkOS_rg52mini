@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Run the freej2me core on the OpenJDK 21 that the image already has.
+"""Run both J2ME cores on the OpenJDK 21 that the image already has.
 
 usage: patch-freej2me.py PATH-TO-freej2me.sh
 
 The libretro core "freej2me" runs freej2me-lr.jar, which is compiled for Java
 21. Upstream's /usr/local/bin/freej2me.sh downloads Azul Zulu JDK 11 (197 MB,
 needs Wi-Fi) and runs the core on that, which dies with
-UnsupportedClassVersionError. For the "freej2me" core this patch uses
+UnsupportedClassVersionError. This patch uses
 /usr/lib/jvm/java-21-openjdk-arm64 instead, so nothing is downloaded, and it
 starts Java with -Dfile.encoding=ISO_8859_1: under Java 21 the default is
 UTF-8, which crashes some games (Prince of Persia: Warrior Within,
-ArrayIndexOutOfBounds 65533). The "freej2me-plus" core keeps the JDK 11 path.
+ArrayIndexOutOfBounds 65533). Since 2026-11-21 the "freej2me-plus" core runs
+on it too (its jar is built for Java 8, build_retroarch.sh; rg503's core of
+2026-11-17 played a test game there at 60 fps), so neither core downloads
+anything.
+
+finishing_touches-rk3562.sh must run this after it copies scripts/freej2me.sh:
+from 1.7 to 1.11 it ran before, and the copy put the stock script back.
 
 If the script is not the stock one, nothing is changed and the build goes on.
 The script falls back to the old behaviour when the OpenJDK 21 is not there.
@@ -29,9 +35,9 @@ EDITS = [
 
 # The freej2me core (freej2me-lr.jar) is compiled for Java 21 and fails on the
 # downloaded JDK 11 (UnsupportedClassVersionError). The image has OpenJDK 21: use
-# it for that core, no download.
+# it for both cores (freej2me-plus's jar is built for Java 8), no download.
 SYSJDK21=/usr/lib/jvm/java-21-openjdk-arm64
-if [ "$2" = "freej2me" ] && [ -x "$SYSJDK21/bin/java" ]; then USE_SYS21=1; fi'''),
+if { [ "$2" = "freej2me" ] || [ "$2" = "freej2me-plus" ]; } && [ -x "$SYSJDK21/bin/java" ]; then USE_SYS21=1; fi'''),
     ('if [[ $(ls -l /${directory}/j2me/jdk/bin/java > /dev/null 2>&1 && echo $?) != 0 ]]; then',
      'if [ -z "$USE_SYS21" ] && [[ $(ls -l /${directory}/j2me/jdk/bin/java > /dev/null 2>&1 && echo $?) != 0 ]]; then'),
     ('export PATH=/${directory}/j2me/jdk/bin:$PATH\nexport JAVA_HOME=/${directory}/j2me/jdk',
@@ -47,4 +53,4 @@ for old, _ in EDITS:
 for old, new in EDITS:
     s = s.replace(old, new, 1)
 open(path, 'w').write(s)
-print("freej2me.sh: the freej2me core now runs on the system OpenJDK 21")
+print("freej2me.sh: both J2ME cores now run on the system OpenJDK 21")

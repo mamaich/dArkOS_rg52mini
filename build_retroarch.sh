@@ -165,6 +165,13 @@ while read RETROARCH_CORE; do
     if [ "$CORE_REPO" != "master" ] && [ "$RETROARCH_CORE" == "np2kai" ]; then
       CORE_REF="e2a8f88be5"
     fi
+    # freej2me-plus: rg503's build of 2026-11-17 (f4e04d7), made for the jar
+    # build_retroarch.sh builds from the current release. The core at the pin
+    # drew a white, torn picture; this one plays (2026-11-21, docs/KNOWN-ISSUES.md,
+    # "J2ME"). Taken alone: the branch's head also has a parallel_n64 with no 3D.
+    if [ "$CORE_REPO" != "master" ] && [ "$RETROARCH_CORE" == "freej2me-plus" ]; then
+      CORE_REF="91b095ca6f60255b0d975f104378fea3e5bb7693"
+    fi
     wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REF"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
     if [ $? -eq 0 ]; then
       sudo unzip -o /dev/shm/"$RETROARCH_CORE"_libretro.so.zip -d Arkbuild/home/ark/.config/retroarch/cores/

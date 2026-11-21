@@ -549,13 +549,6 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
   done
 fi
 
-# J2ME: the freej2me core runs freej2me-lr.jar, built for Java 21, but freej2me.sh
-# downloads a JDK 11 for it. Run that core on the image's OpenJDK 21 instead
-# (docs/KNOWN-ISSUES.md, "J2ME"). Leaves freej2me.sh alone if it is not the stock one.
-sudo install -m 755 scripts/rk3562/patch-freej2me.py Arkbuild/home/ark/patch-freej2me.py
-call_chroot "[ -f /usr/local/bin/freej2me.sh ] && python3 /home/ark/patch-freej2me.py /usr/local/bin/freej2me.sh || true"
-sudo rm -f Arkbuild/home/ark/patch-freej2me.py
-
 # Various tools available through Options added here
 sudo mkdir -p Arkbuild/opt/system/Advanced
 sudo cp dArkOS_Tools/*.sh Arkbuild/opt/system/
@@ -781,6 +774,14 @@ sudo chroot Arkbuild/ bash -c "systemctl disable autosuspend"
 sudo cp scripts/keystroke.py Arkbuild/usr/local/bin/
 sudo cp scripts/b2.sh Arkbuild/usr/local/bin/
 sudo cp scripts/freej2me.sh Arkbuild/usr/local/bin/
+# J2ME: the freej2me core runs freej2me-lr.jar, built for Java 21, but freej2me.sh
+# downloads a JDK 11 for it. Run both cores on the image's OpenJDK 21 instead
+# (docs/KNOWN-ISSUES.md, "J2ME"). Leaves freej2me.sh alone if it is not the stock one.
+# Here, after the copy above: from 1.7 to 1.11 this ran earlier in the script, and
+# the copy put the stock freej2me.sh back over the patched one.
+sudo install -m 755 scripts/rk3562/patch-freej2me.py Arkbuild/home/ark/patch-freej2me.py
+call_chroot "[ -f /usr/local/bin/freej2me.sh ] && python3 /home/ark/patch-freej2me.py /usr/local/bin/freej2me.sh || true"
+sudo rm -f Arkbuild/home/ark/patch-freej2me.py
 sudo cp scripts/easyrpg.sh Arkbuild/usr/local/bin/
 sudo cp scripts/get_last_played.sh Arkbuild/usr/local/bin/
 sudo cp scripts/gx4000.sh Arkbuild/usr/local/bin/
