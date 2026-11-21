@@ -23,8 +23,17 @@ fi
 ARMSX2_REMOTE="https://github.com/ARMSX2/ARMSX2"
 # Pinned: upstream moves every day; a newer commit is a deliberate update
 # (patches checked, profile retrained).
-# 2.9.2 (ba68927, 2026-11-06), the owner's word of 2026-11-08 (the rule of
-# 2026-11-03: taken when no slower). With its profile (below), 3 rounds after
+# 2.9.5 (378e6bc, 2026-11-21), for 1.12 (the owner's word of 2026-11-21:
+# retrain the profile and compare again). With its profile (below), the image's
+# template settings, 3 rounds in play from the owner's savestates, the order
+# turned each round, against 2.9.2: God of War 51.20 / 51.07 / 51.20 against
+# 46.53 / 50.60 / 50.40, Jak 33.25 / 34.05 / 34.35 against 33.05 / 33.75 /
+# 33.50 (+1.3% in both without 2.9.2's first God of War run; ahead in all six
+# pairs); with 2.9.2's profile it was 4-5% slower. Patch 0003 is ported to
+# upstream's rewritten clear loops; the other patches apply as they are, and
+# it looks up every key of our PCSX2.ini as 2.9.2 does.
+# Before: 2.9.2 (ba68927, 2026-11-06), the owner's word of 2026-11-08 (the rule of
+# 2026-11-03: taken when no slower). With its profile, 3 rounds after
 # a warm-up against 1.7's 1049db37: Jak from the owner's savestate 35.7 / 34.5
 # / 35.1 against 35.1 / 35.2 / 35.1 (level), Burnout 3 from boot 37.6 / 37.5 /
 # 37.0 against 36.5 / 36.8 / 36.9 (+1.7%); with 1.7's profile Jak was 9%
@@ -32,24 +41,27 @@ ARMSX2_REMOTE="https://github.com/ARMSX2/ARMSX2"
 # same keys as 1049db37. Before: master of 2026-11-04 (1049db37, 1.7), from
 # the owner's savestates against 1.6's f6df1e69: God of War within the
 # spread, Jak +7%, Guitar Hero +1%, Burnout 3 +0.5%.
-ARMSX2_COMMIT="ba6892742e357085897d0a151bd8e40485dda968"
+ARMSX2_COMMIT="378e6bce00345886eb3f42851f8d8c8e7c29a99f"
 PCSX2_SRC="Arkbuild/home/ark/armsx2"
 PCSX2_BUILD="/home/ark/armsx2/build-${UNIT}"
-# Profile for clang's profile-guided optimisation: 1.7's (below) merged, at
-# about the same total count, with the commit above, instrumented with our
-# patches, on an RG52 Mini (2026-11-08): Jak (200 s) and the God of War demo
-# (120 s) from the owner's savestates, the Burnout 3 demo from boot (120 s).
-# clang takes for each function the record that fits its code, so what
-# upstream changed gets the new runs. llvm-profdata warns "invalid profile
-# created" on the merge, as it did for Guitar Hero's run before; the profile
-# reads whole (29276 functions). 1.7's: 1.6's (a7ad453's runs of 2026-10-20/21
+# Profile for clang's profile-guided optimisation: 2.9.2's (below) merged, at
+# about the same total count (the new runs weighted 799), with the commit
+# above, instrumented with our patches, on an RG52 Mini (2026-11-21): Jak (200
+# s) and the God of War demo (120 s) from the owner's savestates, the Burnout 3
+# demo from boot (120 s), on the image's template settings. clang takes for
+# each function the record that fits its code, so what upstream changed gets
+# the new runs. llvm-profdata warns "invalid profile created" on the merge, as
+# it did each time before; the profile reads whole (30262 functions). Made
+# with ~/rg52/sess19/oe/armsx2-train.sh and armsx2-merge.sh.
+# 2.9.2's (2026-11-08): 1.7's merged the same way with ba68927 instrumented,
+# the same three runs (29276 functions). 1.7's: 1.6's (a7ad453's runs of 2026-10-20/21
 # merged with f6df1e69's of 2026-11-03) merged with 1049db37 instrumented,
 # from boot: Jak (200 s), Guitar Hero and Burnout 3 (120 s each), 2026-11-05;
 # with 1.6's profile alone 1049db37 was 2% slower in God of War and 1.5% in
 # Burnout 3.  Its file-local functions are named by the path of their source,
 # so it is made for this tree at /home/ark/armsx2, where the chroot builds it.
-PGO="pcsx2/pgo/armsx2-20261108.profdata.gz"
-PGO_SHA256="adb772c76647ca1e50afe28a84b4f063002d316fe897a89064c75da817c3128a"
+PGO="pcsx2/pgo/armsx2-20261121.profdata.gz"
+PGO_SHA256="e48c6de30beab0b93cb1d82b217875f12b612f9388c85e72f90864eb4efd67bb"
 
 if [ ! -d "Arkbuild_package_cache/${CHIPSET}" ]; then
   mkdir -p "Arkbuild_package_cache/${CHIPSET}"

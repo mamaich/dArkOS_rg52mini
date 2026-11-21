@@ -14,12 +14,16 @@ kilobyte before they reach it (PRFM PSTL1KEEP). On an RG52 Mini, clearing a
 same in every case. In God of War the function fell from 3.9% to 2.8% of all
 samples.
 
+Ported to ARMSX2 2.9.5 (2026-11-21): upstream's KeepMaskedBits (one BIF) and
+its unrolled 32- and 24-bit loops are kept; the run calls KeepMaskedBits, with
+the same prefetch, so each word written is upstream's.
+
 diff --git a/pcsx2/GS/Renderers/HW/GSRendererHW.cpp b/pcsx2/GS/Renderers/HW/GSRendererHW.cpp
-index 803f32d..6ee5b44 100644
+index afcdba7..d9d65f6 100644
 --- a/pcsx2/GS/Renderers/HW/GSRendererHW.cpp
 +++ b/pcsx2/GS/Renderers/HW/GSRendererHW.cpp
-@@ -12171,6 +12171,29 @@ bool GSRendererHW::TryGSMemClear(bool no_rt, bool preserve_rt, bool invalidate_r
- 	return ((invalidate_rt || no_rt) && (invalidate_z || no_ds));
+@@ -12723,6 +12723,29 @@ static __fi GSVector4i KeepMaskedBits(const GSVector4i& old, const GSVector4i& m
+ #endif
  }
  
 +// The masked and 24-bit clears below read, mask and write back whole pages of GS memory, which
@@ -32,15 +36,15 @@ index 803f32d..6ee5b44 100644
 +	while (end - ptr >= 4)
 +	{
 +		__builtin_prefetch(ptr + ahead, 1, 3);
-+		ptr[0] = (ptr[0] & mask) | vcolor;
-+		ptr[1] = (ptr[1] & mask) | vcolor;
-+		ptr[2] = (ptr[2] & mask) | vcolor;
-+		ptr[3] = (ptr[3] & mask) | vcolor;
++		ptr[0] = KeepMaskedBits(ptr[0], mask, vcolor);
++		ptr[1] = KeepMaskedBits(ptr[1], mask, vcolor);
++		ptr[2] = KeepMaskedBits(ptr[2], mask, vcolor);
++		ptr[3] = KeepMaskedBits(ptr[3], mask, vcolor);
 +		ptr += 4;
 +	}
 +	while (ptr != end)
 +	{
-+		*ptr = (*ptr & mask) | vcolor;
++		*ptr = KeepMaskedBits(*ptr, mask, vcolor);
 +		ptr++;
 +	}
 +}
@@ -48,33 +52,39 @@ index 803f32d..6ee5b44 100644
  void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r, u32 vert_color)
  {
  	GL_INS("HW: ClearGSLocalMemory(): %08X %d,%d => %d,%d @ BP %x BW %u %s", vert_color, r.x, r.y, r.z, r.w, off.bp(),
-@@ -12211,11 +12234,7 @@ void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r,
+@@ -12777,14 +12800,7 @@ void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r,
  				GSVector4i* const ptr_end = ptr + iterations_per_page;
  				if (drawing_mask)
  				{
+-#if defined(__clang__)
+-#pragma clang loop unroll_count(4)
+-#endif
 -					while (ptr != ptr_end)
 -					{
--						*ptr = (*ptr & mask) | vcolor;
+-						*ptr = KeepMaskedBits(*ptr, mask, vcolor);
 -						ptr++;
 -					}
 +					ClearGSLocalMemoryMaskedRun(ptr, ptr_end, mask, vcolor);
  				}
  				else
  				{
-@@ -12236,11 +12255,7 @@ void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r,
+@@ -12805,14 +12821,7 @@ void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r,
  				m_mem.MarkPageRangeWritten(current_page, pages_wide);
  				GSVector4i* ptr = reinterpret_cast<GSVector4i*>(m_mem.vm8() + current_page * GS_PAGE_SIZE);
  				GSVector4i* const ptr_end = ptr + iterations_per_page;
+-#if defined(__clang__)
+-#pragma clang loop unroll_count(4)
+-#endif
 -				while (ptr != ptr_end)
 -				{
--					*ptr = (*ptr & mask) | vcolor;
+-					*ptr = KeepMaskedBits(*ptr, mask, vcolor);
 -					ptr++;
 -				}
 +				ClearGSLocalMemoryMaskedRun(ptr, ptr_end, mask, vcolor);
  			}
  		}
  		else if (format == GSLocalMemory::PSM_FMT_16)
-@@ -12261,11 +12276,7 @@ void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r,
+@@ -12836,11 +12845,7 @@ void GSRendererHW::ClearGSLocalMemory(const GSOffset& off, const GSVector4i& r,
  				GSVector4i* const ptr_end = ptr + iterations_per_page;
  				if (converted_mask)
  				{

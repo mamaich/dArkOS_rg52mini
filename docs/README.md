@@ -541,7 +541,8 @@ In master for 1.12, not released yet (VERSION says 1.12):
   for it had been overwritten in every image since (KNOWN-ISSUES.md, "J2ME").
 - Emulators updated: DSperate 3.5.0 (DS, a third less CPU), armGBA 1.8.1,
   armN64 1.4.1, zeebx 0.6.0, Dolphin and the second RetroArch from their
-  masters of 2026-11-21 (TODO.md, "Upstream updates for 1.12").
+  masters of 2026-11-21, ARMSX2 2.9.5 with a profile retrained for it (PS2,
+  about 1% faster than 2.9.2) (TODO.md, "Upstream updates for 1.12").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

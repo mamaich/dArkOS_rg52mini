@@ -156,24 +156,35 @@ clears). The ND Demo: 50.27/49.40 fps against 50.33/50.20, the same picture.
 patches apply with offsets. GBA, SNES, Mega Drive, FBNeo, PS1 and GBC at 60
 fps with both, the same CPU and pictures.
 
+**ARMSX2: 2.9.2 (ba68927) -> 2.9.5 (378e6bc)**, with a profile of its own
+(the owner, 2026-11-21: retrain and compare again). Our patch 0003 (the GS
+clear's prefetch) did not apply, as upstream rewrote those loops with one BIF
+and an unroll; ported, the run calling upstream's KeepMaskedBits, so each word
+written is upstream's. The other patches apply as they are; every key of our
+PCSX2.ini template is looked up as in 2.9.2 (the config changes: the GS device
+reopened with the vsync mode asked for, smaller GIF buffers below 2 GiB of
+RAM). With 2.9.2's profile it was 4-5% slower (Jak 32.45/32.05 against
+32.85/34.20, God of War 46.20/46.33 against 47.33/50.00). The profile
+(`pcsx2/pgo/armsx2-20261121.profdata.gz`): the instrumented build on the
+console (the test kernel of the charger fix, the same otherwise), Jak 200 s
+and God of War 120 s from the owner's savestates, Burnout 3 120 s from boot,
+merged with 2.9.2's at equal totals (`~/rg52/sess19/oe/armsx2-train.sh`,
+`armsx2-merge.sh`). Then 3 rounds, the order turned each round, in play:
+God of War 51.20 / 51.07 / 51.20 against 46.53 / 50.60 / 50.40, Jak 33.25 /
+34.05 / 34.35 against 33.05 / 33.75 / 33.50: ahead in all six pairs, +1.3% in
+both without 2.9.2's first God of War run. No crash lines, no GPU fault.
+
+**freej2me-plus**: rg503's core of 2026-11-17 (see KNOWN-ISSUES, J2ME), with
+the J2ME fix of 581027a.
+
 **Not taken:**
-- ARMSX2 2.9.5 (378e6bc): our patch 0003 (the GS clear's prefetch) did not
-  apply, as upstream rewrote those loops with one BIF and an unroll; ported
-  (kept in `~/rg52/sess19/oe/pcsx2-0003-gs-clear-prefetch.295.patch`, the run
-  calling upstream's KeepMaskedBits). With 2.9.2's profile, template settings,
-  2 rounds: Jak in play 32.45/32.05 against 32.85/34.20 (-3.8%), God of War
-  46.20/46.33 against 47.33/50.00 (-4.9%). A stale profile costs 2-4%, and
-  2.9.3 with its own profile was still 1-1.5% behind 2.9.2, so no gain is in
-  sight; the owner's rule for ARMSX2 is speed only. A profile of its own was
-  not trained.
 - GameTank after acc608a: only the compatibility header for an older glibc.
 - christianhaitian's core builds since f24bc2a: azahar 034 is ours already;
   armn64.sh is his take of ours; the miniloong Vulkan menu patch and the HDMI
   audio retry (6bd22be) were dropped before; parallel-n64 with Vulkan
   (2235aef) is the rg503 build that draws no 3D here; freej2me-plus's patches
   follow the head the image does not build (the core comes from rg503's zips,
-  the jar from build_retroarch.sh), and its new rg503 core was not tried: no
-  J2ME game on the card.
+  the jar from build_retroarch.sh); its new rg503 core is taken alone (above).
 - openMSX 22 and OpenBOR (not wanted), SDL2 2.32.x after 2.32.10 (no release).
 
 ## Upstream updates for 1.11 (2026-11-18, the owner: take the ones proposed; released 2026-11-19)
