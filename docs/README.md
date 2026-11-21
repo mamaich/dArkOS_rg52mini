@@ -536,6 +536,9 @@ In master for 1.12, not released yet (VERSION says 1.12):
   `width = 640`, `height = 480`: its window is then 640x480, the size its own
   cursor is drawn for. SDL kept the panel's mode for a window sized before it
   was shown (KNOWN-ISSUES.md, "OpenEnroth (Might and Magic VII)").
+- Emulators updated: DSperate 3.5.0 (DS, a third less CPU), armGBA 1.8.1,
+  armN64 1.4.1, zeebx 0.6.0, Dolphin and the second RetroArch from their
+  masters of 2026-11-21 (TODO.md, "Upstream updates for 1.12").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

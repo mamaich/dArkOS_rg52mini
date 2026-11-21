@@ -112,6 +112,70 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
+## Upstream updates for 1.12 (2026-11-21, the owner: take the light ones, armN64, zeebx, and the heavy ones if nothing gets worse)
+
+The check of 2026-11-21 13:43 (`report-20261121-1343.txt`). Each built in the
+test chroot (`cb.sh`) and tried on the owner's dual-boot card (1.11 with the
+hand installs of 2026-11-19/21), the new binary bound over the image's for its
+runs, old and new alternating, each run after the SoC cooled below 62 C
+(`~/rg52/sess19/oe/ab-core.sh`):
+
+**armGBA: a06ea8c (v1.8) -> df6b263 (v1.8.1)**, a timer interrupt fix. Apotris:
+60.00 fps with both, the CPU 9% of the four cores against 8%.
+
+**DSperate: 0688b41 -> 3a2bcd2 (v3.5.0)**, 17 commits: GPU 3D at 1x/2x/4x, the
+RGA present removed, PGO profiles refreshed. Diddy Kong Racing DS: 59.87 fps
+with both, the CPU 18% against 29% (the main thread 34% against 56-60%, each
+2D engine 7% against 14%). **Its picture came out upside down**: the new KMS
+sink turns the picture itself where SDL reports the panel turned, by 270
+unless `DS_ROTATE` says otherwise (upstream ec5ba05, written for ArkOS's
+rotate patch and not run on such a device). `nds.sh` sets `DS_ROTATE=90` on
+the RG52 Mini's panel, not with a TV connected (a landscape mode, nothing to
+turn); with it upright, 59.8 fps, 19%. Not tried on a TV.
+
+**armN64: c5c1a4c (v1.3) -> 10141db (v1.4.1)**, 25 commits: the GL renderer on
+Vulkan for Vulkan frontends, an HLE texture-rectangle fix. Our two patches
+apply with offsets. RetroArch's gl driver, as the image has it: Zelda's title
+59.73 -> 59.80, AeroGauge 60.00 -> 60.00, Air Boarder 50.33 -> 50.40, the same
+CPU, the 3D drawn.
+
+**zeebx: v0.5.1 -> v0.6.0.** Upstream translated the libretro frontend and the
+core from Portuguese to English (b4f71a8), and neither of our patches applied.
+Both are ported to the new names with the logic unchanged (0001: the CPU's
+frame blitted into the frontend's framebuffer on the GPU path; 0002: row-wise
+transforms and media polling every half millisecond). Upstream has not fixed
+the black 2D frames itself: in GPU mode it still delivers only the sentinel.
+Action Hero 3D: 22.73/22.87 fps against 22.67/23.00, the opening's 2D layers
+drawn over the 3D.
+
+**Dolphin: db2afcb -> b2c2c21** (master, 97 commits: the JIT's icache
+invalidated only on dcbf, interpreter carry fixes, AX surround, faster EFB/XFB
+clears). The ND Demo: 50.27/49.40 fps against 50.33/50.20, the same picture.
+
+**retroarch-next: 62eeee4 -> 4c5d1de** (master of 2026-11-21). The twelve
+patches apply with offsets. GBA, SNES, Mega Drive, FBNeo, PS1 and GBC at 60
+fps with both, the same CPU and pictures.
+
+**Not taken:**
+- ARMSX2 2.9.5 (378e6bc): our patch 0003 (the GS clear's prefetch) did not
+  apply, as upstream rewrote those loops with one BIF and an unroll; ported
+  (kept in `~/rg52/sess19/oe/pcsx2-0003-gs-clear-prefetch.295.patch`, the run
+  calling upstream's KeepMaskedBits). With 2.9.2's profile, template settings,
+  2 rounds: Jak in play 32.45/32.05 against 32.85/34.20 (-3.8%), God of War
+  46.20/46.33 against 47.33/50.00 (-4.9%). A stale profile costs 2-4%, and
+  2.9.3 with its own profile was still 1-1.5% behind 2.9.2, so no gain is in
+  sight; the owner's rule for ARMSX2 is speed only. A profile of its own was
+  not trained.
+- GameTank after acc608a: only the compatibility header for an older glibc.
+- christianhaitian's core builds since f24bc2a: azahar 034 is ours already;
+  armn64.sh is his take of ours; the miniloong Vulkan menu patch and the HDMI
+  audio retry (6bd22be) were dropped before; parallel-n64 with Vulkan
+  (2235aef) is the rg503 build that draws no 3D here; freej2me-plus's patches
+  follow the head the image does not build (the core comes from rg503's zips,
+  the jar from build_retroarch.sh), and its new rg503 core was not tried: no
+  J2ME game on the card.
+- openMSX 22 and OpenBOR (not wanted), SDL2 2.32.x after 2.32.10 (no release).
+
 ## Upstream updates for 1.11 (2026-11-18, the owner: take the ones proposed; released 2026-11-19)
 
 **Released as 1.11 on 2026-11-19**: build 20261118214530, from ee61fce (tag
