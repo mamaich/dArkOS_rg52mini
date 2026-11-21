@@ -8,9 +8,20 @@ pass that already rotates every frame scales it onto the panel, keeping
 the aspect ratio (black bars for 4:3). The panel's mode does not change.
 SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
 
---- a/src/video/kmsdrm/SDL_kmsdrmopengles.c	2026-10-07 21:12:21.195644294 +0300
-+++ b/src/video/kmsdrm/SDL_kmsdrmopengles.c	2026-10-07 21:12:21.207640474 +0300
-@@ -159,6 +159,9 @@
+A window not shown yet keeps the size the app gives it with
+SDL_SetWindowSize: KMSDRM makes every window that is not fullscreen the
+size of the screen, and the resize event it sends then overwrote the
+windowed size, so a later SDL_SetWindowFullscreen(SDL_WINDOW_FULLSCREEN)
+with no display mode of its own got the panel's mode instead of the one
+asked for. OpenEnroth makes its window hidden, sizes it, goes fullscreen
+and shows it; with the panel's mode its own GL cursor was drawn away from
+where clicks land.
+
+diff --git a/src/video/kmsdrm/SDL_kmsdrmopengles.c b/src/video/kmsdrm/SDL_kmsdrmopengles.c
+index 92b896e1f..73d39dc02 100644
+--- a/src/video/kmsdrm/SDL_kmsdrmopengles.c
++++ b/src/video/kmsdrm/SDL_kmsdrmopengles.c
+@@ -159,6 +159,9 @@ int KMSDRM_GLES_SwapWindow(_THIS, SDL_Window *window)
              close(src_info.fd);
          }
          src_info.fd = KMSDRM_gbm_bo_get_fd(windata->next_bo);
@@ -20,9 +31,11 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
          dst_info.fd = viddata->rga_buffer_prime_fds[viddata->rga_buffer_index];
          if (c_RkRgaBlit(&src_info, &dst_info, NULL) < 0) {
              SDL_LogError(SDL_LOG_CATEGORY_VIDEO,
---- a/src/video/kmsdrm/SDL_kmsdrmvideo.c	2026-10-07 21:12:21.195644294 +0300
-+++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c	2026-10-07 21:12:21.207640474 +0300
-@@ -337,6 +337,58 @@
+diff --git a/src/video/kmsdrm/SDL_kmsdrmvideo.c b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+index 3eaa93d3d..a245cd631 100644
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.c
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.c
+@@ -337,6 +337,58 @@ static void KMSDRM_FBDestroyCallback(struct gbm_bo *bo, void *data)
      SDL_free(fb_info);
  }
  
@@ -81,7 +94,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  static void
  KMSDRM_InitRotateBuffer(_THIS, int frameWidth, int frameHeight)
  {
-@@ -375,6 +427,16 @@
+@@ -375,6 +427,16 @@ KMSDRM_InitRotateBuffer(_THIS, int frameWidth, int frameHeight)
      dst_info.mmuFlag = 1;
  
      rga_set_rect(&dst_info.rect, 0, 0, frameWidth, frameHeight, frameWidth, frameHeight, RK_FORMAT_BGRA_8888);
@@ -98,7 +111,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  }
  
  KMSDRM_FBInfo *KMSDRM_FBFromBO(_THIS, struct gbm_bo *bo)
-@@ -545,9 +607,20 @@
+@@ -545,9 +607,20 @@ SDL_bool KMSDRM_WaitPageflip(_THIS, SDL_WindowData *windata)
     available on the DRM connector of the display.
     We use the SDL mode list (which we filled in KMSDRM_GetDisplayModes)
     because it's ordered, while the list on the connector is mostly random.*/
@@ -119,7 +132,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  
      SDL_DisplayData *dispdata = (SDL_DisplayData *)display->driverdata;
      drmModeConnector *connector = dispdata->connector;
-@@ -566,6 +639,10 @@
+@@ -566,6 +639,10 @@ static drmModeModeInfo *KMSDRM_GetClosestDisplayMode(SDL_VideoDisplay *display,
      } else {
          SDL_DisplayModeData *modedata = (SDL_DisplayModeData *)closest.driverdata;
          drm_mode = &connector->modes[modedata->mode_index];
@@ -130,7 +143,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
          return drm_mode;
      }
  }
-@@ -1258,6 +1335,25 @@
+@@ -1258,6 +1335,25 @@ static void KMSDRM_GetModeToSet(SDL_Window *window, drmModeModeInfo *out_mode)
      }
  }
  
@@ -156,7 +169,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  static void KMSDRM_DirtySurfaces(SDL_Window *window)
  {
      SDL_WindowData *windata = (SDL_WindowData *)window->driverdata;
-@@ -1272,12 +1366,9 @@
+@@ -1272,12 +1368,9 @@ static void KMSDRM_DirtySurfaces(SDL_Window *window)
         recreation is deferred */
      KMSDRM_GetModeToSet(window, &mode);
      {
@@ -172,7 +185,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
      }
  }
  
-@@ -1296,6 +1387,7 @@
+@@ -1296,6 +1389,7 @@ int KMSDRM_CreateSurfaces(_THIS, SDL_Window *window)
      EGLContext egl_context;
  
      int ret = 0;
@@ -180,7 +193,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  
      /* If the current window already has surfaces, destroy them before creating other. */
      if (windata->gs) {
-@@ -1312,25 +1404,22 @@
+@@ -1312,25 +1406,22 @@ int KMSDRM_CreateSurfaces(_THIS, SDL_Window *window)
         SDL_video.c expects. Hulk-smash the display's current_mode to keep the
         mode that's set in sync with what SDL_video.c thinks is set */
      KMSDRM_GetModeToSet(window, &dispdata->mode);
@@ -218,7 +231,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
      }
  
      if (!windata->gs) {
-@@ -1353,13 +1442,7 @@
+@@ -1353,13 +1444,7 @@ int KMSDRM_CreateSurfaces(_THIS, SDL_Window *window)
      egl_context = (EGLContext)SDL_GL_GetCurrentContext();
      ret = SDL_EGL_MakeCurrent(_this, windata->egl_surface, egl_context);
  
@@ -233,7 +246,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  
      windata->egl_surface_dirty = SDL_FALSE;
  
-@@ -1509,6 +1592,39 @@
+@@ -1509,6 +1594,39 @@ void KMSDRM_GetDisplayModes(_THIS, SDL_VideoDisplay *display)
          if (!SDL_AddDisplayMode(display, &mode)) {
              SDL_free(modedata);
          }
@@ -273,7 +286,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
      }
  }
  
-@@ -1535,6 +1651,8 @@
+@@ -1535,6 +1653,8 @@ int KMSDRM_SetDisplayMode(_THIS, SDL_VideoDisplay *display, SDL_DisplayMode *mod
      /* Take note of the new mode to be set, and leave the CRTC modeset pending
         so it's done in SwapWindow. */
      dispdata->fullscreen_mode = conn->modes[modedata->mode_index];
@@ -282,7 +295,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  
      for (i = 0; i < viddata->num_windows; i++) {
          KMSDRM_DirtySurfaces(viddata->windows[i]);
-@@ -1722,8 +1840,11 @@
+@@ -1722,8 +1842,11 @@ int KMSDRM_CreateWindow(_THIS, SDL_Window *window)
             are considered "windowed" at this point of their life.
             If a window is fullscreen, SDL internals will call
             KMSDRM_SetWindowFullscreen() to reconfigure it if necessary. */
@@ -296,9 +309,33 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  
          if (mode) {
              dispdata->fullscreen_mode = *mode;
---- a/src/video/kmsdrm/SDL_kmsdrmvideo.h	2026-10-07 21:12:21.195644294 +0300
-+++ b/src/video/kmsdrm/SDL_kmsdrmvideo.h	2026-10-07 21:12:21.199643021 +0300
-@@ -100,12 +100,19 @@
+@@ -1838,7 +1961,21 @@ void KMSDRM_SetWindowSize(_THIS, SDL_Window *window)
+ {
+     SDL_VideoData *viddata = ((SDL_VideoData *)_this->driverdata);
+     if (!viddata->vulkan_mode) {
++        /* Scaled modes: a window that is not fullscreen always has the size of
++           the screen, and the resize event DirtySurfaces sends makes SDL take
++           that for its windowed size as well. A window not shown yet keeps
++           the size the app asked for there: going to exclusive fullscreen
++           afterwards with no display mode of its own then gets the mode of
++           that size, as on a desktop, and as a window created fullscreen
++           gets it. OpenEnroth makes its window hidden at 100x100, sizes it
++           to 640x480, goes fullscreen, then shows it. */
++        int w = window->windowed.w, h = window->windowed.h;
++
+         KMSDRM_DirtySurfaces(window);
++        if ((window->flags & (SDL_WINDOW_HIDDEN | SDL_WINDOW_FULLSCREEN)) == SDL_WINDOW_HIDDEN) {
++            window->windowed.w = w;
++            window->windowed.h = h;
++        }
+     }
+ }
+ void KMSDRM_SetWindowFullscreen(_THIS, SDL_Window *window, SDL_VideoDisplay *display, SDL_bool fullscreen)
+diff --git a/src/video/kmsdrm/SDL_kmsdrmvideo.h b/src/video/kmsdrm/SDL_kmsdrmvideo.h
+index aa8f5498f..dc4ae5bb4 100644
+--- a/src/video/kmsdrm/SDL_kmsdrmvideo.h
++++ b/src/video/kmsdrm/SDL_kmsdrmvideo.h
+@@ -100,12 +100,19 @@ typedef struct SDL_VideoData
      int rga_buffer_prime_fds[RGA_BUFFERS_MAX];
      int rga_buffer_index;
      SDL_bool rga_rotation_active;
@@ -318,7 +355,7 @@ SDL_KMSDRM_SCALED_MODES=0 leaves the modes out.
  } SDL_DisplayModeData;
  
  typedef struct SDL_DisplayData
-@@ -115,6 +122,8 @@
+@@ -115,6 +122,8 @@ typedef struct SDL_DisplayData
      drmModeModeInfo mode;
      drmModeModeInfo original_mode;
      drmModeModeInfo fullscreen_mode;

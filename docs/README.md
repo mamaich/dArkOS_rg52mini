@@ -531,6 +531,11 @@ In master for 1.12, not released yet (VERSION says 1.12):
   the console was started with, and showed nothing on the other screen after
   a switch. The kernel makes the console's buffer fit both screens
   (KNOWN-ISSUES.md, "The Options tools on a TV").
+- OpenEnroth (PortMaster's Might and Magic VII): clicks land under the
+  cursor once the game's `openenroth.ini` has `mode = fullscreen`,
+  `width = 640`, `height = 480`: its window is then 640x480, the size its own
+  cursor is drawn for. SDL kept the panel's mode for a window sized before it
+  was shown (KNOWN-ISSUES.md, "OpenEnroth (Might and Magic VII)").
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

@@ -921,6 +921,70 @@ one fills it. A start on the panel with no cable was not tried on this
 kernel: it gives the state checked after a switch to the panel, but its boot
 logo was not seen.
 
+## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
+
+Seen by the owner with PortMaster's OpenEnroth port and a Russian CD copy of
+the game: the cursor moved, the intro could be skipped, but a click on a menu
+button did nothing. The port (ben-willmore/OpenEnroth, branch `portmaster`)
+draws a cursor of its own: its script sets `USE_GL_CURSOR=true` on every
+firmware but ROCKNIX, and `OpenGLRenderer::drawGLCursor()` takes
+`SDL_GetMouseState()`, in the window's pixels, and draws it into the game's
+640x480 frame before that frame is scaled to the window. Clicks go through
+`GameWindowHandler::MapToRender()`, which takes the scale and the bars off.
+In a 1280x720 window the drawn cursor was 1.5 times as far from the corner as
+the point that clicks, and 160 pixels (the bar) further right: moved to where
+"New Game" is in the window's pixels, the button lit up and a click started
+the game, with the drawn cursor off the screen. On a 640x480 screen the two
+agree, so the port is fine there. The system cursor is no way out: the RK3562
+has no cursor plane for SDL (`drmModeMoveCursor() failed`), so without the GL
+cursor there is none.
+
+With a 640x480 window they agree here too. `sdl2-patch-0008` (scaled modes)
+has 640x480 in exclusive fullscreen, and the game's `[window] mode =
+fullscreen` asks for it, but it got 1280x720. OpenEnroth makes its window
+hidden at 100x100, sizes it to 640x480, goes fullscreen and only then shows
+it. KMSDRM makes a window that is not fullscreen the size of the screen, and
+the resize event it sends from `SDL_SetWindowSize` overwrote the windowed
+size SDL keeps; fullscreen with no display mode of its own then takes that
+size, the panel's. 0008 now keeps the size the app gives a window not shown
+yet (`KMSDRM_SetWindowSize`), as SDL does on a desktop and as a window
+created fullscreen already got it. A window shown or windowed is as before.
+
+**To play:** in `ports/openenroth/conf/openenroth.ini`, `[window]`, set
+`mode = fullscreen`, `width = 640`, `height = 480`. The port's default,
+`windowed`, still gets a 1280x720 window and the offset cursor. The game
+writes its window's size back at exit, so one run in a 1280x720 window (with
+the old SDL, or windowed) leaves `width = 1280`, `height = 720` there, and
+fullscreen then asks for the panel's mode: seen on the owner's card. The
+port's own fix would be to map the mouse position in `drawGLCursor()` back
+the way `MapToRender()` does; not reported upstream.
+
+Checked on the console. A probe making OpenEnroth's calls through ctypes:
+1280x720 with the image's SDL, 640x480 with the new one; windowed 1280x720 with
+both. OpenEnroth with `mode = fullscreen`: the cursor on "New Game" lights it
+and a click opens the party creation, a click on "Paladin" changes the
+class. The SDL built alone (BUILDING.md) is byte-identical to the image's
+without the change; with it, `.text` is 64 bytes longer.
+
+Nothing else moved. With the new library the smoke set's SDL games ran at
+1.11's rates (ARMSX2, DraStic, DSperate, PPSSPP, RetroArch's 64-bit cores,
+Flycast, YabaSanshiro, linapple, Mina the Hollower). Only the 64-bit library
+was rebuilt for this; the 32-bit one, which RetroArch32 uses, gets the patch
+at the next build, not tried. Old against new
+on the same console, the image's library bound over the new one for the old
+runs, frames a second: YabaSanshiro 59.3 against 58.9 and 59.1, GTA 3 (re3)
+26.4 against 30.0, Doom 3 59.8 and 59.8 against 59.7 and 59.7 (each run
+after the SoC cooled to 62 C), Need for Speed Underground 27.6 (filling an
+empty shader cache) and 30.0 against 30.0 and 30.0; the same picture each
+time. The owner checked the mouse in OpenEnroth.
+
+A trap of the A/B: the bind of the old library over the new one could not be
+taken off while gptokeyb still mapped it ("target is busy"), and the next
+run, and ES restarted after it, got the old SDL. The owner's OpenEnroth then
+ran on the old one and wrote 1280x720 into its ini. Kill gptokeyb before the
+umount, fall back to `umount -l`, and check the library's checksum after
+each run.
+
 ## v10052026: the power button rebooted revision A boards — fixed in the kernel
 
 The bootloader v10052026 ships (`uboot-oc-stocktee-shmkept.img`) has the BL31

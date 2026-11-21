@@ -284,6 +284,20 @@ kernel put the Linaro `bin` first on `PATH` (under `sudo env PATH=...`, the
 tree's objects are root's) and diff `.config` against `.config.old` before
 building (2026-11-19).
 
+**libSDL2 alone, for a test.** The image's 64-bit SDL can be rebuilt
+byte-identical without an image build: SDL at the commit in
+`rk3562_core_builds/scripts/sdl2.sh`, the patches in the order the image
+applies them (glob order of core builds' `sdl2-patch-*` and ours, copied in
+by `build_sdl2.sh` as 0005, 0006 and 0008), the two git steps of `sdl2.sh`
+(SDL_gamecontroller.c from 528b712, `revert -n e5024fae`), and `sdl2.sh`'s
+cmake flags, in a chroot of the rootfs cache with gcc 12 and the BSP librga
+(`build_deps.sh` puts its headers in `/usr/local/include/rga`), at
+`/home/ark/rk3562_core_builds/SDL`: that path is in the library's assert
+strings. The image builds from a git checkout; a tree without `.git` gets
+the revision string `SDL-2.32.10-no-vcs`, 16 bytes shorter than
+`SDL-release-2.32.10-0-g5d2495703`, and every address after it moves. Give
+cmake `-DSDL_SOURCE_VERSION=release-2.32.10-0-g5d2495703` (2026-11-21).
+
 **A Windows reboot kills the build.** Everything else survives: the image, the
 caches, the mounts. If the build dies late, the mounts and loop devices are
 still in place and the remaining steps can be re-run by hand rather than
