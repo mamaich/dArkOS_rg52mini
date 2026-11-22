@@ -56,6 +56,24 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   recipe's cache key. Its own scripts: `~/rg52/sess19/oe/dpgo/` (build.sh,
   train.sh, merge.sh, cbx.sh = cb.sh with the xtool, as the image build).
 
+* **A card check in Tools** (an idea of the owner's for later, 2026-11-22, after
+  the PortMaster report below). A dialog tool like the Wi-Fi one that:
+  - shows how each partition is mounted and flags a read-only one (`/`,
+    `/boot`, `/roms`; `findmnt -no OPTIONS`);
+  - looks for read/write errors since boot: `dmesg` and the journal for
+    `mmcblk1` errors, `I/O error`, `EXT4-fs error`, "Remounting filesystem
+    read-only", exFAT/FAT and btrfs errors, plus `btrfs device stats /`;
+  - checks the file systems: the root btrfs with `btrfs scrub` (mounted;
+    it repairs what its duplicated metadata allows), `/boot` (FAT) with
+    `fsck.fat` after a short umount, the roms partition after ES is stopped
+    and it is unmounted (`fsck.exfat` or `e2fsck`); a mounted ext4/exFAT
+    cannot be checked;
+  - repairs simple errors only on dArkOS's own partitions and with a
+    confirmation; on the dual-boot card the roms partition is GammaOS's
+    userdata (`mmcblk1p9`, ext4): check only, never repair it from here;
+  - writes a report to the roms partition (e.g. `logs/card-check-<date>.txt`)
+    for a user to send. Maybe a short write test as well (fake or worn cards).
+
 * **PortMaster's folder writable again at boot** (the owner, 2026-11-22). A
   user who updated 1.9 -> 1.12: PortMaster updated itself (2026.06.23 ->
   2026.11.17, "and reset"), then after picking a dark colour scheme it quits
