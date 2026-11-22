@@ -17,6 +17,40 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   `GCPadNew.ini` is. Select is also the hotkey of patch 008 (Select+Start
   quits), so Select and Start reach a Wii game as - and + too.
 
+* **Dolphin: Soulcalibur II hangs in dual core** (the owner, 2026-11-22, the
+  USA demo DRSEAF): "GFX FIFO: Unknown Opcode (0xff ...)", "the emulated GPU
+  desyncing with the emulated CPU", then the CPU and video threads stop (the
+  journal of the ES launch). From boot with no input it hung within 90 s in 3
+  of 3 runs (once with no FIFO line); with `SyncGPU = True` 3 of 3 ran, the
+  attract fight at 26-28 fps. SyncGPU for every game costs 11% in Super Mario
+  Galaxy 2 (24.5 -> 21.6), so per game: on the owner's console since
+  2026-11-22 as `~/.local/share/dolphin-emu/GameSettings/DRSEAF.ini`. To do:
+  `GRS.ini` and `DRS.ini` (`[Core] SyncGPU = True`) into the image's
+  Sys/GameSettings (upstream has only GRSPAF.ini, with cheats).
+
+* **Dolphin with clang and PGO** (the owner asked, 2026-11-22). Built in the
+  test chroot with the xtool tree's clang 19, the recipe's CMake options,
+  ThinLTO (`-fuse-ld=lld` in the compile flags too, or CMake's IPO check
+  fails on bfd ld without LLVMgold and the build goes without LTO); profile
+  from the instrumented build playing Super Mario Galaxy 2 and Metroid Prime
+  from the owner's savestates and the ND Demo from boot, 150 s each
+  (`~/rg52/sess19/oe/dpgo/`: build.sh, train.sh, merge.sh;
+  `dolphin.profdata`, 28473 functions). Galaxy 2 from its savestate, 2
+  rounds: the image's gcc 24.1, clang 25.2 (+4.4%), clang+PGO 26.1 (+8.3%),
+  with `-mcpu=cortex-a53` 26.15 (nothing more). On a game not trained, the
+  Soulcalibur II demo's attract fight (SyncGPU on): gcc 27.6, clang 27.1,
+  clang+PGO 27.7 - level, within that scene's spread. Libmali stays: malisx2
+  ran Galaxy 2 at 19.4 against 24.0. Not decided: a compiler switch for a
+  gain seen only on the trained games.
+
+* **Super Mario Galaxy 2: EFB access from the CPU costs 20-25%.** From the
+  owner's savestate: 24.0 -> 30.0 fps with `EFBAccessEnable = False` over the
+  game's own ini (its SB4.ini turns it on; 30.2 unthrottled, so not a cap).
+  The tile size (256, 1024) does not help, the emulated CPU at 75%/50% gives
+  +2%, no arbitrary mipmap detection nothing. It probably serves the star
+  pointer (unchecked). OpenGL is not an option here (the nogui DRM platform
+  has Vulkan only, patch 006).
+
 ## Shipped in v09162026
 
 All of it is on the device and released, so it is history rather than a list to
