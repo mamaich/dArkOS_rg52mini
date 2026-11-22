@@ -2,6 +2,21 @@
 
 A working list, not a roadmap. Ordered by what a build would answer soonest.
 
+## For 1.13 (the owner, 2026-11-22: not into the 1.12 build already running)
+
+* **Dolphin: a Wiimote on the console's pad by default.** The image ships
+  `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.
+  Wii games already show under GameCube in ES (the system takes `.wbfs`,
+  `.rvz`, `.wad`, `.iso`; `/roms/wii` is no system). The mapping in use on the
+  owner's console since 2026-11-22 (an emulated Wiimote with a Nunchuk, device
+  `evdev/0/rk3562-joystick`): A = Wii A, R1 = Wii B, B = shake, X/Y = 1/2,
+  Select/Start = -/+, the d-pad, the left stick and L1/L2 (axis 2+) the
+  Nunchuk's stick and C/Z, the right stick the pointer; Home unmapped (ogage
+  toggles Bluetooth on it). Its file: `~/rg52/sess19/oe/WiimoteNew.ini`. To do:
+  `dolphin/configs/rk3562/WiimoteNew.ini`, copied by `build_dolphinsa.sh` as
+  `GCPadNew.ini` is. Select is also the hotkey of patch 008 (Select+Start
+  quits), so Select and Start reach a Wii game as - and + too.
+
 ## Shipped in v09162026
 
 All of it is on the device and released, so it is history rather than a list to
@@ -112,7 +127,14 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
-## Upstream updates for 1.12 (2026-11-21, the owner: take the light ones, armN64, zeebx, and the heavy ones if nothing gets worse)
+## Upstream updates for 1.12 (2026-11-21, the owner: take the light ones, armN64, zeebx, and the heavy ones if nothing gets worse; released 2026-11-22)
+
+**Released as 1.12 on 2026-11-22**: build 20261122092638, from b86c72a (tag
+v1.12), with the fixes of 2026-11-19/22 (KNOWN-ISSUES.md: Fix Audio with HDMI,
+the Options tools on a TV, OpenEnroth, J2ME, chargers) and ARMSX2 2.9.5. A
+first build of 2026-11-21 (20261121205810, before ARMSX2 2.9.5 and the charger
+fix) was not released. What was checked on the release build:
+docs/README.md, "Checked for 1.12".
 
 The check of 2026-11-21 13:43 (`report-20261121-1343.txt`). Each built in the
 test chroot (`cb.sh`) and tried on the owner's dual-boot card (1.11 with the

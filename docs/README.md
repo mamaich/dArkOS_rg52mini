@@ -56,7 +56,7 @@ followed.
 
 ## State of the port
 
-The current release is 1.11 (build 11182026, 2026-11-19); from 1.1 on, a card
+The current release is 1.12 (build 11222026, 2026-11-22); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -519,7 +519,7 @@ without the setting got it (once, when run twice), one with its own setting
 was left as it was. The package from 1.9 was made the same way from the
 published images and not installed.
 
-In master for 1.12, not released yet (VERSION says 1.12):
+New in 1.12 (build 11222026, 2026-11-22):
 
 - Options > Advanced > Fix Audio with a TV on HDMI no longer leaves the sound
   on the speaker: it killed ES first, and systemd ended the script with ES's
@@ -548,6 +548,30 @@ In master for 1.12, not released yet (VERSION says 1.12):
   armN64 1.4.1, zeebx 0.6.0, Dolphin and the second RetroArch from their
   masters of 2026-11-21, ARMSX2 2.9.5 with a profile retrained for it (PS2,
   about 1% faster than 2.9.2) (TODO.md, "Upstream updates for 1.12").
+
+Checked for 1.12: the release build (20261122092638, from b86c72a) on the
+owner's dual-boot card, by the release's package 1.11 -> 1.12 over 1.11, what
+had been put on the console by hand since 1.11 (Fix Audio, the HDMI scripts,
+the test kernels, the 64-bit libSDL2) set back to 1.11's files first: 741
+files written, the two dpkg files merged, no failed unit after the reboot,
+the snapshot in place. In the image, before: the kernel with the charger fix
+and the console following the output, libSDL2 byte for byte the build of 0008
+the owner tried in OpenEnroth, nds.sh, the HDMI scripts, Fix Audio, darkos-ota
+and Update.sh as in the repository, ARMSX2 built at 378e6bc with the 2026-11-21
+profile, malisx2 as in 1.11, PortMaster's installer as in 1.11. Then each as
+ES starts it, on the panel, with sound and the right picture: ARMSX2 (God of
+War 37.7, Jak 17.1 fps on the owner's settings; 38.3 and 17.5 in 1.11's
+check, one run each), Dolphin (the ND Demo 50.1), DraStic and DSperate
+(upright), Azahar 60 (55.8 in 1.11's first run), PPSSPP, N64 on three cores,
+Dreamcast, Atomiswave, Saturn standalone and on retrorun, Zeebo, GBA on three
+cores, SNES and PS1 on both RetroArchs, WonderSwan, linapple, Sega CD, J2ME on
+both cores, and the ports GTA 3, Doom 3, Mina the Hollower, Need for Speed
+Underground and OpenEnroth. The charger fix was tried before the build on the
+test kernels (KNOWN-ISSUES.md, "Some chargers stopped charging"). The package
+from 1.10 was made the same way from the published images and not installed.
+
+In master for 1.13, not released yet (VERSION says 1.13): nothing yet; see
+TODO.md, "For 1.13".
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini
