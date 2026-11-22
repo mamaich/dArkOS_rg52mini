@@ -56,6 +56,25 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   recipe's cache key. Its own scripts: `~/rg52/sess19/oe/dpgo/` (build.sh,
   train.sh, merge.sh, cbx.sh = cb.sh with the xtool, as the image build).
 
+* **PortMaster's folder writable again at boot** (the owner, 2026-11-22). A
+  user who updated 1.9 -> 1.12: PortMaster updated itself (2026.06.23 ->
+  2026.11.17, "and reset"), then after picking a dark colour scheme it quits
+  after its splash on every start; reinstalling from Tools does not help; he
+  had "no rights" to delete `config/config.json`. The pugwash.txt he sent was
+  old (2026-11-14, dArkOS 1.9, PortMaster 2026.06.23): nothing logged since. Not
+  reproduced on the owner's console (2026.11.17, all three colour schemes of
+  the default theme start). What permissions do: PortMaster's GUI runs as root
+  (`$ESUDO ./pugwash`), so they cannot crash it; but its self-update writes as
+  root, and on an ext4 roms partition outside the dual-boot card's Android one
+  (which gives `root:media_rw` 2777/777 through its setgid and ACLs) new files
+  would be `root:root` 644/755: ark cannot delete them over MTP (umtprd runs as
+  ark) or from a file manager, and the launcher, which truncates `log.txt` as
+  ark without sudo, silently stops logging. To do: `portmaster-e2big.sh --boot`
+  also runs `chmod -R a+rwX` on the PortMaster folder (write bits only; owner
+  and group untouched for the dual-boot card). Advice given meanwhile: rename
+  `config/config.json`; if that is not enough, rename the whole PortMaster
+  folder and install it again from Tools; send fresh log.txt and pugwash.txt.
+
 * **What a CRT shader costs** (the owner asked whether the NPU could take such
   post-processing off the GPU, 2026-11-22). Dolphin, Galaxy 2 from the owner's
   savestate, 2 rounds: none 25.90 / 25.60, crt_pi 25.65 / 25.70,
