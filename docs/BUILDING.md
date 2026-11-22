@@ -50,7 +50,9 @@ the chroot's clang in `Arkbuild_package_cache/xtool-trixie-amd64` (a minbase
 debootstrap with clang-19, lld-19, llvm-19 and libeatmydata1, about 1 GB) and
 mounts it into the chroot for the recipes that build with clang:
 `build_pcsx2sa.sh` (ARMSX2), `build_malisx2.sh` (its C and C++; its Rust stays
-under qemu) and `build_a53_core azahar` in `build_retroarch.sh`.
+under qemu), `build_a53_core azahar` in `build_retroarch.sh` and, since 1.13,
+`build_dolphinsa.sh` (Dolphin, with its PGO profile and ThinLTO through
+the xtool's lld).
 The host's CPU runs it as it is; cmake, ninja, the shell, GNU ld and strip
 still go through qemu. It compiles inside the chroot, against the chroot's
 headers, libraries and GCC installation, at the chroot's paths, so a PGO

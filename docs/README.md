@@ -570,8 +570,19 @@ Underground and OpenEnroth. The charger fix was tried before the build on the
 test kernels (KNOWN-ISSUES.md, "Some chargers stopped charging"). The package
 from 1.10 was made the same way from the published images and not installed.
 
-In master for 1.13, not released yet (VERSION says 1.13): nothing yet; see
-TODO.md, "For 1.13".
+In master for 1.13, not released yet (VERSION says 1.13):
+
+- Dolphin is built with clang and a profile for its profile-guided
+  optimisation, trained on Super Mario Galaxy 2, Metroid Prime and the ND
+  Demo: Galaxy 2 +4 to +8% against the gcc build of 1.12, a game outside the
+  training (the Soulcalibur II demo) level to +2% (TODO.md, "For 1.13").
+- Wii games take input: an emulated Wiimote with a Nunchuk on the built-in
+  pad by default (the right stick the pointer). Wii games run from /roms/gc,
+  under GameCube in ES.
+- Dolphin no longer hangs in Soulcalibur II: the GPU thread is synchronized
+  for that game (KNOWN-ISSUES.md, "Dolphin: Soulcalibur II hung").
+
+See TODO.md, "For 1.13", for what else is planned.
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

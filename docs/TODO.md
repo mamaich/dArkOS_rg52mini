@@ -2,7 +2,7 @@
 
 A working list, not a roadmap. Ordered by what a build would answer soonest.
 
-## For 1.13 (the owner, 2026-11-22: not into the 1.12 build already running)
+## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day)
 
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.
@@ -12,10 +12,11 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   `evdev/0/rk3562-joystick`): A = Wii A, R1 = Wii B, B = shake, X/Y = 1/2,
   Select/Start = -/+, the d-pad, the left stick and L1/L2 (axis 2+) the
   Nunchuk's stick and C/Z, the right stick the pointer; Home unmapped (ogage
-  toggles Bluetooth on it). Its file: `~/rg52/sess19/oe/WiimoteNew.ini`. To do:
-  `dolphin/configs/rk3562/WiimoteNew.ini`, copied by `build_dolphinsa.sh` as
-  `GCPadNew.ini` is. Select is also the hotkey of patch 008 (Select+Start
-  quits), so Select and Start reach a Wii game as - and + too.
+  toggles Bluetooth on it). **In master**: `dolphin/configs/rk3562/WiimoteNew.ini`,
+  copied by `build_dolphinsa.sh` as `GCPadNew.ini` is (an OTA replaces a
+  user's empty file, keeps one the user set up). Select is also the hotkey of
+  patch 008 (Select+Start quits), so Select and Start reach a Wii game as - and
+  + too.
 
 * **Dolphin: Soulcalibur II hangs in dual core** (the owner, 2026-11-22, the
   USA demo DRSEAF): "GFX FIFO: Unknown Opcode (0xff ...)", "the emulated GPU
@@ -24,9 +25,10 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   of 3 runs (once with no FIFO line); with `SyncGPU = True` 3 of 3 ran, the
   attract fight at 26-28 fps. SyncGPU for every game costs 11% in Super Mario
   Galaxy 2 (24.5 -> 21.6), so per game: on the owner's console since
-  2026-11-22 as `~/.local/share/dolphin-emu/GameSettings/DRSEAF.ini`. To do:
-  `GRS.ini` and `DRS.ini` (`[Core] SyncGPU = True`) into the image's
-  Sys/GameSettings (upstream has only GRSPAF.ini, with cheats).
+  2026-11-22 as `~/.local/share/dolphin-emu/GameSettings/DRSEAF.ini`. **In
+  master**: `GRS.ini` and `DRS.ini` (`[Core] SyncGPU = True`) into the image's
+  Sys/GameSettings (upstream has only GRSPAF.ini, with cheats); KNOWN-ISSUES.md,
+  "Dolphin: Soulcalibur II hung".
 
 * **Dolphin with clang and PGO** (the owner asked, 2026-11-22). Built in the
   test chroot with the xtool tree's clang 19, the recipe's CMake options,
@@ -40,8 +42,19 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   with `-mcpu=cortex-a53` 26.15 (nothing more). On a game not trained, the
   Soulcalibur II demo's attract fight (SyncGPU on): gcc 27.6, clang 27.1,
   clang+PGO 27.7 - level, within that scene's spread. Libmali stays: malisx2
-  ran Galaxy 2 at 19.4 against 24.0. Not decided: a compiler switch for a
-  gain seen only on the trained games.
+  ran Galaxy 2 at 19.4 against 24.0. **Taken (the owner, 2026-11-22).** The
+  profile was trained again from a build in the recipe's own tree and build
+  dir (`/home/ark/rk3562_core_builds/dolphin`, where the image build compiles
+  it: the profile names file-local functions by their source's path):
+  `rk3562_core_builds/pgo/dolphin-b2c2c21-20261122.profdata.gz`. Built from
+  it, Galaxy 2, 2 rounds: gcc 25.60 / 25.25, the first profile 26.40 / 26.50,
+  this one 26.50 / 26.50 (+4%; the gcc build ran faster than in the morning's
+  series, the profiled ones the same); Soulcalibur II (SyncGPU): gcc 27.00 /
+  27.15, this one 28.35 / 27.05. The recipe (`dolphinsa.sh`) takes
+  CLANG_CC/CLANG_CXX, as azahar.sh does, and `build_dolphinsa.sh` hands in the
+  xtool's amd64 clang (natively, not under qemu); the profile is part of the
+  recipe's cache key. Its own scripts: `~/rg52/sess19/oe/dpgo/` (build.sh,
+  train.sh, merge.sh, cbx.sh = cb.sh with the xtool, as the image build).
 
 * **Super Mario Galaxy 2: EFB access from the CPU costs 20-25%, and the
   star pointer needs it.** From the owner's savestate: 24.0 -> 30.0 fps with

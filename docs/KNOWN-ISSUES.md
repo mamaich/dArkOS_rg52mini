@@ -984,6 +984,30 @@ its own eyes: no charging until the hub is plugged in again (1.11 does the
 same). The 1.12 notes say so, as they say to plug a charger into a console
 that is awake.
 
+## Dolphin: Soulcalibur II hung (2026-11-22) — fixed for 1.13
+
+Seen by the owner on 1.12 with the Soulcalibur II demo (USA, DRSEAF), and
+"hangs at different moments". The journal of the ES launch, 22 s in:
+
+    GFX FIFO: Unknown Opcode (0xff @ 0x6b9556d001, preprocess=false).
+    This error is usually caused by the emulated GPU desyncing with the emulated CPU.
+    Turn off the "Dual Core" setting to avoid this.
+
+then the CPU and video threads stood still (the main thread asleep, nothing
+drawn). From boot with no input, the image's settings (dual core, SyncGPU
+off): hung within 90 s in 3 of 3 runs (once with no FIFO line at all). With
+`SyncGPU = True` ("Synchronize GPU thread"): 3 of 3 ran on into the attract
+fight, 26-28 fps, no FIFO error. SyncGPU for every game would cost 11% in
+Super Mario Galaxy 2 (24.5 -> 21.6 fps from the owner's savestate), so it is
+set per game: `dolphin/configs/rk3562/GameSettings/GRS.ini` and `DRS.ini`
+(every region of the game and of its demo; upstream has only GRSPAF.ini, with
+cheats), copied by `build_dolphinsa.sh` into `/opt/dolphin/Sys/GameSettings`.
+A user's own GameSettings still win. On the owner's console since
+2026-11-22 as `~/.local/share/dolphin-emu/GameSettings/DRSEAF.ini`.
+
+If another game hangs the same way (a FIFO line in the journal of its
+launch), the same two lines for its id fix it.
+
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
 
 Seen by the owner with PortMaster's OpenEnroth port and a Russian CD copy of
