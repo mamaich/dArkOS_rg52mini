@@ -921,6 +921,69 @@ one fills it. A start on the panel with no cable was not tried on this
 kernel: it gives the state checked after a switch to the panel, but its boot
 logo was not seen.
 
+## Some chargers stopped charging a second after the plug (2026-11-21) — fixed for 1.12
+
+Seen by the owner on revision B with 1.11 and a TV's charger: plugged in, the
+console showed charging for a moment, then "Discharging" with the charger in
+(`ac`/`usb` online 0, the input limit 450 mA), cable firmly in. lcdyk0517's
+dArkOS4RK3562 carries a fallback for chargers the BC detection does not know
+(3562.bsp.5.10 ebce8f4); it was not the cause here, but is taken too.
+
+**What happens** (rk817 `dbg_level` 1): the PHY found the charger (DCP, "AC"),
+then the HUSB311 side tried PD with it twice, a second apart. Each try toggled
+`EXTCON_USB`, and `rk817_charge_discnt_evt_worker()` put the charger back to
+none whenever `EXTCON_USB` was 0 - which for a dedicated charger, with no USB
+data at all, it always is. A plain charger of the owner's got the same two
+PD tries.
+
+**Fix** (kernel 70524fc, `drivers/power/supply/rk817_charger.c`):
+- the disconnect worker sets none only when the PMIC no longer sees VBUS;
+  with VBUS in it looks at the type again 0.5 s later;
+- VBUS in, not the console's own boost, and no BC type after four looks a
+  second apart: charged as from a DC charger at 1.5 A (lcdyk0517's
+  fallback; the BC detection took 0.1-2.3 s, so a fallback after one look
+  left a PC's port at 1.5 A until its "USB" came); a type that comes later
+  replaces it; no VBUS and no type: none;
+- the port turned USB host with VBUS already in (a powered hub, the console
+  its sink): the boost stays off. Before, the driver switched the console's
+  5 V on into the hub's VBUS (register 0xB4: boost and OTG switch on), and
+  charging could feed on its own battery;
+- after the PMIC's plug-out interrupt the type is looked at again 1.5 s later,
+  as a PD source's hard reset may drop VBUS with no plug-in interrupt after
+  it.
+
+`/sys/kernel/debug/regmap/0-0020/registers` shows the input limit (0xE5, bits
+0-2: 450, 80, 850, 1500, 1750, 2000, 2500, 3000 mA) and the boost (0xB4, bit 1
+the boost, bit 2 the OTG switch); `~/rg52/sess19/oe/chg-all.sh` reads them
+with the roles, the USB devices and the driver's log.
+
+**Checked on revision B** (the owner's console, 2026-11-21/22, test kernels
+#2-#4: 70524fc but for the fallback after two looks, not four):
+the TV's charger and a plain one: "AC", 3000 mA, through the PD tries; a PD
+charger C to C: CDP, 1500 mA; a Quick Charge charger: "AC", also when the
+console starts with it in; a PC's USB 2 and 3 ports: "USB", 450 mA, and the
+PC sees the console; one charger the BC detection takes for a PC: "USB", 450
+mA, as before (its data lines are not shorted; it charges a console that is
+asleep or off, slowly); a PD hub with a flash drive and power: the flash
+drive works, 1500 mA by the fallback, the boost off; a flash drive alone: the
+console powers it as before. Every unplug went back to none.
+
+**Revision A** has no HUSB311. Its charging goes through the same PHY, PMIC
+and driver, and the Type-C pieces of the fix do not come into play there:
+no PD tries toggle `EXTCON_USB`, and the port never turns host. With the
+HUSB311 unbound on revision B (`echo 2-004e > .../drivers/husb311/unbind`,
+a reboot binds it again), A to C cables: the PC "USB" 450 mA, the plain and
+the Quick Charge chargers "AC" 3000 mA, the PC-like one "USB" 450 mA, every
+unplug to none. (The PC then said "USB device not recognized": nothing gave
+the controller its role; after the reboot the PC sees the console again.)
+
+**Not fixed: a console started with a powered hub already in.** While the
+HUSB311 attaches, the hub drops VBUS for a moment; the port turns host in
+that moment, the driver switches the boost on, and it stays the source in
+its own eyes: no charging until the hub is plugged in again (1.11 does the
+same). The 1.12 notes say so, as they say to plug a charger into a console
+that is awake.
+
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
 
 Seen by the owner with PortMaster's OpenEnroth port and a Russian CD copy of

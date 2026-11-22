@@ -165,7 +165,9 @@ KNOWN-ISSUES, "Headphones: the speaker played too".
 | 84be124 | 1.8 | VOP2 on the RK3562 shows RGB888 with red and blue the right way round (KNOWN-ISSUES, "retrorun: red and blue swapped") |
 | 4fe802d | 1.12 | the fbdev buffer 1920x1280 (`CONFIG_DRM_FBDEV_MIN_WIDTH`/`_HEIGHT`, new), the console takes the size of the output in use at each hotplug; the virtual size and `fb0/modes` as before (KNOWN-ISSUES, "The Options tools on a TV") |
 
-The submodule was pinned at 84be12412 from 1.8 to 1.11; 4fe802d4a is in
+| 70524fc | 1.12 | `rk817_charger`: a charger stays charging through the Type-C side's PD tries, a charger with no BC type charges at 1.5 A, no boost into a powered hub's VBUS (KNOWN-ISSUES, "Some chargers stopped charging") |
+
+The submodule was pinned at 84be12412 from 1.8 to 1.11; 70524fc9e is in
 master for 1.12.
 
 ## Babble filter

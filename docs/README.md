@@ -539,6 +539,11 @@ In master for 1.12, not released yet (VERSION says 1.12):
 - J2ME works again, with both cores on the image's OpenJDK 21: no JDK
   download, and freej2me-plus draws (rg503's core of 2026-11-17). The 1.7 fix
   for it had been overwritten in every image since (KNOWN-ISSUES.md, "J2ME").
+- Chargers that stopped charging a second after the plug (the Type-C side's
+  PD tries reset the charger to none) keep charging; a charger the BC
+  detection does not know charges at 1.5 A; a powered hub no longer gets the
+  console's 5 V against its own (kernel 70524fc; KNOWN-ISSUES.md, "Some
+  chargers stopped charging").
 - Emulators updated: DSperate 3.5.0 (DS, a third less CPU), armGBA 1.8.1,
   armN64 1.4.1, zeebx 0.6.0, Dolphin and the second RetroArch from their
   masters of 2026-11-21, ARMSX2 2.9.5 with a profile retrained for it (PS2,
