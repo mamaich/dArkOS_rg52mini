@@ -43,13 +43,15 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   ran Galaxy 2 at 19.4 against 24.0. Not decided: a compiler switch for a
   gain seen only on the trained games.
 
-* **Super Mario Galaxy 2: EFB access from the CPU costs 20-25%.** From the
-  owner's savestate: 24.0 -> 30.0 fps with `EFBAccessEnable = False` over the
-  game's own ini (its SB4.ini turns it on; 30.2 unthrottled, so not a cap).
-  The tile size (256, 1024) does not help, the emulated CPU at 75%/50% gives
-  +2%, no arbitrary mipmap detection nothing. It probably serves the star
-  pointer (unchecked). OpenGL is not an option here (the nogui DRM platform
-  has Vulkan only, patch 006).
+* **Super Mario Galaxy 2: EFB access from the CPU costs 20-25%, and the
+  star pointer needs it.** From the owner's savestate: 24.0 -> 30.0 fps with
+  `EFBAccessEnable = False` over the game's own ini (its SB4.ini turns it on;
+  30.2 unthrottled, so not a cap). But then the pointer only moves: hovering
+  it over falling star bits no longer collects them (the owner, with and
+  without, 2026-11-22). Not taken. The tile size (256, 1024) does not help,
+  the emulated CPU at 75%/50% gives +2%, no arbitrary mipmap detection
+  nothing. OpenGL is not an option here (the nogui DRM platform has Vulkan
+  only, patch 006).
 
 ## Shipped in v09162026
 
