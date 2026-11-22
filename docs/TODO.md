@@ -56,6 +56,19 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   recipe's cache key. Its own scripts: `~/rg52/sess19/oe/dpgo/` (build.sh,
   train.sh, merge.sh, cbx.sh = cb.sh with the xtool, as the image build).
 
+* **What a CRT shader costs** (the owner asked whether the NPU could take such
+  post-processing off the GPU, 2026-11-22). Dolphin, Galaxy 2 from the owner's
+  savestate, 2 rounds: none 25.90 / 25.60, crt_pi 25.65 / 25.70,
+  crt_lottes_fast 25.60 / 25.75 - nothing (the game waits on the CPU).
+  RetroArch's gl driver, armN64, Air Boarder 64 (50 fps is its full speed): none
+  50.40 / 50.30, crt-pi 50.30 / 50.25, crt-easymode 40.00 / 40.00 (-20%),
+  crt-geom 17.50 / 17.50 (-65%; its curvature and the multi-tap sampling per
+  screen pixel, which suit the NPU badly). So the light presets cost nothing and
+  the heavy ones are not NPU work: not pursued; a tip for the notes instead
+  (crt-pi / crt-lottes-fast on heavy systems). The Vulkan driver has no CRT
+  shaders here at all (only shaders_glsl), so 3DS (Azahar on Vulkan) cannot use
+  RetroArch's. Scripts: `~/rg52/sess19/oe/crt/`.
+
 * **Super Mario Galaxy 2: EFB access from the CPU costs 20-25%, and the
   star pointer needs it.** From the owner's savestate: 24.0 -> 30.0 fps with
   `EFBAccessEnable = False` over the game's own ini (its SB4.ini turns it on;
