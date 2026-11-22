@@ -74,6 +74,16 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   and group untouched for the dual-boot card). Advice given meanwhile: rename
   `config/config.json`; if that is not enough, rename the whole PortMaster
   folder and install it again from Tools; send fresh log.txt and pugwash.txt.
+  **The owner's main hypothesis: the user's SD card is failing.** A card that
+  throws write errors gets its partition remounted read-only, which explains
+  every symptom at once: "no rights" to delete, a log that stopped on
+  2026-11-14 (nothing can be written, not even pugwash.txt), a self-update and
+  a scheme change cut off half-written (the GUI then dies on the broken files),
+  and a reinstall that changes nothing. Advice: copy any file onto the console
+  (network or MTP); if nothing can be written, save the data from a PC first,
+  check the card (chkdsk on an exFAT roms partition, H2testw or f3 for its real
+  size and errors) and move to a new one. The chmod item above stays as a
+  fallback for the case where the card proves fine.
 
 * **What a CRT shader costs** (the owner asked whether the NPU could take such
   post-processing off the GPU, 2026-11-22). Dolphin, Galaxy 2 from the owner's
