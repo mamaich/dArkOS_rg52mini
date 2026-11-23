@@ -1147,9 +1147,24 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
 
   So about 1 W and 10 C more for the 3DS, 0.45 W and 8 C for the PSP. The
   3DS's is the upscale's own: RetroArch is on Vulkan either way (the
-  owner's `retroarch.cfg` says gl, his Azahar override vulkan), and its
-  threads take 38% of a core against 22% — the layer's work on the CPU
-  besides the NPU and the GPU's passes.
+  owner's `retroarch.cfg` says gl, his Azahar override vulkan).
+- Against a shader, by the AI-SR session the same day: Super Mario 3D Land
+  in a level (savestate), 1200x720, on battery, two rounds the second in
+  reverse order, 2 x 20 s after 40 s each:
+
+  | | fps | Mali | power | temperature | RetroArch's thread |
+  |---|---|---|---|---|---|
+  | the owner's settings | 60 | 50% | 2.94 W | 67-70 C | 44-45% |
+  | nearest x3 (RetroArch, Vulkan) | 60 | 50% | 2.95 W | 69 C | 44-45% |
+  | bicubic, one pass (`bicubic.slangp`) | 47.8 | 91% | 3.38 W | 71-72 C | 37% |
+  | bicubic, two passes (`bicubic-fast.slangp`) | 60 | 84% | 3.43 W | 69-74 C | 46-47% |
+  | NPU UPSCALE (ESPCN x3, 14.0 ms) | 60 | 79% | 3.89 W | 76-79 C | 48-49% |
+
+  NPU UPSCALE costs 0.95 W over the owner's settings, as on the title
+  screen; about half of it is the NPU itself (the two-pass bicubic keeps
+  Mali busier and draws 0.45 W less), and the layer's work on the CPU 4
+  points of RetroArch's thread here (16 on the title screen above, where
+  the game itself does little).
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

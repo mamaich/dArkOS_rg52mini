@@ -9,9 +9,9 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   console (KNOWN-ISSUES.md, "NPU UPSCALE"); the PSP on a space-to-depth
   model of dArkOS's own (7.65 ms at 600 MHz instead of ESPCN's 15.1 at
   800). On battery it costs about 1 W and 10 C for the 3DS, 0.45 W and 8 C
-  for the PSP (KNOWN-ISSUES). Still open before the build: how the 3DS's
-  watt splits between the NPU, the layer's CPU work and the GPU (the AI-SR
-  session compares nearest, shader bicubic and the NPU); a space-to-depth x3 for the
+  for the PSP (KNOWN-ISSUES; about half of the 3DS's watt is the NPU
+  itself, a two-pass bicubic shader costs 0.45 W). Still open before the
+  build: a space-to-depth x3 for the
   3DS if the AI-SR session trains one as good as ESPCN (32 channels would
   take 6.2 ms instead of 13.1); nothing to try on revision A (its firmware's
   dtb describes the NPU's rail as revision B's does).
