@@ -1140,15 +1140,16 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   | | power | temperature | fps |
   |---|---|---|---|
   | ES's menu | 1.98 W | | |
-  | Super Mario 3D Land, the owner's settings (RetroArch gl and his shader, Azahar 1x) | 2.52 W | 67-69 C | 59.9 |
+  | Super Mario 3D Land, the owner's settings (Azahar's override: Vulkan, no shader preset; 1x) | 2.52 W | 67-69 C | 59.9 |
   | the same, NPU UPSCALE | 3.46 W | 77-79 C | 60.0 |
   | Daxter, the owner's settings (PPSSPP 2x) | 2.61 W | 62-64 C | 60.0 |
   | the same, NPU UPSCALE | 3.06 W | 70-72 C | 59.9 |
 
-  So about 1 W and 10 C more for the 3DS, 0.45 W and 8 C for the PSP. Part
-  of the 3DS's may be RetroArch's driver rather than the NPU: NPU UPSCALE
-  runs it on Vulkan, the owner's settings on gl (RetroArch's thread 38%
-  against 22% of a core).
+  So about 1 W and 10 C more for the 3DS, 0.45 W and 8 C for the PSP. The
+  3DS's is the upscale's own: RetroArch is on Vulkan either way (the
+  owner's `retroarch.cfg` says gl, his Azahar override vulkan), and its
+  threads take 38% of a core against 22% — the layer's work on the CPU
+  besides the NPU and the GPU's passes.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)
