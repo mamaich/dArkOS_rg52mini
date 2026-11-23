@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # NPU UPSCALE (npusr/; docs/KNOWN-ISSUES.md, "NPU UPSCALE"): an emulator's native frame - the 3DS's
-# top screen, the PSP's - enlarged by a small neural network (ESPCN) on the RK3562's NPU, inside
+# top screen, the PSP's - enlarged by a small neural network (npusr/NOTICE) on the RK3562's NPU, inside
 # VK_LAYER_DARKOS_rotate (build_vkrotate.sh builds that part). This installs what the layer and the
 # launchers need beside it: Rockchip's RKNN runtime (from its release, checked by sha256), the
 # models, darkos-npusr (the launchers' helper), the list of systems EmulationStation offers it for,

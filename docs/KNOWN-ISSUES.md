@@ -1012,9 +1012,10 @@ launch), the same two lines for its id fix it.
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
 every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
-emulator's native frame with ESPCN, a small super-resolution network, in
-place of the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240
-to 1200x720), the PSP x2 (480x272 to 960x544). Worked out by a separate
+emulator's native frame with a small super-resolution network in place of
+the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240 to
+1200x720) with ESPCN, the PSP x2 (480x272 to 960x544) with a faster network
+of dArkOS's own trained to give what ESPCN gives. Worked out by a separate
 session (AI-SR, 2026-11-22/23); the owner asked for it in 1.13 for both
 systems, off by default.
 
@@ -1025,8 +1026,8 @@ systems, off by default.
   is ON (es-0011).
 - *The launchers*: `retroarch` (for the Azahar core) and `ppsspp.sh` (PPSSPP
   standalone) ask `darkos-npusr` (`npusr/`), which loads the NPU's driver,
-  caps the NPU at 600 MHz (ESPCN keeps up there; at 1 GHz the console was
-  15 C warmer within 1.5 minutes) and gives the emulator what the upscale
+  caps the NPU at 600 MHz (both models keep up there; at 1 GHz the console
+  was 15 C warmer within 1.5 minutes) and gives the emulator what the upscale
   needs for this run: RetroArch gets an `--appendconfig` (Vulkan, integer
   scale, no smoothing, shader or overlay), Azahar its core options (the top
   screen alone at its native resolution, Vulkan), PPSSPP an `--appendconfig`
@@ -1061,10 +1062,15 @@ systems, off by default.
   78-79% and about 1%, the same as no check (2 minutes from the same
   savestate each).
 - *Two kinds of model*, told apart by the model's input: ESPCN "row5" (5
-  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel) and
-  "space-to-depth" (4 channels, a 2x2 cell of native pixels, NHWC, its
-  output (2S)^2 channels), with a prep shader each (`sr_prep.comp`,
-  `sr_prep_s2d.comp`) and one rotate shader.
+  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel; the
+  3DS's) and "space-to-depth" (4 channels, a 2x2 cell of native pixels,
+  NHWC, its output (2S)^2 channels; the PSP's), with a prep shader each
+  (`sr_prep.comp`, `sr_prep_s2d.comp`) and one rotate shader. At 600 MHz
+  ESPCN x3 takes 13.1 ms on the NPU, ESPCN x2 18.0 and the PSP's
+  space-to-depth model 7.4 (the AI-SR session's srbench). A space-to-depth
+  x3 at 32 channels would take 6.2 ms, at 40 or 48 channels 14.7 (the NPU
+  works in groups of 16 channels): the 3DS stays on ESPCN until a
+  space-to-depth x3 as good as it is trained.
 - *Kernel* (kernel_rk3562 7001704): `vdd_npu` (a PWM DC-DC on `pwm6`),
   `rknpu` and its IOMMU on; rknpu a module. The image blacklists it
   (`/etc/modprobe.d/dArkOS-rknpu.conf`); `darkos-npusr` loads it with
@@ -1075,8 +1081,20 @@ systems, off by default.
   license allows distribution with applications for Rockchip's chips and
   asks that its notices be kept: `/usr/share/doc/librknnrt/LICENSE`,
   `/usr/share/doc/darkos-npusr/NOTICE`); the two models in
-  `/usr/share/darkos/npusr/`, made by `npusr/models/make_espcn.py` from
-  TF-ESPCN's weights (Apache 2.0), INT8.
+  `/usr/share/darkos/npusr/`, INT8: the 3DS's made by
+  `npusr/models/make_espcn.py` from TF-ESPCN's weights (Apache 2.0); the
+  PSP's (still named `espcn_x2_480x272.rknn`, the name the layer looks for)
+  trained by `s2d_distill.py` from a bicubic start, with ESPCN x2 as the
+  teacher, on screenshots of the owner's PSP and 3DS games, scikit-image's
+  sample photographs and drawn shapes and text — no other network's weights
+  and no image dataset (a first try started from weights taken out of
+  another device's firmware and saw BSDS300, which is for non-commercial
+  research only; it was dropped). `s2d_rknn.py` makes the .rknn from the
+  weights kept beside it (`s2d_x2_v7.pt`) byte for byte; the screenshots
+  are not in the sources. Against an honest 2x render of Super Mario 3D Land
+  (toolkit simulator, INT8) it scores 30.60 dB, ESPCN x2 30.69, bicubic
+  30.38; it differs from ESPCN's output (39.4 dB to it) without being
+  further from the right frame.
 
 **Where it does nothing** (the game runs as with NPU UPSCALE off):
 HDMI connected (the layer leaves a landscape display alone); PSP on the
@@ -1096,9 +1114,11 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   (40,0), 60.05 fps, the NPU on every frame (13.6 ms at 600 MHz), CPU 22% of
   four cores; RetroArch's quick menu over it as readable as without SR.
 - Daxter (PSP), PPSSPP standalone through `ppsspp.sh`: 960x544 at (160,88),
-  59.95 fps, the NPU on every frame (15.1 ms with the clock held at 800 MHz;
-  18 ms at 600 would drop a tenth of the upscales), CPU 15%; PPSSPP's pause
-  screen readable.
+  59.95 fps, the NPU on every frame (7.65 ms at 600 MHz with the
+  space-to-depth model; ESPCN x2 before it took 15.1 ms with the clock held
+  at 800 MHz, 18 ms at 600 would drop a tenth of the upscales), CPU 14%;
+  PPSSPP's pause screen readable with the two-pixel check, the game under it
+  upscaled.
 - Put back: Azahar's options set by hand to 2x and the default layout
   were 1x and single screen in the run, a record left when the run was killed
   with its launcher, and 2x and the default layout again at the next launch
@@ -1111,8 +1131,9 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   the menu is left with B (BACK): START (CLOSE) closes every menu and drops
   it, for this option as for every other one (upstream's
   `GuiSettings::input`).
-- 80-81 C after a few minutes of either game on the charger; on battery not
-  measured yet.
+- 80-81 C after a few minutes of either game on the charger with ESPCN for
+  both (the PSP's at 800 MHz); Daxter with the space-to-depth model at 600
+  MHz 66 C after 2 minutes; on battery not measured yet.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

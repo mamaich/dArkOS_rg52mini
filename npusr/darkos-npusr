@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dArkOS RG52 Mini: NPU UPSCALE - an emulator's native frame enlarged by ESPCN on the RK3562's NPU,
+"""dArkOS RG52 Mini: NPU UPSCALE - an emulator's native frame enlarged by a small network on the RK3562's NPU,
 in the Vulkan rotate layer (vk-rotate-layer/npusr.inc.c). EmulationStation's EMULATOR SETTINGS has it
 for the systems /etc/darkos/npusr.conf names; a game of such a system with it ON is launched with
 DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
@@ -30,12 +30,13 @@ import time
 STATE = "/home/ark/.config/darkos-npusr"
 RECORD = os.path.join(STATE, "restore.json")
 MODELS = "/usr/share/darkos/npusr"
-# The NPU's clock for each model (min, max): the 3DS's x3 takes 13.9 ms at 600 MHz, under 60 fps's
-# 16.7; the PSP's x2 18.0 ms at 600 and 14.8 at 800 MHz, and its governor (rknpu_ondemand) stays at
-# 600 unless the minimum is 800 too. At 1 GHz the console was 15 C warmer within 1.5 minutes.
+# The NPU's clock for each model (min, max): the 3DS's x3 (ESPCN) takes 13.9 ms at 600 MHz, under
+# 60 fps's 16.7; the PSP's x2 (space-to-depth) 7.4 ms. A model that needs more must raise the
+# minimum as well: the governor (rknpu_ondemand) stays at 600 unless the minimum is higher too
+# (ESPCN x2 for the PSP needed 800/800). At 1 GHz the console was 15 C warmer within 1.5 minutes.
 NPU_CLOCK = {
     (3, 400, 240): (300000000, 600000000),
-    (2, 480, 272): (800000000, 800000000),
+    (2, 480, 272): (300000000, 600000000),
 }
 
 RA_APPEND = [

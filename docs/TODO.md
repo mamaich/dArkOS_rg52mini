@@ -6,14 +6,13 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 
 * **NPU UPSCALE for the 3DS and the PSP** (the owner, 2026-11-23: into 1.13,
   both systems, off by default). **In master** and checked on the owner's
-  console (KNOWN-ISSUES.md, "NPU UPSCALE"). Still open before the build:
-  faster models the AI-SR session is making at the owner's request (a
-  space-to-depth network distilled from ESPCN, about 7 ms instead of 18 for
-  the PSP, which would no longer need the NPU held at 800 MHz; it needs a
-  change to the layer's prep pass, coming from that session); the console's
-  temperature and draw on battery with the upscale against without it;
-  nothing to try on revision A (its firmware's dtb describes the NPU's rail
-  as revision B's does).
+  console (KNOWN-ISSUES.md, "NPU UPSCALE"); the PSP on a space-to-depth
+  model of dArkOS's own (7.65 ms at 600 MHz instead of ESPCN's 15.1 at
+  800). Still open before the build: the console's temperature and draw on
+  battery with the upscale against without it; a space-to-depth x3 for the
+  3DS if the AI-SR session trains one as good as ESPCN (32 channels would
+  take 6.2 ms instead of 13.1); nothing to try on revision A (its firmware's
+  dtb describes the NPU's rail as revision B's does).
 
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.
