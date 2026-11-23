@@ -1133,7 +1133,22 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   `GuiSettings::input`).
 - 80-81 C after a few minutes of either game on the charger with ESPCN for
   both (the PSP's at 800 MHz); Daxter with the space-to-depth model at 600
-  MHz 66 C after 2 minutes; on battery not measured yet.
+  MHz 66 C after 2 minutes.
+- On battery (2026-11-23, 89-100%), 4 minutes of each game's title screen
+  from 60 C or less, the battery's current times its voltage:
+
+  | | power | temperature | fps |
+  |---|---|---|---|
+  | ES's menu | 1.98 W | | |
+  | Super Mario 3D Land, the owner's settings (RetroArch gl and his shader, Azahar 1x) | 2.52 W | 67-69 C | 59.9 |
+  | the same, NPU UPSCALE | 3.46 W | 77-79 C | 60.0 |
+  | Daxter, the owner's settings (PPSSPP 2x) | 2.61 W | 62-64 C | 60.0 |
+  | the same, NPU UPSCALE | 3.06 W | 70-72 C | 59.9 |
+
+  So about 1 W and 10 C more for the 3DS, 0.45 W and 8 C for the PSP. Part
+  of the 3DS's may be RetroArch's driver rather than the NPU: NPU UPSCALE
+  runs it on Vulkan, the owner's settings on gl (RetroArch's thread 38%
+  against 22% of a core).
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)
