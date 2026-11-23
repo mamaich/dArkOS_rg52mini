@@ -29,7 +29,7 @@ void main()
 {
     ivec2 a = ivec2(floor(uv * vec2(p.AW, p.AH)));
     ivec2 d = a - ivec2(p.dx, p.dy);
-    // a menu over the frame, with the upscaled frame moved (sr_swap_build): all as the program drew it
+    // a menu over the frame, or a frame that is not the native one enlarged as expected (sr_swap_build): all as drawn
     if (d.x < 0 || d.y < 0 || d.x >= p.DW || d.y >= p.DH || (p.over > 0 && cnt.n > uint(p.over))) {
         color = texture(app, uv);
         return;

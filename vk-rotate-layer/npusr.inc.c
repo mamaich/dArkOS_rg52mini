@@ -499,12 +499,13 @@ static void sr_swap_build(Swap *s, VkViewport vp, int scaled)
     } else { x->dw = g_sr.W * g_sr.A; x->dh = g_sr.H * g_sr.A; }
     x->dx = (AW - x->dw) / 2;
     x->dy = (AH - x->dh) / 2;
-    /* Moved or resized, the upscaled frame would carry what a menu drew over the program's frame (the parts of it
-     * one colour in blocks) somewhere else, beside the menu itself: with more than 1% of the native pixels in
-     * blocks not one colour (a menu, PPSSPP's pause screen) the picture is shown as the program drew it. In
-     * place it lands where the menu is, and each block is enough. */
-    int moved = x->dx != x->ox || x->dy != x->oy || x->dw != g_sr.W * g_sr.A || x->dh != g_sr.H * g_sr.A;
-    x->over = g_sr.over >= 0 ? g_sr.over : moved ? g_sr.W * g_sr.H / 100 : 0;
+    /* With more than 1% of the native pixels in blocks not one colour the picture is shown as the program drew
+     * it. Moved or resized, the upscaled frame would carry what a menu drew over the program's frame (the parts
+     * of it one colour in blocks) somewhere else, beside the menu itself (PPSSPP's pause screen); and in place
+     * too, a frame that is not the native one enlarged as expected (Azahar's large-and-small layout switched in
+     * the game, a scale that is not whole) would come out as SR of the wrong pixels. A notification stays below
+     * it and is handled block by block. */
+    x->over = g_sr.over >= 0 ? g_sr.over : g_sr.W * g_sr.H / 100;
     VkDevice dv = d->device;
 
     VkDescriptorSetLayout sets[2] = { s->dsl, sr->comp_dsl };

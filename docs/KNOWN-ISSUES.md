@@ -1070,14 +1070,17 @@ systems, off by default.
   dither, and the far corner): all S x S of them took Super Mario 3D Land's
   Mali from 70% to 85% and dropped a sixth of the upscales, these two cost
   78-79% and about 1%, the same as no check (2 minutes from the same
-  savestate each). With the upscaled frame moved or resized (the PSP's
-  fit), what passed the check — a menu's flat parts, thick strokes of its
-  letters — would come out enlarged beside the menu itself: there the prep
-  pass also counts the blocks not one colour, and above 1% of the native
-  pixels (PPSSPP's pause screen: 7135 of 130560; the game: 0) the whole
-  picture is shown as the program drew it, so the pause screen looks as
-  without NPU UPSCALE; in the bars the frame now covers, anything not black
-  is shown as drawn.
+  savestate each). The prep pass also counts the blocks not one colour, and
+  above 1% of the native pixels the whole picture is shown as the program
+  drew it: a full menu (PPSSPP's pause screen 7135 of 130560, RetroArch's
+  quick menu 88228 of 96000; a game 0) looks as without NPU UPSCALE, the
+  game under it not upscaled. With the upscaled frame moved or resized
+  (the PSP's fit) a menu's flat parts and thick strokes would otherwise come
+  out enlarged beside the menu itself; and a frame that is not the native
+  one enlarged as expected (Azahar's large-and-small layout switched in the
+  game) shows without the upscale instead of with the wrong one. A
+  notification stays under 1% and is handled block by block; in the bars
+  the frame covers when fit, anything not black is shown as drawn.
 - *Three kinds of model*, told apart by the model's input: ESPCN "row5" (5
   luma channels in the NPU's NC1HWC2 layout, one cell a native pixel),
   "space-to-depth" (4 channels, a 2x2 cell of native pixels, NHWC, its
@@ -1154,7 +1157,8 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
 - Super Mario 3D Land, started as ES starts it: SR region 1200x720 at
   (40,0), 59.8-60 fps, the NPU on every frame (8.3 ms at 600 MHz with the
   space-to-depth model; ESPCN x3 before it 13.6 ms), CPU 21% of four
-  cores; RetroArch's quick menu over it as readable as without SR.
+  cores; RetroArch's quick menu over it exactly as RetroArch draws it, the
+  upscale back when it closes.
 - Daxter (PSP), PPSSPP standalone through `ppsspp.sh`, the owner's PPSSPP
   layout (neither integer scale nor stretch): x3 fit, 1271x720 at (4,0) from
   the 960x544 at (160,88), 60 fps, the NPU on every frame (11.0 ms at 600
