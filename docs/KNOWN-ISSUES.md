@@ -1137,7 +1137,12 @@ and put back; a game's own Azahar options file is handled the same way.
 
 **Limits.** The 3DS shows its top screen alone (a game that needs the touch
 screen wants NPU UPSCALE off). The upscaled picture can trail the game by a
-frame.
+frame. PPSSPP on the RG52 renders at 2x by default
+(`ppsspp.ini.sdl.rg52mini`, 7b3ea5c), and NPU UPSCALE runs it at 1x for the
+game: a real 2x render has more of the 3D picture's detail (Daxter's fur),
+the upscale cleaner edges and sharper 2D text, and on battery the 2x render
+drew less (Daxter's title screen 2.61 W against 3.06 W). For the PSP it is
+for games too heavy for 2x.
 
 **Checked on the owner's console (revision B), 2026-11-23**, kernel 7001704,
 the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
@@ -1165,6 +1170,12 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   the menu is left with B (BACK): START (CLOSE) closes every menu and drops
   it, for this option as for every other one (upstream's
   `GuiSettings::input`).
+- Memory, 40 s into each game with the page cache dropped: NPU UPSCALE
+  takes 11 MB of MemAvailable for Super Mario 3D Land (848 against 837 MB;
+  RetroArch's PSS 14 MB more: the NPU's buffers mapped 7 MB, librknnrt
+  4.6 MB, dma-bufs 21 MB against 10) and 10 MB for Daxter (1422 against
+  1412; PPSSPP's PSS 16 MB more, partly made up by its 1x render in place
+  of the owner's 2x).
 - 80-81 C after a few minutes of either game on the charger with ESPCN for
   both (the PSP's at 800 MHz); Daxter with the space-to-depth model at 600
   MHz 66 C after 2 minutes.
