@@ -6,7 +6,9 @@ layout(location = 0) out vec4 color;
 layout(set = 0, binding = 0) uniform sampler2D app;
 layout(std430, set = 1, binding = 0) readonly buffer Nout { uint w[]; } nout;
 layout(set = 1, binding = 1) uniform sampler2D cbcr;
-layout(push_constant) uniform PC { int rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; } p;
+// B: output pixels a side of one NPU cell (S for ESPCN row5, 2S for the space-to-depth models);
+// GH: the NPU grid's height (NC1HWC2: channel c lives in the group c>>4, each group GH rows of wstride cells)
+layout(push_constant) uniform PC { int rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; int B, GH; } p;
 
 void main()
 {
@@ -22,8 +24,9 @@ void main()
         color = texture(app, uv);
         return;
     }
-    int c =(r.y - h * p.S) * p.S + (r.x - w * p.S);
-    uint word = nout.w[(h * p.wstride + w) * 4 + (c >> 2)];
+    int gh = r.y / p.B, gw = r.x / p.B;
+    int c = (r.y - gh * p.B) * p.B + (r.x - gw * p.B);
+    uint word = nout.w[(((c >> 4) * p.GH + gh) * p.wstride + gw) * 4 + ((c & 15) >> 2)];
     int q = bitfieldExtract(int(word), (c & 3) * 8, 8);
     float Y = clamp((float(q) - float(p.zp)) * p.scale, 0.0, 1.0);
     vec2 cc = texture(cbcr, (vec2(r) + 0.5) / float(p.S) / vec2(p.W, p.H)).rg - 0.5;

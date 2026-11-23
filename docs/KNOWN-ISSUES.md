@@ -1054,7 +1054,17 @@ systems, off by default.
   over the frame — a menu, a notification, PPSSPP's pause screen — would be
   sampled every S-th pixel and come out unreadable. The prep pass marks each
   S x S block that is not one colour (a nearest-enlarged frame never has
-  one), and such a block is shown as it is.
+  one), and such a block is shown as it is. It compares two pixels of the
+  block with its first (the next one along, which catches RGUI's one-pixel
+  dither, and the far corner): all S x S of them took Super Mario 3D Land's
+  Mali from 70% to 85% and dropped a sixth of the upscales, these two cost
+  78-79% and about 1%, the same as no check (2 minutes from the same
+  savestate each).
+- *Two kinds of model*, told apart by the model's input: ESPCN "row5" (5
+  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel) and
+  "space-to-depth" (4 channels, a 2x2 cell of native pixels, NHWC, its
+  output (2S)^2 channels), with a prep shader each (`sr_prep.comp`,
+  `sr_prep_s2d.comp`) and one rotate shader.
 - *Kernel* (kernel_rk3562 7001704): `vdd_npu` (a PWM DC-DC on `pwm6`),
   `rknpu` and its IOMMU on; rknpu a module. The image blacklists it
   (`/etc/modprobe.d/dArkOS-rknpu.conf`); `darkos-npusr` loads it with

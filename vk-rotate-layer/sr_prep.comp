@@ -19,17 +19,16 @@ int q8(int x, int y)
 
 // The emulator's frame enlarged nearest makes every S*S block one colour. What the program draws over
 // it at the full resolution - RetroArch's menu and notifications, PPSSPP's pause screen - does not:
-// sr_rotate.frag shows such a block as it is rather than enlarge every S-th pixel of it.
+// sr_rotate.frag shows such a block as it is rather than enlarge every S-th pixel of it. Two pixels are
+// compared with the block's first: the next one along (a one-pixel pattern, as RGUI's dither) and the
+// far corner. All S*S of them cost the 3DS a sixth of its upscales (Mali 85% instead of 70%).
 float flat_block(int x, int y)
 {
-    vec3 c0 = px(x, y);
-    for (int dy = 0; dy < p.S; dy++)
-        for (int dx = 0; dx < p.S; dx++) {
-            vec3 c = texelFetch(app, ivec2(p.ox + x * p.S + dx, p.oy + y * p.S + dy), 0).rgb;
-            if (any(greaterThan(abs(c - c0), vec3(1.5 / 255.0))))
-                return 0.0;
-        }
-    return 1.0;
+    ivec2 o = ivec2(p.ox + x * p.S, p.oy + y * p.S);
+    vec3 c0 = texelFetch(app, o, 0).rgb;
+    vec3 d = max(abs(texelFetch(app, o + ivec2(1, 0), 0).rgb - c0),
+                 abs(texelFetch(app, o + ivec2(p.S - 1), 0).rgb - c0));
+    return any(greaterThan(d, vec3(1.5 / 255.0))) ? 0.0 : 1.0;
 }
 
 void main()

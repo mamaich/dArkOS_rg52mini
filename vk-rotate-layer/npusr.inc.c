@@ -21,7 +21,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "rknn_api.h"
-#include "sr_spv.h"   /* sr_prep_spv[], sr_rotate_frag_spv[] */
+#include "sr_spv.h"   /* sr_prep_spv[], sr_prep_s2d_spv[], sr_rotate_frag_spv[] */
 
 #define SR_SLOTS 3
 #define SRLOG(...) do { fprintf(stderr, "darkos_npusr: " __VA_ARGS__); fputc('\n', stderr); } while (0)
@@ -84,6 +84,9 @@ typedef struct SRDev {
     rknn_context ctx;
     int have_ctx;
     rknn_tensor_attr nin, nout;
+    int s2d;                /* the model's kind: 0 = ESPCN row5 (5 luma channels, NC1HWC2, full grid),
+                               1 = space-to-depth (4 channels NHWC on the half grid, (2S)^2 out channels) */
+    int B, GW, GH;          /* output pixels a side of one NPU cell; the NPU grid */
     SRSlot slot[SR_SLOTS];
     VkSampler nearest, linear;
     VkDescriptorSetLayout prep_dsl, comp_dsl;
@@ -114,7 +117,7 @@ typedef struct SRSwap {
     VkCommandBuffer cb_prep[MAX_IMAGES], cb_pres[MAX_IMAGES];
 } SRSwap;
 
-typedef struct { int32_t rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; } SRPush;
+typedef struct { int32_t rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; int32_t B, GH; } SRPush;
 
 static double sr_now_ms(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e3 + t.tv_nsec / 1e6; }
 
@@ -264,11 +267,25 @@ static SRDev *sr_device_get(Dev *d)
     sr->have_ctx = 1;
     SRCHK(sr->r.query(sr->ctx, RKNN_QUERY_NATIVE_INPUT_ATTR, &sr->nin, sizeof sr->nin) >= 0);
     SRCHK(sr->r.query(sr->ctx, RKNN_QUERY_NATIVE_OUTPUT_ATTR, &sr->nout, sizeof sr->nout) >= 0);
-    /* ESPCN row5 expected: input NC1HWC2 1x1xHxWx16 int8 (5 channels), output NC1HWC2 1x1xHxWx16 int8 (S*S channels) */
-    if (sr->nin.fmt != RKNN_TENSOR_NC1HWC2 || sr->nin.n_dims != 5 || sr->nin.dims[1] != 1 || sr->nin.dims[4] != 16 ||
-        (int)sr->nin.dims[2] != g_sr.H || (int)sr->nin.dims[3] != g_sr.W ||
-        sr->nout.fmt != RKNN_TENSOR_NC1HWC2 || sr->nout.n_dims != 5 || sr->nout.dims[1] != 1 || sr->nout.dims[4] != 16 ||
-        (int)sr->nout.dims[2] != g_sr.H || (int)sr->nout.dims[3] != g_sr.W || g_sr.S * g_sr.S > 16) {
+    /* two kinds of model:
+     *   ESPCN row5:     input NC1HWC2 1x1xHxWx16 int8 (5 channels), output NC1HWC2 1x1xHxWx16 int8 (S*S channels);
+     *   space-to-depth: input NHWC 1x(H/2)x(W/2)x4 int8 (2x2 cell, channel dy*2+dx),
+     *                   output NC1HWC2 1xC1x(H/2)x(W/2)x16 int8 ((2S)^2 channels, channel dy*2S+dx, C1*16 >= (2S)^2) */
+    int row5 = sr->nin.fmt == RKNN_TENSOR_NC1HWC2 && sr->nin.n_dims == 5 && sr->nin.dims[1] == 1 && sr->nin.dims[4] == 16 &&
+        (int)sr->nin.dims[2] == g_sr.H && (int)sr->nin.dims[3] == g_sr.W &&
+        sr->nout.fmt == RKNN_TENSOR_NC1HWC2 && sr->nout.n_dims == 5 && sr->nout.dims[1] == 1 && sr->nout.dims[4] == 16 &&
+        (int)sr->nout.dims[2] == g_sr.H && (int)sr->nout.dims[3] == g_sr.W && g_sr.S * g_sr.S <= 16;
+    int s2d = !(g_sr.W & 1) && !(g_sr.H & 1) &&
+        sr->nin.fmt == RKNN_TENSOR_NHWC && sr->nin.n_dims == 4 && sr->nin.dims[3] == 4 &&
+        (int)sr->nin.dims[1] == g_sr.H / 2 && (int)sr->nin.dims[2] == g_sr.W / 2 &&
+        sr->nout.fmt == RKNN_TENSOR_NC1HWC2 && sr->nout.n_dims == 5 && sr->nout.dims[4] == 16 &&
+        (int)sr->nout.dims[2] == g_sr.H / 2 && (int)sr->nout.dims[3] == g_sr.W / 2 &&
+        (int)sr->nout.dims[1] * 16 >= 4 * g_sr.S * g_sr.S;
+    sr->s2d = s2d;
+    sr->B = s2d ? 2 * g_sr.S : g_sr.S;
+    sr->GW = s2d ? g_sr.W / 2 : g_sr.W;
+    sr->GH = s2d ? g_sr.H / 2 : g_sr.H;
+    if (!row5 && !s2d) {
         SRLOG("model tensors do not match x%d:%dx%d (in %ux%ux%ux%ux%u fmt %d, out %ux%ux%ux%ux%u fmt %d)", g_sr.S, g_sr.W, g_sr.H,
               sr->nin.dims[0], sr->nin.dims[1], sr->nin.dims[2], sr->nin.dims[3], sr->nin.dims[4], sr->nin.fmt,
               sr->nout.dims[0], sr->nout.dims[1], sr->nout.dims[2], sr->nout.dims[3], sr->nout.dims[4], sr->nout.fmt);
@@ -321,7 +338,8 @@ static SRDev *sr_device_get(Dev *d)
     VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .setLayoutCount = 1, .pSetLayouts = &sr->prep_dsl, .pushConstantRangeCount = 1, .pPushConstantRanges = &ppc };
     SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->prep_pl));
-    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(sr_prep_spv), .pCode = sr_prep_spv };
+    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = sr->s2d ? sizeof(sr_prep_s2d_spv) : sizeof(sr_prep_spv), .pCode = sr->s2d ? sr_prep_s2d_spv : sr_prep_spv };
     VkShaderModule cs;
     SRVK(d->CreateShaderModule(dv, &smi, NULL, &cs));
     VkComputePipelineCreateInfo cpi = { .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -356,8 +374,9 @@ static SRDev *sr_device_get(Dev *d)
     SRCHK(pthread_create(&sr->th, NULL, sr_worker, sr) == 0);
     sr->th_started = 1;
     sr->t_last = sr_now_ms();
-    SRLOG("ready: NPU in %ux%ux%u (w_stride %u), out zp %d scale %g, %d slots", sr->nin.dims[2], sr->nin.dims[3], sr->nin.dims[4],
-          sr->nin.w_stride, sr->nout.zp, sr->nout.scale, SR_SLOTS);
+    SRLOG("ready: %s model, NPU grid %dx%d, %dx%d px a cell, in w_stride %u, out %u channel groups, zp %d scale %g, %d slots",
+          sr->s2d ? "space-to-depth" : "row5", sr->GW, sr->GH, sr->B, sr->B, sr->nin.w_stride, sr->nout.dims[1],
+          sr->nout.zp, sr->nout.scale, SR_SLOTS);
     return sr;
 fail:
     SRLOG("NPU SR unavailable for this device");
@@ -548,9 +567,9 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
         sr->slot[w].cbcr_init = 1;
         d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->prep_pipe);
         d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->prep_pl, 0, 1, &x->prep_ds[idx][w], 0, NULL);
-        int32_t pp[6] = { x->ox, x->oy, g_sr.W, g_sr.H, g_sr.S, (int32_t)(sr->nin.w_stride ? sr->nin.w_stride : (uint32_t)g_sr.W) };
+        int32_t pp[6] = { x->ox, x->oy, g_sr.W, g_sr.H, g_sr.S, (int32_t)(sr->nin.w_stride ? sr->nin.w_stride : (uint32_t)sr->GW) };
         d->CmdPushConstants(cb, sr->prep_pl, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof pp, pp);
-        d->CmdDispatch(cb, (uint32_t)(g_sr.W + 15) / 16, (uint32_t)(g_sr.H + 15) / 16, 1);
+        d->CmdDispatch(cb, (uint32_t)(sr->GW + 15) / 16, (uint32_t)(sr->GH + 15) / 16, 1);   /* row5: a pixel, s2d: a 2x2 cell */
         VkMemoryBarrier mb = { .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER, .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_MEMORY_READ_BIT };
         d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -586,7 +605,7 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
         VkDescriptorSet ds2[2] = { s->ds[idx], sr->comp_ds[ready] };
         d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->pl, 0, 2, ds2, 0, NULL);
         SRPush p = { g_rot, (int32_t)s->app_ext.width, (int32_t)s->app_ext.height, x->ox, x->oy, g_sr.W, g_sr.H, g_sr.S,
-                     (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)g_sr.W), sr->nout.zp, sr->nout.scale };
+                     (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale, sr->B, sr->GH };
         d->CmdPushConstants(cb, x->pl, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof p, &p);
     } else {
         d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pipe);
