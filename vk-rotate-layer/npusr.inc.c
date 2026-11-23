@@ -194,10 +194,52 @@ static void *sr_worker(void *arg)
     return NULL;
 }
 
+/* The workers to stop at exit() before librknnrt's own destructors free a job's buffers under a job still on the
+ * NPU (the AI-SR session, 2026-11-24: a program leaving without stopping its NPU thread, a job timed out, and the
+ * next submit crashed rknpu 0.9.8 - fixed in the kernel too). A program that never calls vkDestroyDevice would
+ * leave this worker in rknn_run; registered with atexit() after librknnrt is loaded, this runs before them. */
+#define SR_EXIT_MAX 4
+static SRDev *g_sr_exit[SR_EXIT_MAX];
+static pthread_mutex_t g_sr_exit_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void sr_atexit(void)
+{
+    pthread_mutex_lock(&g_sr_exit_lock);
+    for (int k = 0; k < SR_EXIT_MAX; k++) {
+        SRDev *sr = g_sr_exit[k];
+        if (!sr || !sr->th_started) continue;
+        pthread_mutex_lock(&sr->m);
+        sr->quit = 1;
+        pthread_cond_signal(&sr->cv);
+        pthread_mutex_unlock(&sr->m);
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += 2;
+        if (pthread_timedjoin_np(sr->th, NULL, &ts) == 0) {
+            sr->th_started = 0;
+            SRLOG("exit: NPU worker stopped before the runtime's destructors");
+        }
+    }
+    pthread_mutex_unlock(&g_sr_exit_lock);
+}
+
+static void sr_exit_track(SRDev *sr, int add)
+{
+    static int registered;
+    pthread_mutex_lock(&g_sr_exit_lock);
+    for (int k = 0; k < SR_EXIT_MAX; k++) {
+        if (add && !g_sr_exit[k]) { g_sr_exit[k] = sr; break; }
+        if (!add && g_sr_exit[k] == sr) { g_sr_exit[k] = NULL; break; }
+    }
+    if (add && !registered) registered = atexit(sr_atexit) == 0;
+    pthread_mutex_unlock(&g_sr_exit_lock);
+}
+
 static void sr_device_free(Dev *d)
 {
     SRDev *sr = d->sr;
     if (!sr) return;
+    sr_exit_track(sr, 0);
     if (sr->th_started) {
         pthread_mutex_lock(&sr->m);
         sr->quit = 1;
@@ -442,6 +484,7 @@ static SRDev *sr_device_get(Dev *d)
     }
     SRCHK(pthread_create(&sr->th, NULL, sr_worker, sr) == 0);
     sr->th_started = 1;
+    sr_exit_track(sr, 1);   /* librknnrt is loaded by now: its destructors come after this atexit() */
     sr->t_last = sr_now_ms();
     SRLOG("ready: %s model, NPU grid %dx%d, %dx%d px a cell, upscaled %dx%d, in w_stride %u, out %u channel groups, zp %d scale %g, %d slots",
           sr->kind == 2 ? "cells" : sr->kind == 1 ? "space-to-depth" : "row5", sr->GW, sr->GH, sr->B, sr->B, sr->OW, sr->OH,
