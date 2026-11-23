@@ -1014,8 +1014,8 @@ The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
 every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
 emulator's native frame with a small super-resolution network in place of
 the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240 to
-1200x720) with ESPCN, the PSP x2 (480x272 to 960x544) with a faster network
-of dArkOS's own trained to give what ESPCN gives. Worked out by a separate
+1200x720), the PSP x2 (480x272 to 960x544), each with a network of dArkOS's
+own trained to give what ESPCN gives, faster on the NPU. Worked out by a separate
 session (AI-SR, 2026-11-22/23); the owner asked for it in 1.13 for both
 systems, off by default.
 
@@ -1062,15 +1062,15 @@ systems, off by default.
   78-79% and about 1%, the same as no check (2 minutes from the same
   savestate each).
 - *Two kinds of model*, told apart by the model's input: ESPCN "row5" (5
-  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel; the
-  3DS's) and "space-to-depth" (4 channels, a 2x2 cell of native pixels,
-  NHWC, its output (2S)^2 channels; the PSP's), with a prep shader each
+  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel) and
+  "space-to-depth" (4 channels, a 2x2 cell of native pixels, NHWC, its
+  output (2S)^2 channels; both models in the image), with a prep shader each
   (`sr_prep.comp`, `sr_prep_s2d.comp`) and one rotate shader. At 600 MHz
-  ESPCN x3 takes 13.1 ms on the NPU, ESPCN x2 18.0 and the PSP's
-  space-to-depth model 7.4 (the AI-SR session's srbench). A space-to-depth
-  x3 at 32 channels would take 6.2 ms, at 40 or 48 channels 14.7 (the NPU
-  works in groups of 16 channels): the 3DS stays on ESPCN until a
-  space-to-depth x3 as good as it is trained.
+  (the AI-SR session's srbench) ESPCN x3 takes 13.1 ms on the NPU, ESPCN x2
+  18.0; space-to-depth at 32 channels 6.3 ms for x3 with 5 blocks and 0.8 ms
+  more a block (the 3DS's has 7: 8.3 ms in the game), 7.4 for the PSP's x2
+  with 5. 40 or 48 channels take 14.7 ms (the NPU works in groups of 16
+  channels), so depth, not width, is where such a model grows.
 - *Kernel* (kernel_rk3562 7001704): `vdd_npu` (a PWM DC-DC on `pwm6`),
   `rknpu` and its IOMMU on; rknpu a module. The image blacklists it
   (`/etc/modprobe.d/dArkOS-rknpu.conf`); `darkos-npusr` loads it with
@@ -1081,20 +1081,29 @@ systems, off by default.
   license allows distribution with applications for Rockchip's chips and
   asks that its notices be kept: `/usr/share/doc/librknnrt/LICENSE`,
   `/usr/share/doc/darkos-npusr/NOTICE`); the two models in
-  `/usr/share/darkos/npusr/`, INT8: the 3DS's made by
-  `npusr/models/make_espcn.py` from TF-ESPCN's weights (Apache 2.0); the
-  PSP's (still named `espcn_x2_480x272.rknn`, the name the layer looks for)
-  trained by `s2d_distill.py` from a bicubic start, with ESPCN x2 as the
-  teacher, on screenshots of the owner's PSP and 3DS games, scikit-image's
-  sample photographs and drawn shapes and text — no other network's weights
-  and no image dataset (a first try started from weights taken out of
-  another device's firmware and saw BSDS300, which is for non-commercial
-  research only; it was dropped). `s2d_rknn.py` makes the .rknn from the
-  weights kept beside it (`s2d_x2_v7.pt`) byte for byte; the screenshots
-  are not in the sources. Against an honest 2x render of Super Mario 3D Land
-  (toolkit simulator, INT8) it scores 30.60 dB, ESPCN x2 30.69, bicubic
-  30.38; it differs from ESPCN's output (39.4 dB to it) without being
-  further from the right frame.
+  `/usr/share/darkos/npusr/`, INT8, still named `espcn_x3_400x240.rknn` and
+  `espcn_x2_480x272.rknn` (the names the layer looks for). Both trained by
+  `npusr/models/s2d_distill.py` from a bicubic start, with ESPCN (TF-ESPCN,
+  Apache 2.0) as the teacher, on screenshots of the owner's PSP and 3DS
+  games, scikit-image's sample photographs and drawn shapes and text — no
+  other network's weights and no image dataset (a first try started from
+  weights taken out of another device's firmware and saw BSDS300, which is
+  for non-commercial research only; it was dropped). The 3DS's was trained
+  on with quantisation noise after that (its INT8 model 0.35 dB closer to
+  the right frame; for the PSP's x2 it made things worse). `s2d_rknn.py`
+  makes each .rknn from the weights kept beside it (`s2d_x3_b7.pt`,
+  `s2d_x2_v7.pt`) byte for byte; the screenshots are not in the sources.
+  `make_espcn.py` still makes ESPCN itself for the NPU. Against an honest
+  render at 3x and 2x of Super Mario 3D Land (toolkit simulator, INT8):
+
+  | | x3 | x2 |
+  |---|---|---|
+  | the model in the image | 31.15 dB | 30.60 dB |
+  | ESPCN | 31.21 dB | 30.69 dB |
+  | bicubic | 30.57 dB | 30.38 dB |
+
+  The models differ from ESPCN's output (the PSP's 39.4 dB to it) without
+  being further from the right frame, and look the same.
 
 **Where it does nothing** (the game runs as with NPU UPSCALE off):
 HDMI connected (the layer leaves a landscape display alone); PSP on the
@@ -1111,8 +1120,9 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
 - Boot: rknpu not loaded (the blacklist), `vdd_npu` off; `modprobe` loads
   it, `card1`/`renderD129` appear after `card0`.
 - Super Mario 3D Land, started as ES starts it: SR region 1200x720 at
-  (40,0), 60.05 fps, the NPU on every frame (13.6 ms at 600 MHz), CPU 22% of
-  four cores; RetroArch's quick menu over it as readable as without SR.
+  (40,0), 59.8-60 fps, the NPU on every frame (8.3 ms at 600 MHz with the
+  space-to-depth model; ESPCN x3 before it 13.6 ms), CPU 21% of four
+  cores; RetroArch's quick menu over it as readable as without SR.
 - Daxter (PSP), PPSSPP standalone through `ppsspp.sh`: 960x544 at (160,88),
   59.95 fps, the NPU on every frame (7.65 ms at 600 MHz with the
   space-to-depth model; ESPCN x2 before it took 15.1 ms with the clock held
@@ -1135,7 +1145,8 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   both (the PSP's at 800 MHz); Daxter with the space-to-depth model at 600
   MHz 66 C after 2 minutes.
 - On battery (2026-11-23, 89-100%), 4 minutes of each game's title screen
-  from 60 C or less, the battery's current times its voltage:
+  from 60 C or less, the battery's current times its voltage (the 3DS on
+  ESPCN x3 then):
 
   | | power | temperature | fps |
   |---|---|---|---|
@@ -1159,12 +1170,14 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   | bicubic, one pass (`bicubic.slangp`) | 47.8 | 91% | 3.38 W | 71-72 C | 37% |
   | bicubic, two passes (`bicubic-fast.slangp`) | 60 | 84% | 3.43 W | 69-74 C | 46-47% |
   | NPU UPSCALE (ESPCN x3, 14.0 ms) | 60 | 79% | 3.89 W | 76-79 C | 48-49% |
+  | NPU UPSCALE (the space-to-depth x3 in the image, 8.3 ms) | 60 | 76% | 3.67 W | 75-77 C | 46% |
 
-  NPU UPSCALE costs 0.95 W over the owner's settings, as on the title
-  screen; about half of it is the NPU itself (the two-pass bicubic keeps
-  Mali busier and draws 0.45 W less), and the layer's work on the CPU 4
-  points of RetroArch's thread here (16 on the title screen above, where
-  the game itself does little).
+  NPU UPSCALE with ESPCN costs 0.95 W over the owner's settings, as on the
+  title screen; about half of it is the NPU itself (the two-pass bicubic
+  keeps Mali busier and draws 0.45 W less), and the layer's work on the CPU
+  4 points of RetroArch's thread here (16 on the title screen above, where
+  the game itself does little). The space-to-depth model takes 0.2 W and
+  2 C off that (the same series, ESPCN 3.87 W in it).
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

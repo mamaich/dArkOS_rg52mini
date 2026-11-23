@@ -6,15 +6,13 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 
 * **NPU UPSCALE for the 3DS and the PSP** (the owner, 2026-11-23: into 1.13,
   both systems, off by default). **In master** and checked on the owner's
-  console (KNOWN-ISSUES.md, "NPU UPSCALE"); the PSP on a space-to-depth
-  model of dArkOS's own (7.65 ms at 600 MHz instead of ESPCN's 15.1 at
-  800). On battery it costs about 1 W and 10 C for the 3DS, 0.45 W and 8 C
-  for the PSP (KNOWN-ISSUES; about half of the 3DS's watt is the NPU
-  itself, a two-pass bicubic shader costs 0.45 W). Still open before the
-  build: a space-to-depth x3 for the
-  3DS if the AI-SR session trains one as good as ESPCN (32 channels would
-  take 6.2 ms instead of 13.1); nothing to try on revision A (its firmware's
-  dtb describes the NPU's rail as revision B's does).
+  console (KNOWN-ISSUES.md, "NPU UPSCALE"); both systems on space-to-depth
+  models of dArkOS's own (the 3DS 8.3 ms at 600 MHz instead of ESPCN's
+  13.6, the PSP 7.65 instead of ESPCN's 15.1 at 800). On battery it costs
+  about 0.75 W and 8 C for the 3DS, 0.45 W and 8 C for the PSP
+  (KNOWN-ISSUES; about half of it is the NPU itself, a two-pass bicubic
+  shader costs 0.45 W). Still open: nothing to try on revision A (its
+  firmware's dtb describes the NPU's rail as revision B's does).
 
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.

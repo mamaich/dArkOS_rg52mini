@@ -16,6 +16,15 @@ The PSP's model (s2d_x2_v7.pt beside this script; trained 2026-11-23 on an RTX 5
   (... = --psp DIR --3ds DIR --pairs FILE). The second run was cut short at step 42500 by the PC's power-off; the
   best checkpoint saved by then is the model. Training on a GPU is not bit-exact, hence the weights are kept.
 
+The 3DS's model (s2d_x3_b7.pt; 2026-11-23), 7 blocks, with --dedup in both runs, the second one with quantisation
+noise (without it the INT8 model was 0.35 dB further from an honest 3x render):
+  python s2d_distill.py --scale 3 --blocks 7 --steps 60000 --shares 0.45,0.15,0.40 --init-bicubic --dedup \
+      --tag x3_b7_bic ...
+  python s2d_distill.py --scale 3 --blocks 7 --steps 30000 --lr 2e-4 --shares 0.45,0.15,0.40 --init out/x3_b7_bic.pt \
+      --qnoise --calib-dir <the --3ds directory> --dedup --tag x3_b7_noise ...
+  The model is that run's checkpoint at step 20000 (its checks are as INT8: rounded in the calibrated ranges).
+  s2d_rknn.py ... --scale 3 --blocks 7 --size 400x240 --calib <the --3ds directory> makes the .rknn.
+
   --psp    PSP frames, 480x272 png: the native frame taken from PPSSPP's 2x nearest output on the console. Trained
            on: Daxter (8), Final Fantasy Anniversary (6); files named sf-* (Street Fighter Alpha 3 Max) are left out
            of training, but they are 6 copies of one still frame (so that check is one frame) and s2d_rknn.py's
@@ -45,6 +54,11 @@ ap.add_argument("--crop", type=int, default=96)
 ap.add_argument("--lr", type=float, default=1e-3)
 ap.add_argument("--init", default=None, help="start weights: a checkpoint of this script (.pt), to train on")
 ap.add_argument("--init-bicubic", action="store_true", help="start from the bicubic identity (no other network's weights)")
+ap.add_argument("--qnoise", action="store_true", help="train with quantisation noise: weights and activations as INT8 "
+                "would round them, but with uniform noise of +-half a step in place of the rounding (needs --calib-dir)")
+ap.add_argument("--calib-dir", default=None, help="--qnoise: the activations' ranges, min/max over these frames as the "
+                "toolkit's calibration takes them, redone every 2500 steps")
+ap.add_argument("--dedup", action="store_true", help="keep one of frames that are alike, and train on none alike a check frame")
 ap.add_argument("--shares", default="0.45,0.35,0.20", help="shares of the crops: games, photographs, synthetic")
 ap.add_argument("--margin", type=int, default=0, help="leave this many output pixels at a crop's edges out of the loss")
 ap.add_argument("--psp", required=True); ap.add_argument("--3ds", dest="n3ds", required=True); ap.add_argument("--pairs", required=True)
@@ -52,6 +66,7 @@ ap.add_argument("--pb", default=None, help="the teacher; default: ESPCN_x<S>.pb 
 ap.add_argument("--out", default="out")
 ap.add_argument("--tag", default=None)
 a = ap.parse_args()
+if a.qnoise and not a.calib_dir: ap.error("--qnoise needs --calib-dir")
 S, C, NB, R, CS = a.scale, a.ch, a.blocks, 2 * a.scale, a.crop
 tag = a.tag or f"s2d_x{S}_c{C}_b{NB}"
 OUT = os.path.abspath(a.out); os.makedirs(OUT, exist_ok=True)
@@ -68,16 +83,68 @@ def teacher(y):
     return F.pixel_shuffle(torch.tanh(F.conv2d(x, TW[2], TB[2], padding=1)), S).clamp(0, 1)
 
 
+class FQ(nn.Module):
+    """An activation as RKNN's w8a8 quantises it: per tensor, asymmetric, 256 levels, the range from calibration.
+    In training with noise: clipped to the range plus uniform noise of +-half a step; otherwise rounded (with a
+    straight-through gradient)."""
+    def __init__(self):
+        super().__init__()
+        self.register_buffer("lo", torch.zeros(())); self.register_buffer("hi", torch.zeros(())); self.register_buffer("n", torch.zeros(()))
+        self.noise = False
+
+    def forward(self, x):
+        lo = torch.clamp(self.lo, max=0.0); hi = torch.maximum(self.hi, lo + 1e-6)
+        sc = (hi - lo) / 255; zp = torch.round(-lo / sc)
+        if self.noise and self.training:
+            return torch.clamp(x, lo, hi) + (torch.rand_like(x) - 0.5) * sc
+        q = (torch.clamp(torch.round(x / sc) + zp, 0, 255) - zp) * sc
+        return x + (q - x).detach()
+
+
+def fqw(w):   # weights: per channel, symmetric, int8
+    sc = w.detach().abs().amax(dim=(1, 2, 3), keepdim=True).clamp_min(1e-8) / 127
+    return w + (torch.round(w / sc).clamp(-127, 127) * sc - w).detach()
+
+
 class Student(nn.Module):
     def __init__(self):
         super().__init__()
         self.c = nn.ModuleList([nn.Conv2d(4, C, 3, padding=1)] + [nn.Conv2d(C, C, 3, padding=1) for _ in range(NB)] + [nn.Conv2d(C, R * R, 3, padding=1)])
+        self.qat = False   # --qnoise: INT8 as above, in training (with noise) and in the checks (rounded)
+        self.fq = nn.ModuleList([FQ() for _ in range(NB + 2)])
+
+    def conv(self, k, x):
+        cv = self.c[k]
+        if not self.qat: return cv(x)
+        w = cv.weight
+        if self.fq[0].noise and self.training:
+            sc = w.detach().abs().amax(dim=(1, 2, 3), keepdim=True).clamp_min(1e-8) / 127
+            return F.conv2d(x, w + (torch.rand_like(w) - 0.5) * sc, cv.bias, padding=1)
+        return F.conv2d(x, fqw(w), cv.bias, padding=1)
 
     def core(self, x, clamp=True):   # space-to-depth in, R*R channels out: what goes into the .rknn (with the Clip)
-        x = self.c[0](x)
-        for k in range(1, NB + 1): x = F.relu(self.c[k](x))
-        x = self.c[NB + 1](x)
+        q = (lambda k, t: self.fq[k](t)) if self.qat else (lambda k, t: t)
+        x = q(0, self.conv(0, x))
+        for k in range(1, NB + 1): x = q(k, F.relu(self.conv(k, x)))
+        x = self.conv(NB + 1, x)
+        if self.qat: return q(NB + 1, x.clamp(0, 1))   # as on the NPU: the Clip, then the output quantised
         return x.clamp(0, 1) if clamp else x
+
+    @torch.no_grad()
+    def calibrate(self, frames):
+        """the activations' ranges = min/max over the calibration frames (as the toolkit's "normal" algorithm)"""
+        was, self.qat = self.qat, False
+        lo = [float("inf")] * (NB + 2); hi = [-float("inf")] * (NB + 2)
+        for y in frames:
+            x = F.pixel_unshuffle(y, 2)
+            t = [self.c[0](x)]
+            for k in range(1, NB + 1): t.append(F.relu(self.c[k](t[-1])))
+            t.append(self.c[-1](t[-1]).clamp(0, 1))
+            for k, v in enumerate(t): lo[k] = min(lo[k], v.min().item()); hi[k] = max(hi[k], v.max().item())
+        for k, f in enumerate(self.fq):
+            f.lo.fill_(lo[k]); f.hi.fill_(hi[k]); f.n.fill_(1)
+        self.qat = was
+        return lo, hi
 
     def forward(self, y, clamp=True):   # trained without the Clip: from a random start it would stop the gradient
         return F.pixel_shuffle(self.core(F.pixel_unshuffle(y, 2), clamp), R)
@@ -86,6 +153,10 @@ class Student(nn.Module):
 st = Student().to(dev)
 if a.init:
     st.load_state_dict(torch.load(a.init, map_location=dev), strict=False); print("start weights:", a.init)
+if a.qnoise:
+    st.qat = True
+    for f in st.fq: f.noise = True
+    print("training with quantisation noise: weights int8 per channel, activations 8 bits per tensor (as RKNN's w8a8)")
 if a.init_bicubic:
     # The first convolution copies the 4 space-to-depth channels, the body passes them through (Y >= 0, so the
     # ReLU does not touch them), the last one is bicubic (Keys, a=-0.75 as in cv2 and PyTorch) over 3x3 cells =
@@ -194,7 +265,23 @@ def textures(n=300, sz=192):
     return out
 
 
-print(f"game frames {len(game)}, photographs {len(photo)}, checks {len(val)}", flush=True)
+if a.dedup:   # frames alike (the 6 sf-*, the shifted prev-* among the 3DS's) once; none alike a check frame in training
+    import hashlib
+    _h = lambda t: hashlib.md5(np.ascontiguousarray(t).tobytes()).hexdigest()
+    val = list({_h(v): v for v in val}.values())
+    _vh = {_h(v) for v in val}; _seen = set(); _g = []
+    for t in game:
+        k = _h(t)
+        if k in _vh or k in _seen: continue
+        _seen.add(k); _g.append(t)
+    print(f"alike frames: games {len(game)} -> {len(_g)}, checks {len(val)} distinct", flush=True)
+    game = _g
+CAL = []
+if a.calib_dir:
+    for f in sorted(glob.glob(os.path.join(a.calib_dir, "*.png"))):
+        yy = Yof(cv2.imread(f, cv2.IMREAD_UNCHANGED)); h_, w_ = yy.shape[0] // 2 * 2, yy.shape[1] // 2 * 2
+        CAL.append(torch.from_numpy(yy[:h_, :w_].astype(np.float32) / 255).to(dev)[None, None])
+print(f"game frames {len(game)}, photographs {len(photo)}, checks {len(val)}, calibration {len(CAL)}", flush=True)
 SH = [float(x) for x in a.shares.split(",")]
 
 
@@ -241,12 +328,18 @@ def evaluate():
     st.train(); return np.mean(r), g
 
 
-e, g = evaluate(); print(f"start: to the teacher {e:.2f} dB; to the honest {S}x: student {g[0]:.2f}, teacher {g[1]:.2f}", flush=True)
+if not a.qnoise:   # with it, the ranges are not calibrated yet: the check after the calibration below
+    e, g = evaluate(); print(f"start: to the teacher {e:.2f} dB; to the honest {S}x: student {g[0]:.2f}, teacher {g[1]:.2f}", flush=True)
 opt = torch.optim.Adam(st.parameters(), lr=a.lr)
 sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=a.lr, total_steps=a.steps, pct_start=0.05)
 t0 = time.time(); best = -1; pl = None
 for it in range(1, a.steps + 1):
     if (it - 1) % 10000 == 0: pl = pool()
+    if a.qnoise and (it - 1) % 2500 == 0:
+        lo_, hi_ = st.calibrate(CAL)
+        if it == 1: print("ranges (calibration):", [f"{l:.2f}..{h:.2f}" for l, h in zip(lo_, hi_)], flush=True)
+    if a.qnoise and it == 1:
+        e, g = evaluate(); print(f"INT8 at the start: to the teacher {e:.2f} dB (edges included {EDGE[0]:.2f}), to the honest {S}x {g[0]:.2f}", flush=True)
     x = batch(pl)
     with torch.no_grad(): tgt = teacher(x)
     out = st(x, clamp=False)
@@ -256,7 +349,8 @@ for it in range(1, a.steps + 1):
     opt.zero_grad(); loss.backward(); opt.step(); sched.step()
     if it % 2500 == 0 or it == a.steps:
         e, g = evaluate()
-        if EDGE[0] > best: best = EDGE[0]; torch.save(st.state_dict(), f"{OUT}/{tag}.pt")   # the best over the whole frame, edges included
+        if EDGE[0] > best:   # the best over the whole frame, edges included (with --qnoise: as INT8)
+            best = EDGE[0]; torch.save({k: v for k, v in st.state_dict().items() if not k.startswith("fq.")}, f"{OUT}/{tag}.pt")
         print(f"  step {it}: loss {loss.item():.5f}, to the teacher {e:.2f} dB (edges included {EDGE[0]:.2f}), "
               f"to the honest {S}x {g[0]:.2f} (teacher {g[1]:.2f}), {time.time() - t0:.0f} s", flush=True)
 print(f"best to the teacher (edges included) {best:.2f} dB -> {OUT}/{tag}.pt")

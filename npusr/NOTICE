@@ -19,27 +19,30 @@ NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate). It uses:
 2. rknn_api.h - the runtime's header, from the same release and under the same license
    (vk-rotate-layer/rknn_api.h in the dArkOS sources; LICENSE.rknn beside it).
 
-3. The 3DS's model, /usr/share/darkos/npusr/espcn_x3_400x240.rknn: ESPCN x3
-   From TF-ESPCN by Fanny Monori, https://github.com/fannymonori/TF-ESPCN (the models OpenCV's
-   dnn_superres module uses), Apache License 2.0 (LICENSE-TF-ESPCN, installed beside this file).
-   Changed: the first layer rebuilt for the NPU (the same network, its 5x5 kernel as five rows),
-   quantised to INT8 with rknn-toolkit2 2.5.0 for x3 from 400x240; npusr/models/make_espcn.py
-   in the dArkOS sources makes it from ESPCN_x3.pb (TF-ESPCN's export/ file, kept there too).
-   sha256 aa9ccd9cc62555c40d178db133ab3a8d8269714093dd86a9cbf5ee922b559e68  espcn_x3_400x240.rknn
+3. ESPCN x2 and x3, TF-ESPCN by Fanny Monori, https://github.com/fannymonori/TF-ESPCN (the
+   models OpenCV's dnn_superres module uses), Apache License 2.0 (LICENSE-TF-ESPCN, installed
+   beside this file). The teacher both of item 4's models learned from: they were trained to
+   give what ESPCN gives. ESPCN_x2.pb and ESPCN_x3.pb (TF-ESPCN's export/ files) are kept in
+   npusr/models/ in the dArkOS sources, with make_espcn.py, which makes ESPCN itself into a
+   model for the NPU (its first layer rebuilt as five rows; NPU UPSCALE ran on it before item
+   4's models, and the layer still takes such a model).
 
-4. The PSP's model, /usr/share/darkos/npusr/espcn_x2_480x272.rknn (the file name the layer
-   looks for; the network is not ESPCN): made for dArkOS in 2026, x2 from 480x272.
-   A space-to-depth network (4 luma channels of a 2x2 cell in, 7 3x3 convolutions, 52 048
-   weights), 2.4 times faster than ESPCN x2 on the NPU. Its weights started from a bicubic
-   interpolation written into the network plus random noise (seed 0) - no other network's
-   weights - and were trained to give what ESPCN x2 (item 3's TF-ESPCN, ESPCN_x2.pb, Apache
-   License 2.0) gives on the same inputs: screenshots of PSP and 3DS games taken on the console;
-   scikit-image's sample photographs (skimage.data: astronaut, coffee, chelsea, rocket, camera,
-   coins, moon, page, text - public domain or CC0 by their notes there; moon and page have no
-   note of their own and come with scikit-image under its BSD-3-Clause license); shapes, text
-   and textures the training script draws. No image dataset. Quantised to INT8 with
-   rknn-toolkit2 2.5.0, calibrated on PSP screenshots (15 distinct frames).
-   In the dArkOS sources: npusr/models/s2d_distill.py trains it, s2d_rknn.py makes the .rknn
-   from its weights (s2d_x2_v7.pt, kept there: training on a GPU is not bit-exact). The
-   screenshots are not in the sources.
+4. The models, /usr/share/darkos/npusr/espcn_x3_400x240.rknn (the 3DS's, x3 from 400x240) and
+   espcn_x2_480x272.rknn (the PSP's, x2 from 480x272) - the file names the layer looks for; the
+   networks are not ESPCN. Made for dArkOS in 2026.
+   Space-to-depth networks: 4 luma channels of a 2x2 cell in, 3x3 convolutions of 32 channels
+   (the 3DS's 9 of them, 76 324 weights; the PSP's 7, 52 048 weights), 1.7 and 2.4 times faster
+   than ESPCN on the NPU. Their weights started from a bicubic interpolation written into the
+   network plus random noise (seed 0) - no other network's weights - and were trained to give
+   what ESPCN (item 3) gives on the same inputs: screenshots of PSP and 3DS games taken on the
+   console; scikit-image's sample photographs (skimage.data: astronaut, coffee, chelsea,
+   rocket, camera, coins, moon, page, text - public domain or CC0 by their notes there; moon
+   and page have no note of their own and come with scikit-image under its BSD-3-Clause
+   license); shapes, text and textures the training script draws. No image dataset. The 3DS's
+   was then trained on with quantisation noise. Quantised to INT8 with rknn-toolkit2 2.5.0,
+   calibrated on 3DS screenshots (10 distinct frames) and PSP screenshots (15).
+   In the dArkOS sources: npusr/models/s2d_distill.py trains them, s2d_rknn.py makes the
+   .rknn files from their weights (s2d_x3_b7.pt, s2d_x2_v7.pt, kept there: training on a GPU
+   is not bit-exact). The screenshots are not in the sources.
+   sha256 202e80e75c3376175717aa95367b3075467fc73701e9d29f9fcc96936144f58b  espcn_x3_400x240.rknn
    sha256 d2cf6854545702c7331b3747527170047894feba658a6bf1c06a49488fa88bbc  espcn_x2_480x272.rknn

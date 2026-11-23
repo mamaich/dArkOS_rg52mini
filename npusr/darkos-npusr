@@ -30,8 +30,8 @@ import time
 STATE = "/home/ark/.config/darkos-npusr"
 RECORD = os.path.join(STATE, "restore.json")
 MODELS = "/usr/share/darkos/npusr"
-# The NPU's clock for each model (min, max): the 3DS's x3 (ESPCN) takes 13.9 ms at 600 MHz, under
-# 60 fps's 16.7; the PSP's x2 (space-to-depth) 7.4 ms. A model that needs more must raise the
+# The NPU's clock for each model (min, max): at 600 MHz the 3DS's x3 takes 8.3 ms, the PSP's x2
+# 7.4 ms, both well under 60 fps's 16.7 (ESPCN x3 took 13.9). A model that needs more must raise the
 # minimum as well: the governor (rknpu_ondemand) stays at 600 unless the minimum is higher too
 # (ESPCN x2 for the PSP needed 800/800). At 1 GHz the console was 15 C warmer within 1.5 minutes.
 NPU_CLOCK = {
