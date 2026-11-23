@@ -1,0 +1,128 @@
+dArkOS: EMULATOR SETTINGS offers NPU UPSCALE (OFF, ON) for the systems /etc/darkos/npusr.conf names on
+its es_systems line. The choice is kept as "<system>.npusr", and a game of such a system is launched
+with DARKOS_NPU_UPSCALE=on when it is ON. The system's launcher turns that into DARKOS_NPU_SR for the
+Vulkan rotate layer (the emulator's native frame and the scale) and gives the emulator what the
+upscale needs (native resolution, integer scale, no filtering) for that run only.
+
+diff --git a/es-app/src/DarkosNpu.h b/es-app/src/DarkosNpu.h
+new file mode 100644
+index 0000000..cd23616
+--- /dev/null
++++ b/es-app/src/DarkosNpu.h
+@@ -0,0 +1,54 @@
++#pragma once
++#ifndef ES_APP_DARKOS_NPU_H
++#define ES_APP_DARKOS_NPU_H
++
++// dArkOS: NPU UPSCALE, the RK3562 NPU enlarging an emulator's native frame (ESPCN) in the Vulkan
++// rotate layer. EMULATOR SETTINGS offers it for the systems /etc/darkos/npusr.conf names on its
++// "es_systems" line; a game is launched with DARKOS_NPU_UPSCALE=on, which the system's launcher
++// turns into the layer's DARKOS_NPU_SR (the frame size and scale of that emulator) and the settings
++// the emulator needs for it (native resolution, integer scale, no filtering).
++
++#include <fstream>
++#include <sstream>
++#include <string>
++
++namespace DarkosNpu
++{
++	inline std::string trim(const std::string& s)
++	{
++		const size_t a = s.find_first_not_of(" \t\r\n");
++		if (a == std::string::npos)
++			return "";
++		return s.substr(a, s.find_last_not_of(" \t\r\n") - a + 1);
++	}
++
++	// The value of "key = value" in npusr.conf, "" if it has none.
++	inline std::string confValue(const std::string& key)
++	{
++		std::ifstream f("/etc/darkos/npusr.conf");
++		std::string line, value;
++		while (std::getline(f, line))
++		{
++			const size_t hash = line.find('#');
++			if (hash != std::string::npos)
++				line.erase(hash);
++			const size_t eq = line.find('=');
++			if (eq != std::string::npos && trim(line.substr(0, eq)) == key)
++				value = trim(line.substr(eq + 1));
++		}
++		return value;
++	}
++
++	// es_systems is a comma-separated list of ES system names.
++	inline bool offered(const std::string& system)
++	{
++		std::istringstream names(confValue("es_systems"));
++		std::string name;
++		while (std::getline(names, name, ','))
++			if (trim(name) == system)
++				return true;
++		return false;
++	}
++}
++
++#endif
+diff --git a/es-app/src/FileData.cpp b/es-app/src/FileData.cpp
+index d401d09..fe7b5a5 100644
+--- a/es-app/src/FileData.cpp
++++ b/es-app/src/FileData.cpp
+@@ -19,6 +19,7 @@
+ #include <assert.h>
+ #include "Gamelist.h"
+ #include "DarkosVulkan.h"
++#include "DarkosNpu.h"
+ #include <stdlib.h>
+ #include <algorithm>
+ 
+@@ -361,9 +362,16 @@ void FileData::launchGame(Window* window)
+ 	else
+ 		unsetenv("DARKOS_HIDE_PAD");
+ 
++	// dArkOS: NPU UPSCALE of the system (DarkosNpu.h); its launcher makes DARKOS_NPU_SR of it
++	if (DarkosNpu::offered(getSystemName()) && Settings::getInstance()->getString(getSystemName() + ".npusr") == "on")
++		setenv("DARKOS_NPU_UPSCALE", "on", 1);
++	else
++		unsetenv("DARKOS_NPU_UPSCALE");
++
+ 	int exitCode = runSystemCommand(command, getDisplayName(), hideWindow ? NULL : window);
+ 	unsetenv("DARKOS_VULKAN");
+ 	unsetenv("DARKOS_HIDE_PAD");
++	unsetenv("DARKOS_NPU_UPSCALE");
+ 	if (exitCode != 0)
+ 	{
+ 		LOG(LogWarning) << "...launch terminated with nonzero exit code " << exitCode << "!";
+diff --git a/es-app/src/guis/GuiMenu.cpp b/es-app/src/guis/GuiMenu.cpp
+index 3abfcf6..4e29547 100644
+--- a/es-app/src/guis/GuiMenu.cpp
++++ b/es-app/src/guis/GuiMenu.cpp
+@@ -35,6 +35,7 @@
+ //#include <go2/display.h>
+ #include "SystemConf.h"
+ #include "DarkosVulkan.h"
++#include "DarkosNpu.h"
+ 
+ GuiMenu::GuiMenu(Window* window, bool animate) : GuiComponent(window), mMenu(window, _("MAIN MENU")), mVersion(window)
+ {
+@@ -1910,6 +1911,20 @@ void GuiMenu::openSystemEmulatorSettings(SystemData* system)
+ 		});
+ 	}
+ 
++	// dArkOS: NPU UPSCALE (DarkosNpu.h), for the systems npusr.conf offers it to. OFF by default.
++	if (DarkosNpu::offered(system->getName()))
++	{
++		auto sr_choice = std::make_shared<OptionListComponent<std::string>>(mWindow, _("NPU UPSCALE"), false);
++		const std::string currentSr = Settings::getInstance()->getString(system->getName() + ".npusr");
++		sr_choice->add(_("OFF"), "", currentSr != "on");
++		sr_choice->add(_("ON"), "on", currentSr == "on");
++		s->addWithLabel(_("NPU UPSCALE"), sr_choice);
++		s->addSaveFunc([system, sr_choice]
++		{
++			Settings::getInstance()->setString(system->getName() + ".npusr", sr_choice->getSelected());
++		});
++	}
++
+ 	mWindow->pushGui(s);
+ }
+ 

@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+"""dArkOS RG52 Mini: NPU UPSCALE - an emulator's native frame enlarged by ESPCN on the RK3562's NPU,
+in the Vulkan rotate layer (vk-rotate-layer/npusr.inc.c). EmulationStation's EMULATOR SETTINGS has it
+for the systems /etc/darkos/npusr.conf names; a game of such a system with it ON is launched with
+DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
+
+  darkos-npusr retroarch <RetroArch's config dir> <game>
+      3DS on Azahar: brings the NPU up; sets the core options the upscale needs (the 400x240 top
+      screen alone at its native resolution, Vulkan) and the settings in the core's overrides that
+      would undo it; prints a config for RetroArch's --appendconfig (Vulkan, integer scale, no
+      smoothing, shader or overlay). The launcher then sets DARKOS_NPU_SR=x3:400x240.
+  darkos-npusr ppsspp <PPSSPP's PSP/SYSTEM dir>
+      PSP on PPSSPP: brings the NPU up; prints a config for PPSSPP's --appendconfig (Vulkan, 1x,
+      nearest, integer scale, centred); DARKOS_NPU_SR=x2:480x272.
+  darkos-npusr restore
+      puts back every key the last run changed, in the files it changed - or that the emulator
+      writes the appended settings into. The launchers run it after the emulator, and before one
+      when a record is left over (the console was switched off in a game).
+
+Status 1 from retroarch or ppsspp: no upscale this time (HDMI, no NPU, model or runtime); nothing
+is changed and the game starts as it would with NPU UPSCALE off. docs/KNOWN-ISSUES.md, "NPU UPSCALE".
+"""
+import glob
+import json
+import os
+import subprocess
+import sys
+import time
+
+STATE = "/home/ark/.config/darkos-npusr"
+RECORD = os.path.join(STATE, "restore.json")
+MODELS = "/usr/share/darkos/npusr"
+# The NPU's clock for each model (min, max): the 3DS's x3 takes 13.9 ms at 600 MHz, under 60 fps's
+# 16.7; the PSP's x2 18.0 ms at 600 and 14.8 at 800 MHz, and its governor (rknpu_ondemand) stays at
+# 600 unless the minimum is 800 too. At 1 GHz the console was 15 C warmer within 1.5 minutes.
+NPU_CLOCK = {
+    (3, 400, 240): (300000000, 600000000),
+    (2, 480, 272): (800000000, 800000000),
+}
+
+RA_APPEND = [
+    ("video_driver", "vulkan"),
+    ("video_scale_integer", "true"),
+    ("video_scale_integer_overscale", "false"),
+    ("video_smooth", "false"),
+    ("video_shader_enable", "false"),
+    ("input_overlay_enable", "false"),
+    ("aspect_ratio_index", "22"),
+]
+AZAHAR = "Azahar"
+AZAHAR_OPTIONS = [
+    ("citra_resolution_factor", "1"),
+    ("citra_layout_option", "single_screen"),
+    ("citra_swap_screen", "Top"),
+    ("citra_graphics_api", "Vulkan"),
+]
+PPSSPP_APPEND = [
+    ("Graphics", "GraphicsBackend", "3 (VULKAN)"),
+    ("Graphics", "InternalResolution", "1"),
+    ("Graphics", "DisplayCropTo16x9", "False"),
+    # 1.20 reads the filter and the layout from here, not [Graphics]: 960x544 at (160,88)
+    ("DisplayLayout.Landscape", "BufferFiltering", "2"),
+    ("DisplayLayout.Landscape", "DisplayStretch", "False"),
+    ("DisplayLayout.Landscape", "DisplayOffsetX", "0.500000"),
+    ("DisplayLayout.Landscape", "DisplayOffsetY", "0.500000"),
+    ("DisplayLayout.Landscape", "DisplayScale", "1.000000"),
+    ("DisplayLayout.Landscape", "DisplayIntegerScale", "True"),
+    ("DisplayLayout.Landscape", "DisplayAspectRatio", "1.000000"),
+]
+
+
+def log(msg):
+    print("darkos-npusr: " + msg, file=sys.stderr)
+
+
+# --- the NPU ----------------------------------------------------------------------------------------
+
+def hdmi_connected():
+    for st in glob.glob("/sys/class/drm/card*-HDMI-A-*/status"):
+        try:
+            with open(st) as f:
+                if f.read().strip() == "connected":
+                    return True
+        except OSError:
+            pass
+    return False
+
+
+def npu_up(scale, w, h):
+    """The NPU ready for the model of x<scale> from <w>x<h>; False (and why on stderr) if not."""
+    if hdmi_connected():
+        # the rotate layer leaves a landscape display alone, and the upscale with it
+        log("HDMI is connected: no upscale")
+        return False
+    model = f"{MODELS}/espcn_x{scale}_{w}x{h}.rknn"
+    if not os.path.isfile(model):
+        log(f"no model {model}")
+        return False
+    if not any(os.path.isfile(os.path.join(d, "librknnrt.so"))
+               for d in ("/usr/lib/aarch64-linux-gnu", "/usr/lib", "/usr/local/lib")):
+        log("no librknnrt.so")
+        return False
+    if not os.path.isdir("/sys/module/rknpu"):
+        # blacklisted (modprobe.d/dArkOS-rknpu.conf): nothing loads it but this
+        r = subprocess.run(["sudo", "-n", "/usr/sbin/modprobe", "rknpu"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        if r.returncode != 0:
+            log("modprobe rknpu: " + r.stderr.strip())
+            return False
+    for _ in range(50):
+        nodes = glob.glob("/sys/class/devfreq/*.npu")
+        if nodes:
+            break
+        time.sleep(0.1)
+    else:
+        log("the NPU did not come up (no devfreq node)")
+        return False
+    lo, hi = NPU_CLOCK.get((scale, w, h), (300000000, 600000000))
+    # the minimum down first, so that the maximum may go below the last run's minimum
+    for name, hz in (("min_freq", 300000000), ("max_freq", hi), ("min_freq", lo)):
+        subprocess.run(["sudo", "-n", "tee", os.path.join(nodes[0], name)], input=f"{hz}\n",
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+    return True
+
+
+# --- config files: "key = value" lines, with [sections] or without ------------------------------------
+
+def read_lines(path):
+    try:
+        with open(path, encoding="utf-8", errors="surrogateescape") as f:
+            return f.read().splitlines()
+    except OSError:
+        return None
+
+
+def write_lines(path, lines):
+    tmp = path + ".npusr-tmp"
+    with open(tmp, "w", encoding="utf-8", errors="surrogateescape") as f:
+        f.write("\n".join(lines) + "\n")
+    os.replace(tmp, path)
+
+
+def find(lines, section, key):
+    """Index of key's line (in section, if there are sections), -1 if none."""
+    cur = None
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if s.startswith("[") and s.endswith("]"):
+            cur = s[1:-1]
+            continue
+        if (section is None or cur == section) and "=" in s and s.split("=", 1)[0].strip() == key:
+            return i
+    return -1
+
+
+def put(lines, section, key, line):
+    """key's line replaced by line, added when key has none, removed when line is None."""
+    i = find(lines, section, key)
+    if line is None:
+        if i >= 0:
+            del lines[i]
+        return
+    if i >= 0:
+        lines[i] = line
+        return
+    if section is None:
+        lines.append(line)
+        return
+    head = -1
+    for j, l in enumerate(lines):
+        if l.strip() == f"[{section}]":
+            head = j
+            break
+    if head < 0:
+        lines += [f"[{section}]", line]
+        return
+    end = head + 1
+    while end < len(lines) and not (lines[end].strip().startswith("[") and lines[end].strip().endswith("]")):
+        end += 1
+    while end > head + 1 and not lines[end - 1].strip():
+        end -= 1
+    lines.insert(end, line)
+
+
+def ra_line(key, value):
+    return f'{key} = "{value}"'
+
+
+def ra_value(lines, key):
+    i = find(lines, None, key)
+    if i < 0:
+        return None
+    return lines[i].split("=", 1)[1].strip().strip('"')
+
+
+# --- the restore record: {path: [[section, key, the line before or null], ...]} -------------------------
+
+def load_record():
+    try:
+        with open(RECORD) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_record(rec):
+    os.makedirs(STATE, exist_ok=True)
+    tmp = RECORD + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(rec, f, indent=1)
+    os.replace(tmp, RECORD)
+
+
+def remember(rec, path, lines, section, key):
+    entries = rec.setdefault(path, [])
+    if any(e[0] == section and e[1] == key for e in entries):
+        return
+    if section is not None and f"[{section}]" not in (l.strip() for l in lines) and \
+            not any(e[0] == section and e[1] == "" for e in entries):
+        entries.append([section, "", None])   # the section was not there: an empty one goes again
+    i = find(lines, section, key)
+    entries.append([section, key, lines[i] if i >= 0 else None])
+
+
+def drop_empty_section(lines, section):
+    for i, l in enumerate(lines):
+        if l.strip() == f"[{section}]":
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j == len(lines) or (lines[j].strip().startswith("[") and lines[j].strip().endswith("]")):
+                del lines[i:j]
+            return
+
+
+def restore():
+    rec = load_record()
+    for path, entries in rec.items():
+        lines = read_lines(path)
+        if lines is None:
+            continue
+        before = list(lines)
+        for section, key, line in entries:
+            if key:
+                put(lines, section, key, line)
+        for section, key, line in entries:
+            if not key:
+                drop_empty_section(lines, section)
+        if lines != before:
+            try:
+                write_lines(path, lines)
+            except OSError as e:
+                log(f"cannot restore {path}: {e}")
+    try:
+        os.remove(RECORD)
+    except OSError:
+        pass
+
+
+def set_keys(rec, path, keys, add):
+    """keys [(key, value)] set in the RetroArch-style file path; missing ones added only if add."""
+    lines = read_lines(path)
+    if lines is None:
+        if not add:
+            return
+        lines = []
+    changed = False
+    for key, value in keys:
+        if ra_value(lines, key) == value or (not add and find(lines, None, key) < 0):
+            continue
+        remember(rec, path, lines, None, key)
+        put(lines, None, key, ra_line(key, value))
+        changed = True
+    if changed:
+        save_record(rec)   # the record first: a power-off in between leaves something to put back
+        write_lines(path, lines)
+
+
+# --- the emulators ------------------------------------------------------------------------------------
+
+def cmd_retroarch(cfgdir, game):
+    if not npu_up(3, 400, 240):
+        return 1
+    rc = read_lines(os.path.join(cfgdir, "retroarch.cfg")) or []
+    core_dir = os.path.join(cfgdir, "config", AZAHAR)
+    base = os.path.splitext(os.path.basename(game))[0]
+    folder = os.path.basename(os.path.dirname(os.path.abspath(game)))
+    rec = load_record()
+    # core options: the file RetroArch takes them from, and a game's or a folder's own, which win
+    if ra_value(rc, "global_core_options") == "true":
+        opts = os.path.expanduser(ra_value(rc, "core_options_path") or "") or \
+            os.path.join(cfgdir, "retroarch-core-options.cfg")
+    else:
+        opts = os.path.join(core_dir, AZAHAR + ".opt")
+    set_keys(rec, opts, AZAHAR_OPTIONS, add=True)
+    if ra_value(rc, "game_specific_options") != "false":
+        for own in (os.path.join(core_dir, base + ".opt"), os.path.join(core_dir, folder + ".opt")):
+            if os.path.isfile(own):
+                set_keys(rec, own, AZAHAR_OPTIONS, add=True)
+    # overrides come after --appendconfig: one that sets any of these is set to ours for this run
+    for over in (AZAHAR, folder, base):
+        set_keys(rec, os.path.join(core_dir, over + ".cfg"), RA_APPEND, add=False)
+    app = "/tmp/darkos-npusr-retroarch.cfg"
+    with open(app, "w") as f:
+        f.write("".join(ra_line(k, v) + "\n" for k, v in RA_APPEND))
+    print(app)
+    return 0
+
+
+def cmd_ppsspp(sysdir):
+    if not npu_up(2, 480, 272):
+        return 1
+    # PPSSPP saves its config right after it reads --appendconfig's, into ppsspp.ini and into a
+    # game's own <ID>_ppsspp.ini: what they had of these keys is put back after it
+    rec = load_record()
+    for path in [os.path.join(sysdir, "ppsspp.ini")] + sorted(glob.glob(os.path.join(sysdir, "*_ppsspp.ini"))):
+        lines = read_lines(path)
+        if lines is None:
+            continue
+        for section, key, _ in PPSSPP_APPEND:
+            remember(rec, path, lines, section, key)
+    save_record(rec)
+    app = "/tmp/darkos-npusr-ppsspp.ini"
+    sections = {}
+    for section, key, value in PPSSPP_APPEND:
+        sections.setdefault(section, []).append(f"{key} = {value}")
+    with open(app, "w") as f:
+        for section, lines in sections.items():
+            f.write(f"[{section}]\n" + "\n".join(lines) + "\n")
+    print(app)
+    return 0
+
+
+def main(argv):
+    if len(argv) >= 1 and argv[0] == "restore":
+        restore()
+        return 0
+    if os.path.exists(RECORD):
+        restore()   # left over from a run that did not end (power off in a game)
+    if len(argv) == 3 and argv[0] == "retroarch":
+        return cmd_retroarch(argv[1], argv[2])
+    if len(argv) == 2 and argv[0] == "ppsspp":
+        return cmd_ppsspp(argv[1])
+    print(__doc__, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

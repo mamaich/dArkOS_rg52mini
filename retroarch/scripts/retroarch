@@ -85,6 +85,21 @@ else
   # retroarch.cfg.ext does (ra-extpads.py; only in the RG52 Mini's image)
   ext=""
   [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "/home/ark/.config/${emulator}")
+  # dArkOS RG52 Mini: NPU UPSCALE (EmulationStation's EMULATOR SETTINGS, 3DS): Azahar's top screen
+  # enlarged x3 by the NPU in the Vulkan rotate layer. darkos-npusr sets what that needs for this
+  # run and puts back afterwards what it changed; status 1 from it: the game starts as usual.
+  npusr=/usr/local/bin/darkos-npusr
+  npu=""
+  if [ -x "$npusr" ]; then
+    [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
+    if [ "$DARKOS_NPU_UPSCALE" = on ]; then
+      case "$*" in
+        *cores/azahar_libretro.so*)
+          npu=$("$npusr" retroarch "/home/ark/.config/${emulator}" "${@: -1}") && export DARKOS_NPU_SR=x3:400x240 ;;
+      esac
+    fi
+  fi
+  ext="$ext${ext:+${npu:+|}}$npu"
   start=$SECONDS
   /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} "$@"
   rc=$?
@@ -97,5 +112,6 @@ else
     [ "${PIPESTATUS[0]}" -eq 1 ] && "$bioscheck" failed "$emulator" "$log" "$@"
     rm -f "$log"
   fi
+  [ -n "$npu" ] && "$npusr" restore
   exit $rc
 fi

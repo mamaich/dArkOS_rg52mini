@@ -4,6 +4,17 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 
 ## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day)
 
+* **NPU UPSCALE for the 3DS and the PSP** (the owner, 2026-11-23: into 1.13,
+  both systems, off by default). **In master** and checked on the owner's
+  console (KNOWN-ISSUES.md, "NPU UPSCALE"). Still open before the build:
+  faster models the AI-SR session is making at the owner's request (a
+  space-to-depth network distilled from ESPCN, about 7 ms instead of 18 for
+  the PSP, which would no longer need the NPU held at 800 MHz; it needs a
+  change to the layer's prep pass, coming from that session); the console's
+  temperature and draw on battery with the upscale against without it;
+  nothing to try on revision A (its firmware's dtb describes the NPU's rail
+  as revision B's does).
+
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.
   Wii games already show under GameCube in ES (the system takes `.wbfs`,

@@ -38,7 +38,12 @@
  * loader does that), DARKOS_VK_ROTATE=270 turns the other way,
  * DARKOS_VK_SCALED_MODES=0 leaves out the scaled modes,
  * DARKOS_VK_ROTATE_DEBUG=1 logs to stderr.
+ *
+ * NPU UPSCALE (npusr.inc.c, DARKOS_NPU_SR=x<S>:<W>x<H>): an emulator's native frame, shown enlarged by
+ * an integer with nearest sampling, is enlarged by ESPCN on the NPU instead, in the same pass. Off
+ * unless that knob is set: then nothing of it is loaded and the layer is as before.
  */
+#define _GNU_SOURCE   /* npusr: pthread_timedjoin_np */
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_layer.h>
 #include <pthread.h>
@@ -51,10 +56,20 @@
 #define LAYER_NAME "VK_LAYER_DARKOS_rotate"
 #define EXPORT __attribute__((visibility("default")))
 #define MAX_IMAGES 8
+struct SRDev;
+struct SRSwap;
 
 static int g_debug = -1;
 static int g_rot = 90;
 static int g_scaled = 1;
+
+/* npusr: whether the knob is set (parsed in full by sr_cfg, npusr.inc.c) */
+static int g_sr_on_early;
+static void sr_cfg_early(void)
+{
+    const char *e = getenv("DARKOS_NPU_SR");
+    g_sr_on_early = e && *e && *e != '0';
+}
 
 #define LOG(...) do { if (g_debug > 0) { fprintf(stderr, "darkos_rotate: " __VA_ARGS__); fputc('\n', stderr); } } while (0)
 
@@ -146,7 +161,11 @@ typedef struct Dev {
     DF(CmdBindDescriptorSets) DF(CmdPushConstants) DF(CmdDraw) DF(QueueSubmit)
     DF(CreateSemaphore) DF(DestroySemaphore) DF(CreateFence) DF(DestroyFence)
     DF(WaitForFences) DF(ResetFences) DF(DeviceWaitIdle)
+    /* npusr */
+    DF(CreateBuffer) DF(DestroyBuffer) DF(GetBufferMemoryRequirements) DF(BindBufferMemory)
+    DF(CreateComputePipelines) DF(CmdDispatch) DF(ResetCommandBuffer) DF(GetMemoryFdPropertiesKHR)
 #undef DF
+    struct SRDev *sr;
 } Dev;
 
 typedef struct Swap {
@@ -170,7 +189,15 @@ typedef struct Swap {
     VkDescriptorPool dp;
     VkSampler samp;
     VkCommandPool pool;
+    VkFormat fmt;
+    struct SRSwap *srs;     /* npusr: NULL = no SR */
 } Swap;
+
+/* npusr.inc.c */
+static void sr_device_free(Dev *d);
+static void sr_swap_free(Swap *s);
+static void sr_swap_build(Swap *s, VkViewport vp, int scaled);
+static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi, uint32_t idx, VkResult *res);
 
 static Inst *g_insts;
 static Mode *g_modes;
@@ -728,7 +755,36 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_CreateDevice(VkPhysicalDevice pd, const 
         cb = (VkLayerDeviceCreateInfo *)cb->pNext;
 
     PFN_vkCreateDevice create = (PFN_vkCreateDevice)gipa(i->instance, "vkCreateDevice");
-    VkResult r = create(pd, ci, alloc, out);
+    /* npusr: with the knob set, the extensions that import the NPU's memory (dma-buf), when the driver has them */
+    sr_cfg_early();
+    VkDeviceCreateInfo ci2 = *ci;
+    const char *exts[64];
+    if (g_sr_on_early && ci->enabledExtensionCount + 3 <= 64) {
+        uint32_t ne = 0;
+        for (; ne < ci->enabledExtensionCount; ne++) exts[ne] = ci->ppEnabledExtensionNames[ne];
+        PFN_vkEnumerateDeviceExtensionProperties enumx =
+            (PFN_vkEnumerateDeviceExtensionProperties)gipa(i->instance, "vkEnumerateDeviceExtensionProperties");
+        uint32_t na = 0;
+        VkExtensionProperties *av = NULL;
+        if (enumx && enumx(pd, NULL, &na, NULL) == VK_SUCCESS && na && (av = calloc(na, sizeof *av)) &&
+            enumx(pd, NULL, &na, av) == VK_SUCCESS) {
+            static const char *want[] = { "VK_KHR_external_memory", "VK_KHR_external_memory_fd", "VK_EXT_external_memory_dma_buf" };
+            for (int w = 0; w < 3; w++) {
+                int have = 0, sup = 0;
+                for (uint32_t k = 0; k < ne; k++) if (!strcmp(exts[k], want[w])) have = 1;
+                for (uint32_t k = 0; k < na; k++) if (!strcmp(av[k].extensionName, want[w])) sup = 1;
+                if (!have && sup) exts[ne++] = want[w];
+            }
+            ci2.enabledExtensionCount = ne;
+            ci2.ppEnabledExtensionNames = exts;
+        }
+        free(av);
+    }
+    VkResult r = create(pd, &ci2, alloc, out);
+    if (r != VK_SUCCESS && ci2.ppEnabledExtensionNames != ci->ppEnabledExtensionNames) {
+        fprintf(stderr, "darkos_npusr: vkCreateDevice with dma-buf extensions failed (%d), retrying without: SR off\n", r);
+        r = create(pd, ci, alloc, out);
+    }
     if (r != VK_SUCCESS)
         return r;
 
@@ -770,6 +826,8 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_CreateDevice(VkPhysicalDevice pd, const 
     DF(CmdBindDescriptorSets) DF(CmdPushConstants) DF(CmdDraw) DF(QueueSubmit)
     DF(CreateSemaphore) DF(DestroySemaphore) DF(CreateFence) DF(DestroyFence)
     DF(WaitForFences) DF(ResetFences) DF(DeviceWaitIdle)
+    DF(CreateBuffer) DF(DestroyBuffer) DF(GetBufferMemoryRequirements) DF(BindBufferMemory)
+    DF(CreateComputePipelines) DF(CmdDispatch) DF(ResetCommandBuffer) DF(GetMemoryFdPropertiesKHR)
 #undef DF
     pthread_mutex_lock(&g_lock);
     d->next = g_devs; g_devs = d;
@@ -788,6 +846,7 @@ static VKAPI_ATTR void VKAPI_CALL L_DestroyDevice(VkDevice device, const VkAlloc
     while (*pp && *pp != d) pp = &(*pp)->next;
     if (*pp) *pp = d->next;
     pthread_mutex_unlock(&g_lock);
+    sr_device_free(d);
     free(d);
     destroy(device, alloc);
 }
@@ -805,10 +864,13 @@ static uint32_t find_memory(Dev *d, uint32_t bits, VkMemoryPropertyFlags want)
     return 0;
 }
 
+#include "npusr.inc.c"
+
 static void swap_free(Swap *s)
 {
     Dev *d = s->d;
     VkDevice dv = d->device;
+    sr_swap_free(s);
     for (uint32_t k = 0; k < s->n; k++) {
         if (s->fb[k]) d->DestroyFramebuffer(dv, s->fb[k], NULL);
         if (s->real_view[k]) d->DestroyImageView(dv, s->real_view[k], NULL);
@@ -860,6 +922,7 @@ static int swap_build(Swap *s, const VkSwapchainCreateInfoKHR *ci)
     Dev *d = s->d;
     VkDevice dv = d->device;
     VkFormat fmt = ci->imageFormat;
+    s->fmt = fmt;
     int scaled;
     VkViewport vp = scaled_viewport(s->app_ext, s->real_ext, &scaled);
 
@@ -1038,6 +1101,7 @@ static int swap_build(Swap *s, const VkSwapchainCreateInfoKHR *ci)
             0, 0, NULL, 0, NULL, 1, &ib);
         CHECK(d->EndCommandBuffer(s->cb[k]));
     }
+    sr_swap_build(s, vp, scaled);   /* npusr: when it fails, just no SR */
     return 1;
 fail:
     return 0;
@@ -1133,6 +1197,9 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_QueuePresent(VkQueue queue, const VkPres
     }
     if (!rot || idx >= rot->n)
         return d->QueuePresentKHR(queue, pi);
+    VkResult sres;
+    if (rot->srs && sr_present(d, rot, queue, pi, idx, &sres))
+        return sres;
 
     /* the pass waits for what the program said its frame waits for, and the
        present waits for the pass */

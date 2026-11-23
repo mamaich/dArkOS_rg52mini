@@ -35,6 +35,8 @@ inference. Keep that distinction in what you add.
     retroarch-patches/, sdl2-patch-*   our patches to RetroArch and SDL2
     dArkOS_Tools/rk3562/               Options -> Tools entries
     malisx2/, pcsx2/, dolphin/, ...    per-component files: settings, launchers, profiles
+    vk-rotate-layer/                   the Vulkan layer that turns frames onto the portrait panel, and NPU UPSCALE's part of it
+    npusr/                             NPU UPSCALE's helper, models, NOTICE and the RKNN runtime's license (build_npusr.sh)
     rk3562_core_builds/                submodule: RetroArch cores, one recipe each, patches/<core>-patch-NNN-*.patch
     kernel_rk3562/                     submodule: the kernel with the hardware patches
     bootloader/                        submodule: the loader packing tool

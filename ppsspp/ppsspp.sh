@@ -50,7 +50,20 @@ if  [[ $1 == "standalone" ]]; then
       printf "Launching ppsspp emulation now" >> /dev/tty1
     fi
   fi
-  LD_PRELOAD="$HDMI" /opt/ppsspp/PPSSPPSDL --fullscreen "$2"
+  # dArkOS RG52 Mini: NPU UPSCALE (EmulationStation's EMULATOR SETTINGS): the PSP's 480x272 enlarged
+  # x2 by the NPU in the Vulkan rotate layer. PPSSPP saves what --appendconfig gives it into its
+  # ini files; darkos-npusr puts those keys back before ppsspp.ini goes to ppsspp.ini.sdl.
+  npusr=/usr/local/bin/darkos-npusr
+  npu=()
+  if [ -x "$npusr" ]; then
+    [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
+    if [ "$DARKOS_NPU_UPSCALE" = on ] && npucfg=$("$npusr" ppsspp "/$directory/psp/ppsspp/PSP/SYSTEM"); then
+      export DARKOS_NPU_SR=x2:480x272
+      npu=(--appendconfig="$npucfg")
+    fi
+  fi
+  LD_PRELOAD="$HDMI" /opt/ppsspp/PPSSPPSDL --fullscreen "${npu[@]}" "$2"
+  [ ${#npu[@]} -gt 0 ] && "$npusr" restore
   cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl
   sudo systemctl stop killer_daemon.service
 elif [[ $1 == "standalone-2021" ]]; then

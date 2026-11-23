@@ -1,0 +1,30 @@
+dArkOS RG52 Mini - NPU UPSCALE: third-party components
+=======================================================
+
+NPU UPSCALE enlarges an emulator's native frame with a small neural network (ESPCN) on the
+RK3562's NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate). It uses:
+
+1. librknnrt.so - Rockchip RKNN runtime 2.5.0
+   Rockchip Electronics Co., Ltd.
+   Under the License Agreement for RKNN Software Development Kit Package (its full text is
+   /usr/share/doc/librknnrt/LICENSE, npusr/LICENSE.rknn in the dArkOS sources, from the same
+   release): for applications compatible with Rockchip's products (1.1), its notices kept
+   (2.1(b)). dArkOS uses it only on the RK3562 of the RG52 Mini. Unmodified, as
+   published in https://github.com/airockchip/rknn-toolkit2 at the tag v2.5.0,
+   rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so
+   sha256 4b6cc575bedf8952b13db4b1190fa3b3d2ac213f00be774ff6ccd19d651970c0
+   Installed as /usr/lib/aarch64-linux-gnu/librknnrt.so; loaded by the layer only when a game
+   starts with NPU UPSCALE on.
+
+2. rknn_api.h - the runtime's header, from the same release and under the same license
+   (vk-rotate-layer/rknn_api.h in the dArkOS sources; LICENSE.rknn beside it).
+
+3. The ESPCN weights in /usr/share/darkos/npusr/espcn_x*.rknn
+   From TF-ESPCN by Fanny Monori, https://github.com/fannymonori/TF-ESPCN (the models OpenCV's
+   dnn_superres module uses), Apache License 2.0 (LICENSE-TF-ESPCN, installed beside this file).
+   Changed: the first layer rebuilt for the NPU (the same network, its 5x5 kernel as five rows),
+   quantised to INT8 with rknn-toolkit2 2.5.0 for the 3DS (x3 from 400x240) and the PSP
+   (x2 from 480x272); npusr/models/make_espcn.py in the dArkOS sources makes them from
+   ESPCN_x3.pb and ESPCN_x2.pb (TF-ESPCN's export/ files, kept there too).
+   sha256 aa9ccd9cc62555c40d178db133ab3a8d8269714093dd86a9cbf5ee922b559e68  espcn_x3_400x240.rknn
+   sha256 994d34277a33e45bdfb19f702c2f9c57a3a0cda425c81e2f1f7b956430bf64f8  espcn_x2_480x272.rknn

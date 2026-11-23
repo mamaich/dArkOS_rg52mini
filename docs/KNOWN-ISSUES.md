@@ -1008,6 +1008,111 @@ A user's own GameSettings still win. On the owner's console since
 If another game hangs the same way (a FIFO line in the journal of its
 launch), the same two lines for its id fix it.
 
+## NPU UPSCALE: the 3DS and the PSP enlarged on the NPU — for 1.13
+
+The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
+every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
+emulator's native frame with ESPCN, a small super-resolution network, in
+place of the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240
+to 1200x720), the PSP x2 (480x272 to 960x544). Worked out by a separate
+session (AI-SR, 2026-11-22/23); the owner asked for it in 1.13 for both
+systems, off by default.
+
+**How it is put together.**
+- *ES*: EMULATOR SETTINGS has NPU UPSCALE (OFF, ON) for the systems
+  `/etc/darkos/npusr.conf` names (3ds, n3ds, ppsspp, pspminis), kept as
+  `<system>.npusr`; a game is launched with `DARKOS_NPU_UPSCALE=on` when it
+  is ON (es-0011).
+- *The launchers*: `retroarch` (for the Azahar core) and `ppsspp.sh` (PPSSPP
+  standalone) ask `darkos-npusr` (`npusr/`), which loads the NPU's driver,
+  caps the NPU at 600 MHz (ESPCN keeps up there; at 1 GHz the console was
+  15 C warmer within 1.5 minutes) and gives the emulator what the upscale
+  needs for this run: RetroArch gets an `--appendconfig` (Vulkan, integer
+  scale, no smoothing, shader or overlay), Azahar its core options (the top
+  screen alone at its native resolution, Vulkan), PPSSPP an `--appendconfig`
+  (Vulkan, 1x, nearest, integer scale, centred). Then the launcher sets
+  `DARKOS_NPU_SR=x3:400x240` or `x2:480x272` for the layer.
+- *What it changes it puts back*: Azahar's core options, and the keys of an
+  override of the core that would undo it, are set in their files; PPSSPP
+  writes what `--appendconfig` gives it into `ppsspp.ini` and into a game's
+  own `<ID>_ppsspp.ini`. `darkos-npusr` keeps the earlier lines in
+  `~/.config/darkos-npusr/restore.json` and puts them back after the
+  emulator; a record left over from a power-off in a game is put back at the
+  next launch of either launcher.
+- *The layer*: VK_LAYER_DARKOS_rotate (`vk-rotate-layer/npusr.inc.c`, with
+  `sr_prep.comp` and `sr_rotate.frag`) does the work only when
+  `DARKOS_NPU_SR` is set. At each present a compute pass takes every S-th
+  pixel of the area from the program's frame and writes the NPU's input (the
+  luma, in the NPU's own NC1HWC2 int8 layout) and the colour into one of
+  three slots; a worker thread runs the NPU on it; the rotate pass builds the
+  panel's pixels inside the area from the latest finished NPU output (luma)
+  and the colour. Present never waits for the NPU, so the upscaled picture
+  can be a frame behind. The NPU allocates the buffers and Vulkan imports
+  them as dma-bufs (Mali's Vulkan cannot export its own). Without the
+  variable the layer is as before and loads none of this.
+- *Over the game*: what RetroArch or PPSSPP draws at the panel's resolution
+  over the frame — a menu, a notification, PPSSPP's pause screen — would be
+  sampled every S-th pixel and come out unreadable. The prep pass marks each
+  S x S block that is not one colour (a nearest-enlarged frame never has
+  one), and such a block is shown as it is.
+- *Kernel* (kernel_rk3562 7001704): `vdd_npu` (a PWM DC-DC on `pwm6`),
+  `rknpu` and its IOMMU on; rknpu a module. The image blacklists it
+  (`/etc/modprobe.d/dArkOS-rknpu.conf`); `darkos-npusr` loads it with
+  modprobe, so a console that never turns NPU UPSCALE on never powers the
+  NPU.
+- *The runtime and the models*: Rockchip's `librknnrt.so` 2.5.0, fetched by
+  `build_npusr.sh` from rknn-toolkit2's release and checked by sha256 (its
+  license allows distribution with applications for Rockchip's chips and
+  asks that its notices be kept: `/usr/share/doc/librknnrt/LICENSE`,
+  `/usr/share/doc/darkos-npusr/NOTICE`); the two models in
+  `/usr/share/darkos/npusr/`, made by `npusr/models/make_espcn.py` from
+  TF-ESPCN's weights (Apache 2.0), INT8.
+
+**Where it does nothing** (the game runs as with NPU UPSCALE off):
+HDMI connected (the layer leaves a landscape display alone); PSP on the
+RetroArch core or on standalone-2021; no NPU, model or runtime. A RetroArch
+override that sets one of its keys is set to the upscale's value for the run
+and put back; a game's own Azahar options file is handled the same way.
+
+**Limits.** The 3DS shows its top screen alone (a game that needs the touch
+screen wants NPU UPSCALE off). The upscaled picture can trail the game by a
+frame.
+
+**Checked on the owner's console (revision B), 2026-11-23**, kernel 7001704,
+the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
+- Boot: rknpu not loaded (the blacklist), `vdd_npu` off; `modprobe` loads
+  it, `card1`/`renderD129` appear after `card0`.
+- Super Mario 3D Land, started as ES starts it: SR region 1200x720 at
+  (40,0), 60.05 fps, the NPU on every frame (13.6 ms at 600 MHz), CPU 22% of
+  four cores; RetroArch's quick menu over it as readable as without SR.
+- Daxter (PSP), PPSSPP standalone through `ppsspp.sh`: 960x544 at (160,88),
+  59.95 fps, the NPU on every frame (15.1 ms with the clock held at 800 MHz;
+  18 ms at 600 would drop a tenth of the upscales), CPU 15%; PPSSPP's pause
+  screen readable.
+- Put back: Azahar's options set by hand to 2x and the default layout
+  were 1x and single screen in the run, a record left when the run was killed
+  with its launcher, and 2x and the default layout again at the next launch
+  (with NPU UPSCALE off, which loaded none of the upscale). PPSSPP:
+  `ppsspp.ini.sdl` after the run differs from before only in PPSSPP's own
+  `RunCount`; the game's own ini and `controls.ini` unchanged.
+- From ES: NPU UPSCALE in EMULATOR SETTINGS of "Nintendo 3DS (n3ds)", ON,
+  kept as `n3ds.npusr`; the game then started with `DARKOS_NPU_UPSCALE=on`
+  and the upscale. This ES keeps a change made in a settings menu only when
+  the menu is left with B (BACK): START (CLOSE) closes every menu and drops
+  it, for this option as for every other one (upstream's
+  `GuiSettings::input`).
+- 80-81 C after a few minutes of either game on the charger; on battery not
+  measured yet.
+
+**Revision A.** No revision A unit was tried. What can be checked without
+one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)
+and for revision B (v14: HUSB311, no RK915) describe `vdd_npu` alike — a
+pwm-regulator on `pwm6` (`pwm@ff700020`, `pwm6m0` = GPIO0_C1, 0.8 to 1.1 V,
+`pwms = <&pwm6 0 5000 1>`), the regulator, the PWM and the NPU disabled — and
+in neither does anything else use GPIO0_C1 (its other functions, `npu-pins`
+and `can1m1`, are unused; no GPIO user). The NPU is powered only when NPU
+UPSCALE is turned on.
+
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
 
 Seen by the owner with PortMaster's OpenEnroth port and a Russian CD copy of
