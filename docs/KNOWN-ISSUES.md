@@ -1109,7 +1109,10 @@ systems, off by default.
   (91366fe), the same series, two rounds, slot 9 on battery: 50.4/50.5% and
   2.89/2.87 W without the upscale, 70.4/70.8% and 3.57/3.53 W with it (a
   build with no check at all 69.9/70.2%, 3.59/3.53 W): the check costs
-  nothing now, the upscale 20 points of Mali instead of 32. The prep pass compares one
+  nothing now, the upscale 20 points of Mali instead of 32. The compose
+  pass's model values as specialization constants (ae44ec2: the divisions
+  by B become multiplies; colour in mediump): 66.9/67.0% against 50.3/50.8%
+  without the upscale (on the charger, so no power figure), 16.5 points. The prep pass compares one
   pixel of each block with its first, (S-1, S-2) — odd, so RGUI's one-pixel
   dither shows (with a step of 2 the far corner too) — and adds the count
   up by subgroup, one atomic for 8 blocks (libmali's advice); all S x S of
