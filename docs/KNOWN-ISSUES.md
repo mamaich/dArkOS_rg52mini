@@ -1138,9 +1138,12 @@ RetroArch core or on standalone-2021; no NPU, model or runtime. A RetroArch
 override that sets one of its keys is set to the upscale's value for the run
 and put back; a game's own Azahar options file is handled the same way.
 
-**Limits.** The 3DS shows its top screen alone (a game that needs the touch
-screen wants NPU UPSCALE off). The upscaled picture can trail the game by a
-frame. PPSSPP on the RG52 renders at 2x by default
+**Limits.** The 3DS is upscaled only in a layout that shows one screen: the
+game starts with the top screen alone (a game that needs the touch screen
+wants NPU UPSCALE off), and a layout of two screens switched to in the game
+(large and small, side by side) shows without the upscale. The release notes
+must say so (the owner, 2026-11-23). The upscaled picture can trail the game
+by a frame. PPSSPP on the RG52 renders at 2x by default
 (`ppsspp.ini.sdl.rg52mini`, 7b3ea5c), and NPU UPSCALE runs it at 1x for the
 game: a real 2x render has more of the 3D picture's detail (Daxter's fur;
 against an honest render, Super Mario 3D Land in the same geometry, the AI-SR
