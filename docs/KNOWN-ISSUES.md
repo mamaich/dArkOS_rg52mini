@@ -1078,7 +1078,11 @@ systems, off by default.
   notifications at the top). Until 2026-11-23 each pixel of the panel
   checked its block and read the count: the AI-SR session measured that at
   about 12 points of Mali on Super Mario 3D Land (82% with the upscale, 70%
-  without the check, 50.5% without the upscale). The prep pass compares one
+  without the check, 50.5% without the upscale). Decided once a frame
+  (91366fe), the same series, two rounds, slot 9 on battery: 50.4/50.5% and
+  2.89/2.87 W without the upscale, 70.4/70.8% and 3.57/3.53 W with it (a
+  build with no check at all 69.9/70.2%, 3.59/3.53 W): the check costs
+  nothing now, the upscale 20 points of Mali instead of 32. The prep pass compares one
   pixel of each block with its first, (S-1, S-2) — odd, so RGUI's one-pixel
   dither shows (with a step of 2 the far corner too) — and adds the count
   up by subgroup, one atomic for 8 blocks (libmali's advice); all S x S of
