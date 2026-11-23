@@ -528,9 +528,19 @@ static void sr_swap_build(Swap *s, VkViewport vp, int scaled)
     SRVK(d->CreateShaderModule(dv, &smi, NULL, &vs));
     smi.codeSize = sizeof(sr_rotate_frag_spv); smi.pCode = sr_rotate_frag_spv;
     if (d->CreateShaderModule(dv, &smi, NULL, &fs) != VK_SUCCESS) { d->DestroyShaderModule(dv, vs, NULL); goto fail; }
+    /* sr_rotate.frag's specialization constants: the model's and the rectangle's values, fixed for the pipeline
+     * (as constants the divisions by B become multiplies and the branches that do not apply go) */
+    struct { int32_t B, GH, wstride, zp; float scale; int32_t OW, OH; VkBool32 direct, moved; } spc = {
+        sr->B, sr->GH, (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale,
+        sr->OW, sr->OH, x->dw == sr->OW && x->dh == sr->OH, (VkBool32)x->moved };
+    _Static_assert(sizeof spc == 9 * 4, "sr_rotate.frag's constants are nine 4-byte values");
+    VkSpecializationMapEntry sme[9];
+    for (uint32_t k = 0; k < 9; k++) sme[k] = (VkSpecializationMapEntry){ k, k * 4, 4 };
+    VkSpecializationInfo spi = { 9, sme, sizeof spc, &spc };
     VkPipelineShaderStageCreateInfo st[2] = {
         { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vs, .pName = "main" },
-        { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fs, .pName = "main" } };
+        { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fs, .pName = "main",
+          .pSpecializationInfo = &spi } };
     VkPipelineVertexInputStateCreateInfo vi = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
     VkPipelineInputAssemblyStateCreateInfo ia = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };

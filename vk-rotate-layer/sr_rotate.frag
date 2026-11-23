@@ -8,21 +8,35 @@ layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 color;
 layout(set = 0, binding = 0) uniform sampler2D app;
 layout(std430, set = 1, binding = 0) readonly buffer Nout { uint w[]; } nout;
-layout(set = 1, binding = 1) uniform sampler2D cbcr;
-// B: output pixels a side of one NPU cell (S for ESPCN row5, 2S for the space-to-depth models, S*K for cells);
-// GH: the NPU grid's height (NC1HWC2: channel c lives in the group c>>4, each group GH rows of wstride cells);
-// moved: the rectangle is not the program's native frame (fit, fill)
+layout(set = 1, binding = 1) uniform mediump sampler2D cbcr;
+// the rotate pass's push constants (rotate.vert reads rot); the model's own values below
 layout(push_constant) uniform PC { int rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; int B, GH, A, dx, dy, DW, DH, OW, OH, moved; } p;
+// The model's and the rectangle's values, fixed for the pipeline (npusr.inc.c, sr_swap_build): as constants
+// the divisions by B become multiplies (the Mali has no integer divide; two a pixel cost ~10 instructions
+// each) and the branches that do not apply go. B: output pixels a side of one NPU cell (S for ESPCN row5, 2S
+// for the space-to-depth models, S*K for cells); GH: the NPU grid's height (NC1HWC2: channel c lives in the
+// group c>>4, each group GH rows of WSTRIDE cells); DIRECT: the rectangle is the upscaled frame's size;
+// MOVED: the rectangle is not the program's native frame (fit, fill).
+layout(constant_id = 0) const int B = 6;
+layout(constant_id = 1) const int GH = 120;
+layout(constant_id = 2) const int WSTRIDE = 200;
+layout(constant_id = 3) const int ZP = -128;
+layout(constant_id = 4) const float SCALE = 0.00392157;
+layout(constant_id = 5) const int OW = 1200;
+layout(constant_id = 6) const int OH = 720;
+layout(constant_id = 7) const bool DIRECT = true;
+layout(constant_id = 8) const bool MOVED = false;
 
 // a pixel of the upscaled frame (clamped to it)
-float luma(ivec2 r)
+mediump float luma(ivec2 r)
 {
-    r = clamp(r, ivec2(0), ivec2(p.OW - 1, p.OH - 1));
-    int gh = r.y / p.B, gw = r.x / p.B;
-    int c = (r.y - gh * p.B) * p.B + (r.x - gw * p.B);
-    uint word = nout.w[(((c >> 4) * p.GH + gh) * p.wstride + gw) * 4 + ((c & 15) >> 2)];
+    r = clamp(r, ivec2(0), ivec2(OW - 1, OH - 1));
+    ivec2 g = r / B;                       // a constant divisor: a multiply and a shift
+    ivec2 in_cell = r - g * B;
+    int c = in_cell.y * B + in_cell.x;
+    uint word = nout.w[(((c >> 4) * GH + g.y) * WSTRIDE + g.x) * 4 + ((c & 15) >> 2)];
     int q = bitfieldExtract(int(word), (c & 3) * 8, 8);
-    return clamp((float(q) - float(p.zp)) * p.scale, 0.0, 1.0);
+    return clamp(float(q - ZP) * SCALE, 0.0, 1.0);
 }
 
 void main()
@@ -35,7 +49,7 @@ void main()
     }
     // Moved (fit, fill), the upscaled frame covers the program's bars: anything but black there (PPSSPP's
     // notifications at the top) is shown as drawn. A notification over the frame itself is upscaled with it.
-    if (p.moved != 0) {
+    if (MOVED) {
         ivec2 r = a - ivec2(p.ox, p.oy);
         if (r.x < 0 || r.y < 0 || r.x >= p.W * p.A || r.y >= p.H * p.A) {
             vec4 c = texture(app, uv);
@@ -46,16 +60,16 @@ void main()
         }
     }
     vec2 n = (vec2(d) + 0.5) / vec2(p.DW, p.DH);   // where in the frame, 0..1
-    float Y;
-    if (p.DW == p.OW && p.DH == p.OH)
+    mediump float Y;
+    if (DIRECT)
         Y = luma(d);
     else {
-        vec2 f = n * vec2(p.OW, p.OH) - 0.5;
+        vec2 f = n * vec2(OW, OH) - 0.5;
         ivec2 i = ivec2(floor(f));
-        vec2 t = f - vec2(i);
+        mediump vec2 t = f - vec2(i);
         Y = mix(mix(luma(i), luma(i + ivec2(1, 0)), t.x), mix(luma(i + ivec2(0, 1)), luma(i + ivec2(1, 1)), t.x), t.y);
     }
-    vec2 cc = texture(cbcr, n).rg - 0.5;
-    float cr = cc.x, cb = cc.y;
+    mediump vec2 cc = texture(cbcr, n).rg - 0.5;
+    mediump float cr = cc.x, cb = cc.y;
     color = vec4(clamp(vec3(Y + 1.403 * cr, Y - 0.714 * cr - 0.344 * cb, Y + 1.773 * cb), 0.0, 1.0), 1.0);
 }
