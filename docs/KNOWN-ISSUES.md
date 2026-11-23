@@ -1139,10 +1139,13 @@ and put back; a game's own Azahar options file is handled the same way.
 screen wants NPU UPSCALE off). The upscaled picture can trail the game by a
 frame. PPSSPP on the RG52 renders at 2x by default
 (`ppsspp.ini.sdl.rg52mini`, 7b3ea5c), and NPU UPSCALE runs it at 1x for the
-game: a real 2x render has more of the 3D picture's detail (Daxter's fur),
-the upscale cleaner edges and sharper 2D text, and on battery the 2x render
-drew less (Daxter's title screen 2.61 W against 3.06 W). For the PSP it is
-for games too heavy for 2x.
+game: a real 2x render has more of the 3D picture's detail (Daxter's fur;
+against an honest render, Super Mario 3D Land in the same geometry, the AI-SR
+session: 2x brought up 36.6 dB, the upscale 32.9, bicubic 32.0), the upscale
+cleaner edges and sharper 2D text. Nor does it save the battery: Daxter in a
+level from the owner's savestate, 2 minutes each on battery, 2.62 W, GPU 28%,
+60 C at 2x against 3.61 W, GPU 66%, 74 C with the upscale (its GPU passes
+cost more than PPSSPP's 2x). For the PSP it is for games too heavy for 2x.
 
 **Checked on the owner's console (revision B), 2026-11-23**, kernel 7001704,
 the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
