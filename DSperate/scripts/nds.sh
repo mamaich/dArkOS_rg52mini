@@ -134,6 +134,11 @@ elif [[ "$1" == "dsperate" ]]; then
   if ! grep -q "^[[:space:]]*layout[[:space:]]*=" /${directory}/nds/dsperate/dsperate.ini; then
     sed -i "/^\[video\]/a layout = horizontal" /${directory}/nds/dsperate/dsperate.ini
   fi
+  # The 3D at 2x the DS's resolution unless the file says otherwise (dArkOS 1.13: the
+  # GPU raster keeps 60 fps for ~0.1-0.2 W): an ini copied before it has no such line.
+  if ! grep -q "^[[:space:]]*gpu3d_scale[[:space:]]*=" /${directory}/nds/dsperate/dsperate.ini; then
+    sed -i "/^\[video\]/a gpu3d_scale = 2" /${directory}/nds/dsperate/dsperate.ini
+  fi
 
   # Since 3.5.0 DSperate turns the picture itself where SDL reports the panel turned (its
   # KMS sink), by 270 unless told otherwise: the RG52 Mini's panel is mounted the other way,

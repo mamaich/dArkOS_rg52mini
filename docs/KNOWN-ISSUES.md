@@ -1008,6 +1008,33 @@ A user's own GameSettings still win. On the owner's console since
 If another game hangs the same way (a FIFO line in the journal of its
 launch), the same two lines for its id fix it.
 
+## DSperate: the 3D at 2x by default — for 1.13
+
+DSperate 3.5.0 draws the 3D layer on the GPU at 1, 2 or 4 times the DS's
+resolution (`video.gpu3d_scale`, "no finer than the view shows": on the
+1280x720 panel 4 is 2); it was at 1 because no ini set it. The owner asked
+for 2 by default (2026-11-23) after the measurements: `gpu3d_scale = 2` in
+`DSperate/configs/dsperate.ini.rk3562`, and `nds.sh` adds that line to an ini
+that has none (as it does `layout`), so a card set up earlier gets it too
+and a value set by hand stays.
+
+Measured on battery from the owner's DSperate savestates, 60 s each, the
+screens side by side (the states keep their layout), 2D layers unchanged:
+
+| | fps | power | GPU | CPU |
+|---|---|---|---|---|
+| Diddy Kong Racing DS, the hub, 1x | 59.9 / 59.9 | 2.37 / 2.46 W | 11% | 18-19% |
+| the same, 2x | 59.8 / 59.9 | 2.50 / 2.51 W | 20-21% | 16-17% |
+| Metroid Prime Hunters (First Hunt), a fight, 1x | 59.8 / 59.8 | 2.40 / 2.45 W | 12% | 18% |
+| the same, 2x | 59.9 / 59.9 | 2.57 / 2.57 W | 22% | 19% |
+
+The models come out visibly sharper at 2x (the cap's lettering, the
+weapon, the enemies' edges); text and HUDs are 2D and stay as they were.
+For the NDS this is the better road than NPU UPSCALE: a real 2x render
+beats an upscale of the 1x frame (as for the PSP), and DSperate presents
+through its own KMS output, past the Vulkan layer, so the layer could not
+upscale it anyway.
+
 ## NPU UPSCALE: the 3DS and the PSP enlarged on the NPU — for 1.13
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
