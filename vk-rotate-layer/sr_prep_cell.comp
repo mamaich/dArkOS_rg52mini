@@ -1,4 +1,5 @@
 #version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
 // sr_prep_cell: as sr_prep.comp, but for the models fed KxK cells of native pixels (K*K <= 16; the PSP's x8/3
 // from 3x3 cells): input NC1HWC2 int8 on the grid of cells, 16 bytes a cell, channel dy*K+dx = Y8-128 of the
 // native pixel (K*gx+dx, K*gy+dy), the bytes past K*K zero. One invocation a cell; the colour and the one-colour
@@ -12,13 +13,15 @@ layout(push_constant) uniform PC { int ox, oy, W, H, S, wstride, K; } p;
 
 vec3 px(int x, int y) { return texelFetch(app, ivec2(p.ox + x * p.S, p.oy + y * p.S), 0).rgb; }
 
-// as sr_prep.comp's: the next pixel along and the far corner against the block's first
+// as sr_prep.comp's
 float flat_block(int x, int y)
 {
     ivec2 o = ivec2(p.ox + x * p.S, p.oy + y * p.S);
     vec3 c0 = texelFetch(app, o, 0).rgb;
-    vec3 d = max(abs(texelFetch(app, o + ivec2(1, 0), 0).rgb - c0),
-                 abs(texelFetch(app, o + ivec2(p.S - 1), 0).rgb - c0));
+    // (S-1, S-2): odd, against the first, so a one-pixel dither shows, and by the far corner; a step of 2 (the PSP)
+    // also takes the far corner itself, else a horizontal stroke through the block would pass
+    vec3 d = abs(texelFetch(app, o + ivec2(p.S - 1, max(p.S - 2, 0)), 0).rgb - c0);
+    if (p.S < 3) d = max(d, abs(texelFetch(app, o + ivec2(p.S - 1), 0).rgb - c0));
     return any(greaterThan(d, vec3(1.5 / 255.0))) ? 0.0 : 1.0;
 }
 
@@ -27,6 +30,7 @@ void main()
     ivec2 g = ivec2(gl_GlobalInvocationID.xy);
     if (g.x * p.K >= p.W || g.y * p.K >= p.H) return;
     uvec4 cell = uvec4(0u);
+    uint nf = 0u;
     for (int dy = 0; dy < p.K; dy++)
         for (int dx = 0; dx < p.K; dx++) {
             int x = g.x * p.K + dx, y = g.y * p.K + dy, c = dy * p.K + dx;
@@ -35,8 +39,10 @@ void main()
             int q = int(round(clamp(yl, 0.0, 1.0) * 255.0)) - 128;
             cell[c >> 2] |= (uint(q) & 0xFFu) << (8 * (c & 3));
             float f = flat_block(x, y);
-            if (f < 0.5) atomicAdd(cnt.n, 1u);
+            nf += f < 0.5 ? 1u : 0u;
             imageStore(cbcr, ivec2(x, y), vec4((rgb.r - yl) * 0.713 + 0.5, (rgb.b - yl) * 0.564 + 0.5, f, 1.0));
         }
     nin.v[g.y * p.wstride + g.x] = cell;
+    nf = subgroupAdd(nf);   // one atomic a subgroup (sr_prep.comp)
+    if (subgroupElect() && nf > 0u) atomicAdd(cnt.n, nf);
 }

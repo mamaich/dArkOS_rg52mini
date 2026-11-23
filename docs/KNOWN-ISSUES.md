@@ -1062,25 +1062,27 @@ systems, off by default.
   them as dma-bufs (Mali's Vulkan cannot export its own). Without the
   variable the layer is as before and loads none of this.
 - *Over the game*: what RetroArch or PPSSPP draws at the panel's resolution
-  over the frame — a menu, a notification, PPSSPP's pause screen — would be
-  sampled every S-th pixel and come out unreadable. The prep pass marks each
-  S x S block that is not one colour (a nearest-enlarged frame never has
-  one), and such a block is shown as it is. It compares two pixels of the
-  block with its first (the next one along, which catches RGUI's one-pixel
-  dither, and the far corner): all S x S of them took Super Mario 3D Land's
-  Mali from 70% to 85% and dropped a sixth of the upscales, these two cost
-  78-79% and about 1%, the same as no check (2 minutes from the same
-  savestate each). The prep pass also counts the blocks not one colour, and
-  above 1% of the native pixels the whole picture is shown as the program
-  drew it: a full menu (PPSSPP's pause screen 7135 of 130560, RetroArch's
-  quick menu 88228 of 96000; a game 0) looks as without NPU UPSCALE, the
-  game under it not upscaled. With the upscaled frame moved or resized
-  (the PSP's fit) a menu's flat parts and thick strokes would otherwise come
-  out enlarged beside the menu itself; and a frame that is not the native
-  one enlarged as expected (Azahar's large-and-small layout switched in the
-  game) shows without the upscale instead of with the wrong one. A
-  notification stays under 1% and is handled block by block; in the bars
-  the frame covers when fit, anything not black is shown as drawn.
+  over the frame — a menu, PPSSPP's pause screen — would be sampled every
+  S-th pixel and come out unreadable. The prep pass counts the S x S blocks
+  that are not one colour (a nearest-enlarged frame never has one), and the
+  layer picks the pass once a frame on the CPU from the count of the slot it
+  shows: above 1% of the native pixels the picture as the program drew it —
+  a full menu (PPSSPP's pause screen 7135 of 130560, RetroArch's quick menu
+  70912 of 96000; a game 0) looks as without NPU UPSCALE, the game under it
+  not upscaled, and a frame that is not the native one enlarged as expected
+  (Azahar's large-and-small layout switched in the game) shows without the
+  upscale instead of with the wrong one — else the upscale. A notification
+  over the frame stays under 1% and is upscaled with it, a little smeared
+  (the owner, 2026-11-23: it read badly either way); with the frame fit,
+  anything not black in the bars it covers is shown as drawn (PPSSPP's
+  notifications at the top). Until 2026-11-23 each pixel of the panel
+  checked its block and read the count: the AI-SR session measured that at
+  about 12 points of Mali on Super Mario 3D Land (82% with the upscale, 70%
+  without the check, 50.5% without the upscale). The prep pass compares one
+  pixel of each block with its first, (S-1, S-2) — odd, so RGUI's one-pixel
+  dither shows (with a step of 2 the far corner too) — and adds the count
+  up by subgroup, one atomic for 8 blocks (libmali's advice); all S x S of
+  them had taken Mali from 70% to 85%.
 - *Three kinds of model*, told apart by the model's input: ESPCN "row5" (5
   luma channels in the NPU's NC1HWC2 layout, one cell a native pixel),
   "space-to-depth" (4 channels, a 2x2 cell of native pixels, NHWC, its

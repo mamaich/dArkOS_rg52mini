@@ -119,6 +119,7 @@ typedef struct SRDev {
     int K;                  /* native pixels a side of one NPU cell (1 for row5) */
     int B, GW, GH;          /* output pixels a side of one NPU cell; the NPU grid */
     int OW, OH;             /* the upscaled frame: GW*B x GH*B */
+    int cnt_host;           /* every slot's count readable by the CPU */
     SRSlot slot[SR_SLOTS];
     VkSampler nearest, linear;
     VkDescriptorSetLayout prep_dsl, comp_dsl;
@@ -143,6 +144,7 @@ typedef struct SRSwap {
     int ox, oy;             /* the program's native frame (W*A x H*A) in its picture */
     int dx, dy, dw, dh;     /* where the upscaled frame goes */
     int over;               /* more blocks not one colour than this: the program's picture as it is (0: never) */
+    int moved;              /* the upscaled frame is not where the program's is */
     VkPipelineLayout pl;
     VkPipeline pipe;
     VkDescriptorPool dp;
@@ -151,7 +153,7 @@ typedef struct SRSwap {
     VkCommandBuffer cb_prep[MAX_IMAGES], cb_pres[MAX_IMAGES];
 } SRSwap;
 
-typedef struct { int32_t rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; int32_t B, GH, A, dx, dy, dw, dh, OW, OH, over; } SRPush;
+typedef struct { int32_t rot, AW, AH, ox, oy, W, H, S, wstride, zp; float scale; int32_t B, GH, A, dx, dy, dw, dh, OW, OH, moved; } SRPush;
 
 static double sr_now_ms(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1e3 + t.tv_nsec / 1e6; }
 
@@ -378,9 +380,19 @@ static SRDev *sr_device_get(Dev *d)
             .memoryTypeIndex = find_memory(d, mr.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) };
         SRVK(d->AllocateMemory(dv, &nai, NULL, &s->gcnt));
         SRVK(d->BindBufferMemory(dv, s->bcnt, s->gcnt, 0));
-        void *pm = NULL;   /* read only for the counters on stderr; no mapping, no counter there */
-        if (d->MapMemory && d->MapMemory(dv, s->gcnt, 0, VK_WHOLE_SIZE, 0, &pm) == VK_SUCCESS) s->mcnt = pm;
+        /* read by the CPU at each present (which pass draws the frame) and for the counters on stderr: only from
+         * memory it sees coherently; without it every frame takes the checking pass */
+        VkPhysicalDeviceMemoryProperties mp;
+        d->inst->GetMemProps(d->phys, &mp);
+        const VkMemoryPropertyFlags hc = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        void *pm = NULL;
+        if ((mp.memoryTypes[nai.memoryTypeIndex].propertyFlags & hc) == hc && d->MapMemory &&
+            d->MapMemory(dv, s->gcnt, 0, VK_WHOLE_SIZE, 0, &pm) == VK_SUCCESS)
+            s->mcnt = pm;
     }
+    sr->cnt_host = 1;
+    for (int k = 0; k < SR_SLOTS; k++) if (!sr->slot[k].mcnt) sr->cnt_host = 0;
+    if (!sr->cnt_host) SRLOG("the count of blocks not one colour is not readable by the CPU: a menu will be upscaled too");
 
     /* prep: set0 = the program's picture, the slot's NPU input, the slot's colour, the slot's count of blocks not one colour */
     VkDescriptorSetLayoutBinding pb[4] = {
@@ -406,30 +418,27 @@ static SRDev *sr_device_get(Dev *d)
     d->DestroyShaderModule(dv, cs, NULL);
     SRVK(pr);
 
-    /* compose (in the rotate fragment shader): set1 = the slot's NPU output, colour and count */
-    VkDescriptorSetLayoutBinding cb[3] = {
+    /* compose (in the rotate fragment shader): set1 = the slot's NPU output and colour */
+    VkDescriptorSetLayoutBinding cb[2] = {
         { 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL },
-        { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &sr->linear },
-        { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL } };
-    dli.bindingCount = 3; dli.pBindings = cb;
+        { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &sr->linear } };
+    dli.bindingCount = 2; dli.pBindings = cb;
     SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->comp_dsl));
-    VkDescriptorPoolSize ps[2] = { { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 * SR_SLOTS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SR_SLOTS } };
+    VkDescriptorPoolSize ps[2] = { { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SR_SLOTS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SR_SLOTS } };
     VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = SR_SLOTS, .poolSizeCount = 2, .pPoolSizes = ps };
     SRVK(d->CreateDescriptorPool(dv, &dpi, NULL, &sr->dpool));
     for (int k = 0; k < SR_SLOTS; k++) {
         VkDescriptorSetAllocateInfo dai = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             .descriptorPool = sr->dpool, .descriptorSetCount = 1, .pSetLayouts = &sr->comp_dsl };
         SRVK(d->AllocateDescriptorSets(dv, &dai, &sr->comp_ds[k]));
-        VkDescriptorBufferInfo bi = { sr->slot[k].bout, 0, VK_WHOLE_SIZE }, ni = { sr->slot[k].bcnt, 0, VK_WHOLE_SIZE };
+        VkDescriptorBufferInfo bi = { sr->slot[k].bout, 0, VK_WHOLE_SIZE };
         VkDescriptorImageInfo ci = { sr->linear, sr->slot[k].vcbcr, VK_IMAGE_LAYOUT_GENERAL };
-        VkWriteDescriptorSet w[3] = {
+        VkWriteDescriptorSet w[2] = {
             { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->comp_ds[k], .dstBinding = 0, .descriptorCount = 1,
               .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &bi },
             { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->comp_ds[k], .dstBinding = 1, .descriptorCount = 1,
-              .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ci },
-            { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->comp_ds[k], .dstBinding = 2, .descriptorCount = 1,
-              .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &ni } };
-        d->UpdateDescriptorSets(dv, 3, w, 0, NULL);
+              .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ci } };
+        d->UpdateDescriptorSets(dv, 2, w, 0, NULL);
     }
     SRCHK(pthread_create(&sr->th, NULL, sr_worker, sr) == 0);
     sr->th_started = 1;
@@ -506,6 +515,7 @@ static void sr_swap_build(Swap *s, VkViewport vp, int scaled)
      * the game, a scale that is not whole) would come out as SR of the wrong pixels. A notification stays below
      * it and is handled block by block. */
     x->over = g_sr.over >= 0 ? g_sr.over : g_sr.W * g_sr.H / 100;
+    x->moved = x->dx != x->ox || x->dy != x->oy || x->dw != g_sr.W * g_sr.A || x->dh != g_sr.H * g_sr.A;
     VkDevice dv = d->device;
 
     VkDescriptorSetLayout sets[2] = { s->dsl, sr->comp_dsl };
@@ -684,13 +694,18 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
     VkRenderPassBeginInfo rbi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, .renderPass = s->rp, .framebuffer = s->fb[idx],
         .renderArea = { { 0, 0 }, s->real_ext } };
     d->CmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
-    if (ready >= 0) {
+    /* From the count of blocks not one colour in the slot shown (its prep has run - the NPU had its input - so
+     * the count is final): above the limit (a full menu, a frame not as expected) the program's picture as it
+     * is, else the upscale (a notification over the frame upscaled with it: the owner, 2026-11-23, it reads
+     * badly either way). Decided here once a frame rather than in each of the panel's pixels. */
+    long nflat = ready >= 0 && sr->cnt_host ? (long)sr->slot[ready].mcnt[0] : -1;
+    if (ready >= 0 && !(nflat >= 0 && x->over > 0 && nflat > x->over)) {
         d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->pipe);
         VkDescriptorSet ds2[2] = { s->ds[idx], sr->comp_ds[ready] };
         d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->pl, 0, 2, ds2, 0, NULL);
         SRPush p = { g_rot, (int32_t)s->app_ext.width, (int32_t)s->app_ext.height, x->ox, x->oy, g_sr.W, g_sr.H, g_sr.S,
                      (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale, sr->B, sr->GH,
-                     g_sr.A, x->dx, x->dy, x->dw, x->dh, sr->OW, sr->OH, x->over };
+                     g_sr.A, x->dx, x->dy, x->dw, x->dh, sr->OW, sr->OH, x->moved };
         d->CmdPushConstants(cb, x->pl, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof p, &p);
     } else {
         d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pipe);

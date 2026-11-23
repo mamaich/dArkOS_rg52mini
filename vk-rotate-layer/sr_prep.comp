@@ -1,4 +1,5 @@
 #version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
 // sr_prep: the program's picture (landscape, enlarged by an integer, nearest, the S*W x S*H area at ox,oy)
 // -> the NPU's input for ESPCN row5 (NC1HWC2, C2=16: 16 bytes a pixel; channels 0..4 = Y8-128 shifted
 //    vertically by dy = c-2, -128 past the edge) + the colour (Cr, Cb + 0.5) of the source pixel in rgba8,
@@ -21,15 +22,18 @@ int q8(int x, int y)
 
 // The emulator's frame enlarged nearest makes every S*S block one colour. What the program draws over
 // it at the full resolution - RetroArch's menu and notifications, PPSSPP's pause screen - does not:
-// sr_rotate.frag shows such a block as it is rather than enlarge every S-th pixel of it. Two pixels are
-// compared with the block's first: the next one along (a one-pixel pattern, as RGUI's dither) and the
-// far corner. All S*S of them cost the 3DS a sixth of its upscales (Mali 85% instead of 70%).
+// sr_rotate.frag shows such a block as it is rather than enlarge every S-th pixel of it. One pixel is
+// compared with the block's first, (S-1, S-2) (with a step of 2 the far corner too): all S*S of them cost
+// the 3DS a sixth of its upscales (Mali 85% instead of 70%). Each block not one colour is counted, and
+// npusr.inc.c picks the rotate pass from the count.
 float flat_block(int x, int y)
 {
     ivec2 o = ivec2(p.ox + x * p.S, p.oy + y * p.S);
     vec3 c0 = texelFetch(app, o, 0).rgb;
-    vec3 d = max(abs(texelFetch(app, o + ivec2(1, 0), 0).rgb - c0),
-                 abs(texelFetch(app, o + ivec2(p.S - 1), 0).rgb - c0));
+    // (S-1, S-2): odd, against the first, so a one-pixel dither shows, and by the far corner; a step of 2 (the PSP)
+    // also takes the far corner itself, else a horizontal stroke through the block would pass
+    vec3 d = abs(texelFetch(app, o + ivec2(p.S - 1, max(p.S - 2, 0)), 0).rgb - c0);
+    if (p.S < 3) d = max(d, abs(texelFetch(app, o + ivec2(p.S - 1), 0).rgb - c0));
     return any(greaterThan(d, vec3(1.5 / 255.0))) ? 0.0 : 1.0;
 }
 
@@ -45,6 +49,7 @@ void main()
     vec3 rgb = px(q.x, q.y);
     float yl = dot(rgb, vec3(0.299, 0.587, 0.114));
     float f = flat_block(q.x, q.y);
-    if (f < 0.5) atomicAdd(cnt.n, 1u);
+    uint nf = subgroupAdd(f < 0.5 ? 1u : 0u);   // one atomic a subgroup, not one a block
+    if (subgroupElect() && nf > 0u) atomicAdd(cnt.n, nf);
     imageStore(cbcr, q, vec4((rgb.r - yl) * 0.713 + 0.5, (rgb.b - yl) * 0.564 + 0.5, f, 1.0));
 }
