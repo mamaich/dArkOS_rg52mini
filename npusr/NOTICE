@@ -38,7 +38,7 @@ NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate). It uses:
    coins, moon, page, text - public domain or CC0 by their notes there; moon and page have no
    note of their own and come with scikit-image under its BSD-3-Clause license); shapes, text
    and textures the training script draws. No image dataset. Quantised to INT8 with
-   rknn-toolkit2 2.5.0, calibrated on 20 PSP screenshots.
+   rknn-toolkit2 2.5.0, calibrated on PSP screenshots (15 distinct frames).
    In the dArkOS sources: npusr/models/s2d_distill.py trains it, s2d_rknn.py makes the .rknn
    from its weights (s2d_x2_v7.pt, kept there: training on a GPU is not bit-exact). The
    screenshots are not in the sources.

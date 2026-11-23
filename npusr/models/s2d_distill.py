@@ -16,12 +16,19 @@ The PSP's model (s2d_x2_v7.pt beside this script; trained 2026-11-23 on an RTX 5
   (... = --psp DIR --3ds DIR --pairs FILE). The second run was cut short at step 42500 by the PC's power-off; the
   best checkpoint saved by then is the model. Training on a GPU is not bit-exact, hence the weights are kept.
 
-  --psp    PSP frames, 480x272 png: the native frame taken from PPSSPP's 2x nearest output on the console. Used for
-           the model: Daxter (8), Final Fantasy Anniversary (6); files named sf-* (Street Fighter Alpha 3 Max, 6)
-           are checks only.
-  --3ds    3DS frames, Y 400x240 png (Super Mario 3D Land, 14); files with -s2 in the name are checks only.
+  --psp    PSP frames, 480x272 png: the native frame taken from PPSSPP's 2x nearest output on the console. Trained
+           on: Daxter (8), Final Fantasy Anniversary (6); files named sf-* (Street Fighter Alpha 3 Max) are left out
+           of training, but they are 6 copies of one still frame (so that check is one frame) and s2d_rknn.py's
+           calibration took the whole directory, them included: 20 files, 15 distinct frames.
+  --3ds    3DS frames, Y 400x240 png (Super Mario 3D Land): 14 files, 10 distinct frames. Files with -s2 in the name
+           are left out of training, but the prev-* names are shifted (the savestate loaded asynchronously and the
+           shot shows the previous slot): prev-s9 is scene s2's frame k3, prev-s1 scene s0's k3, prev-s0b scene
+           s9's k3. So scene s2 was not wholly unseen; its frame k40 and its pairs were.
   --pairs  npz of Super Mario 3D Land renders of the same view at 1x, 2x, 3x ("<scene>-k40_f<factor>", RGB):
            scenes s0, s1, s9 go into training (2x and 3x renders downscaled), s2 is the honest-render check.
+  The checks printed while training (SFA3 and s2) are therefore slightly optimistic; the clean ones were made apart
+  from this script: PSP demos seen neither in training nor in calibration, and the INT8 model against an honest
+  2x render.
   --init-bicubic  start from a "bicubic identity": the first convolution copies the 4 space-to-depth channels,
            the body passes them through, the last convolution is the bicubic kernel (Keys, a=-0.75) over 3x3 cells;
            every other weight normal noise, sigma 0.01, seed 0. No other network's weights."""
