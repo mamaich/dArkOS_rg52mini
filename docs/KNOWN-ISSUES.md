@@ -1014,8 +1014,10 @@ The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
 every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
 emulator's native frame with a small super-resolution network in place of
 the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240 to
-1200x720), the PSP x2 (480x272 to 960x544), each with a network of dArkOS's
-own trained to give what ESPCN gives, faster on the NPU. Worked out by a separate
+1200x720), the PSP as big as PPSSPP's own settings make its picture (x3 to
+1440x816, brought down to 1271x720: the screen's height, the PSP's shape;
+x2 to 960x544 with integer scale), each with a network of dArkOS's own
+trained to give what ESPCN gives, faster on the NPU. Worked out by a separate
 session (AI-SR, 2026-11-22/23); the owner asked for it in 1.13 for both
 systems, off by default.
 
@@ -1031,8 +1033,16 @@ systems, off by default.
   needs for this run: RetroArch gets an `--appendconfig` (Vulkan, integer
   scale, no smoothing, shader or overlay), Azahar its core options (the top
   screen alone at its native resolution, Vulkan), PPSSPP an `--appendconfig`
-  (Vulkan, 1x, nearest, integer scale, centred). Then the launcher sets
-  `DARKOS_NPU_SR=x3:400x240` or `x2:480x272` for the layer.
+  (Vulkan, 1x, nearest, integer scale, centred: 960x544). Then the launcher
+  sets `DARKOS_NPU_SR` for the layer: `x3:400x240` for the 3DS; for the PSP
+  what `darkos-npusr` prints after the config, from PPSSPP's own layout in
+  `ppsspp.ini` — `x3:480x272:a2:fit` (the x3 model over PPSSPP's 2x, into
+  the largest rectangle of the PSP's shape), `:fill` with its Stretch on,
+  `x2:480x272` (in place) with its Integer scale on. x3 brought down to the
+  screen is sharper than x2 brought up (the AI-SR session, Super Mario 3D
+  Land in the same geometry against an honest 3x render brought down by
+  area: 32.9 dB against 32.5, bicubic 32.1; x2 also shows grain on white
+  letters), at 11.0 ms on the NPU against 7.65.
 - *What it changes it puts back*: Azahar's core options, and the keys of an
   override of the core that would undo it, are set in their files; PPSSPP
   writes what `--appendconfig` gives it into `ppsspp.ini` and into a game's
@@ -1060,16 +1070,27 @@ systems, off by default.
   dither, and the far corner): all S x S of them took Super Mario 3D Land's
   Mali from 70% to 85% and dropped a sixth of the upscales, these two cost
   78-79% and about 1%, the same as no check (2 minutes from the same
-  savestate each).
-- *Two kinds of model*, told apart by the model's input: ESPCN "row5" (5
-  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel) and
+  savestate each). With the upscaled frame moved or resized (the PSP's
+  fit), what passed the check — a menu's flat parts, thick strokes of its
+  letters — would come out enlarged beside the menu itself: there the prep
+  pass also counts the blocks not one colour, and above 1% of the native
+  pixels (PPSSPP's pause screen: 7135 of 130560; the game: 0) the whole
+  picture is shown as the program drew it, so the pause screen looks as
+  without NPU UPSCALE; in the bars the frame now covers, anything not black
+  is shown as drawn.
+- *Three kinds of model*, told apart by the model's input: ESPCN "row5" (5
+  luma channels in the NPU's NC1HWC2 layout, one cell a native pixel),
   "space-to-depth" (4 channels, a 2x2 cell of native pixels, NHWC, its
-  output (2S)^2 channels; both models in the image), with a prep shader each
-  (`sr_prep.comp`, `sr_prep_s2d.comp`) and one rotate shader. At 600 MHz
+  output (2S)^2 channels; the models in the image) and "cells" (KxK native
+  pixels in NC1HWC2, K*K <= 16, for a scale that is not whole, as 8/3 from
+  3x3 cells: for a PSP model from 480x270 straight to 1280x720 the AI-SR
+  session is training), with a prep shader each (`sr_prep.comp`,
+  `sr_prep_s2d.comp`, `sr_prep_cell.comp`) and one rotate shader. At 600 MHz
   (the AI-SR session's srbench) ESPCN x3 takes 13.1 ms on the NPU, ESPCN x2
   18.0; space-to-depth at 32 channels 6.3 ms for x3 with 5 blocks and 0.8 ms
-  more a block (the 3DS's has 7: 8.3 ms in the game), 7.4 for the PSP's x2
-  with 5. 40 or 48 channels take 14.7 ms (the NPU works in groups of 16
+  more a block (the 3DS's has 7: 8.3 ms in the game; the same on the PSP's
+  480x272 10.6, 11.0 in the game), 7.4 for the PSP's x2 with 5. 40 or 48
+  channels take 14.7 ms (the NPU works in groups of 16
   channels), so depth, not width, is where such a model grows.
 - *Kernel* (kernel_rk3562 7001704): `vdd_npu` (a PWM DC-DC on `pwm6`),
   `rknpu` and its IOMMU on; rknpu a module. The image blacklists it
@@ -1080,9 +1101,12 @@ systems, off by default.
   `build_npusr.sh` from rknn-toolkit2's release and checked by sha256 (its
   license allows distribution with applications for Rockchip's chips and
   asks that its notices be kept: `/usr/share/doc/librknnrt/LICENSE`,
-  `/usr/share/doc/darkos-npusr/NOTICE`); the two models in
-  `/usr/share/darkos/npusr/`, INT8, still named `espcn_x3_400x240.rknn` and
-  `espcn_x2_480x272.rknn` (the names the layer looks for). Both trained by
+  `/usr/share/doc/darkos-npusr/NOTICE`); the models in
+  `/usr/share/darkos/npusr/`, INT8, still named `espcn_x<S>_<W>x<H>.rknn`
+  (the names the layer looks for): `espcn_x3_400x240.rknn` (the 3DS),
+  `espcn_x3_480x272.rknn` (the PSP: the 3DS's weights, calibrated on PSP
+  frames) and `espcn_x2_480x272.rknn` (the PSP with integer scale). Both
+  networks trained by
   `npusr/models/s2d_distill.py` from a bicubic start, with ESPCN (TF-ESPCN,
   Apache 2.0) as the teacher, on screenshots of the owner's PSP and 3DS
   games, scikit-image's sample photographs and drawn shapes and text — no
@@ -1123,12 +1147,12 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   (40,0), 59.8-60 fps, the NPU on every frame (8.3 ms at 600 MHz with the
   space-to-depth model; ESPCN x3 before it 13.6 ms), CPU 21% of four
   cores; RetroArch's quick menu over it as readable as without SR.
-- Daxter (PSP), PPSSPP standalone through `ppsspp.sh`: 960x544 at (160,88),
-  59.95 fps, the NPU on every frame (7.65 ms at 600 MHz with the
-  space-to-depth model; ESPCN x2 before it took 15.1 ms with the clock held
-  at 800 MHz, 18 ms at 600 would drop a tenth of the upscales), CPU 14%;
-  PPSSPP's pause screen readable with the two-pixel check, the game under it
-  upscaled.
+- Daxter (PSP), PPSSPP standalone through `ppsspp.sh`, the owner's PPSSPP
+  layout (neither integer scale nor stretch): x3 fit, 1271x720 at (4,0) from
+  the 960x544 at (160,88), 60 fps, the NPU on every frame (11.0 ms at 600
+  MHz), CPU 14%, 74 C; PPSSPP's pause screen exactly as PPSSPP draws it,
+  the game full-screen again after it. Before it, x2 in place: 59.95 fps,
+  7.65 ms (ESPCN x2 before that 15.1 ms with the clock held at 800 MHz).
 - Put back: Azahar's options set by hand to 2x and the default layout
   were 1x and single screen in the run, a record left when the run was killed
   with its launcher, and 2x and the default layout again at the next launch

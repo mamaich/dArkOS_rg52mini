@@ -51,14 +51,19 @@ if  [[ $1 == "standalone" ]]; then
     fi
   fi
   # dArkOS RG52 Mini: NPU UPSCALE (EmulationStation's EMULATOR SETTINGS): the PSP's 480x272 enlarged
-  # x2 by the NPU in the Vulkan rotate layer. PPSSPP saves what --appendconfig gives it into its
-  # ini files; darkos-npusr puts those keys back before ppsspp.ini goes to ppsspp.ini.sdl.
+  # by the NPU in the Vulkan rotate layer, as big as PPSSPP's own settings make the picture.
+  # darkos-npusr prints the --appendconfig file and the layer's DARKOS_NPU_SR. PPSSPP saves what
+  # --appendconfig gives it into its ini files; darkos-npusr puts those keys back before ppsspp.ini
+  # goes to ppsspp.ini.sdl.
   npusr=/usr/local/bin/darkos-npusr
   npu=()
   if [ -x "$npusr" ]; then
     [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
-    if [ "$DARKOS_NPU_UPSCALE" = on ] && npucfg=$("$npusr" ppsspp "/$directory/psp/ppsspp/PSP/SYSTEM"); then
-      export DARKOS_NPU_SR=x2:480x272
+    if [ "$DARKOS_NPU_UPSCALE" = on ] && npuout=$("$npusr" ppsspp "/$directory/psp/ppsspp/PSP/SYSTEM"); then
+      npucfg=${npuout%%$'\n'*}
+      npusr_sr=${npuout#*$'\n'}
+      [ "$npusr_sr" = "$npuout" ] && npusr_sr=x2:480x272
+      export DARKOS_NPU_SR=$npusr_sr
       npu=(--appendconfig="$npucfg")
     fi
   fi

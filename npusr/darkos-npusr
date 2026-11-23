@@ -11,7 +11,10 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       smoothing, shader or overlay). The launcher then sets DARKOS_NPU_SR=x3:400x240.
   darkos-npusr ppsspp <PPSSPP's PSP/SYSTEM dir>
       PSP on PPSSPP: brings the NPU up; prints a config for PPSSPP's --appendconfig (Vulkan, 1x,
-      nearest, integer scale, centred); DARKOS_NPU_SR=x2:480x272.
+      nearest, integer scale, centred: 960x544) and on a second line what the launcher sets
+      DARKOS_NPU_SR to - the picture as big as PPSSPP's own settings make it without the upscale:
+      x3:480x272:a2:fit (the screen's height, the PSP's shape; x3 brought down to it is sharper
+      than x2 brought up), :fill with Stretch on, x2:480x272 in place with Integer scale on.
   darkos-npusr restore
       puts back every key the last run changed, in the files it changed - or that the emulator
       writes the appended settings into. The launchers run it after the emulator, and before one
@@ -30,13 +33,14 @@ import time
 STATE = "/home/ark/.config/darkos-npusr"
 RECORD = os.path.join(STATE, "restore.json")
 MODELS = "/usr/share/darkos/npusr"
-# The NPU's clock for each model (min, max): at 600 MHz the 3DS's x3 takes 8.3 ms, the PSP's x2
-# 7.4 ms, both well under 60 fps's 16.7 (ESPCN x3 took 13.9). A model that needs more must raise the
+# The NPU's clock for each model (min, max): at 600 MHz the 3DS's x3 takes 8.3 ms, the PSP's x3
+# 10.6 ms and its x2 7.4 ms, all under 60 fps's 16.7 (ESPCN x3 took 13.9). A model that needs more must raise the
 # minimum as well: the governor (rknpu_ondemand) stays at 600 unless the minimum is higher too
 # (ESPCN x2 for the PSP needed 800/800). At 1 GHz the console was 15 C warmer within 1.5 minutes.
 NPU_CLOCK = {
     (3, 400, 240): (300000000, 600000000),
     (2, 480, 272): (300000000, 600000000),
+    (3, 480, 272): (300000000, 600000000),
 }
 
 RA_APPEND = [
@@ -308,8 +312,21 @@ def cmd_retroarch(cfgdir, game):
     return 0
 
 
+def ppsspp_sr(sysdir):
+    """DARKOS_NPU_SR for PPSSPP: as big as its own layout settings make the picture without the upscale."""
+    lines = read_lines(os.path.join(sysdir, "ppsspp.ini")) or []
+
+    def on(key):
+        i = find(lines, "DisplayLayout.Landscape", key)
+        return i >= 0 and lines[i].split("=", 1)[1].strip().lower() == "true"
+    if on("DisplayIntegerScale"):
+        return 2, "x2:480x272"              # 960x544, where PPSSPP shows it with the append
+    return 3, "x3:480x272:a2:" + ("fill" if on("DisplayStretch") else "fit")
+
+
 def cmd_ppsspp(sysdir):
-    if not npu_up(2, 480, 272):
+    scale, spec = ppsspp_sr(sysdir)
+    if not npu_up(scale, 480, 272):
         return 1
     # PPSSPP saves its config right after it reads --appendconfig's, into ppsspp.ini and into a
     # game's own <ID>_ppsspp.ini: what they had of these keys is put back after it
@@ -329,6 +346,7 @@ def cmd_ppsspp(sysdir):
         for section, lines in sections.items():
             f.write(f"[{section}]\n" + "\n".join(lines) + "\n")
     print(app)
+    print(spec)
     return 0
 
 
