@@ -1136,6 +1136,24 @@ systems, off by default.
   (`/etc/modprobe.d/dArkOS-rknpu.conf`); `darkos-npusr` loads it with
   modprobe, so a console that never turns NPU UPSCALE on never powers the
   NPU.
+- *A timed-out NPU job hung the console* (kernel_rk3562 c0c1473): the AI-SR
+  session's GLES experiment (2026-11-24, a library that left its NPU
+  thread in `rknn_run` while the program exited) got three "failed to wait
+  job ... timeout" with soft resets, then "refcount_t: addition on 0;
+  use-after-free" in `rknpu_submit_ioctl`, a NULL dereference in
+  `rknpu_job_subcore_commit`, and soft lockups until a power cycle
+  (ramoops kept it: systemd-pstore moves it to `/var/lib/systemd/pstore/`).
+  rknpu 0.9.8 marks a job `irq_entry` on every interrupt and left it set on
+  the "invalid irq status" path; a timeout's `rknpu_job_abort()` then freed
+  the job while the core still pointed at it (or while it was still
+  queued), and the next submit committed freed memory. Fixed in the driver;
+  tested with a build that drops completion interrupts on request: three
+  timeouts, a soft reset each, the upscale going on at 60 a second. The
+  layer also stops its NPU thread at `exit()` before librknnrt's
+  destructors (an `atexit()` registered after loading it), for a program
+  that never calls `vkDestroyDevice`. A side finding: after `rmmod rknpu`
+  and a reload its governor keeps the NPU at 300 MHz (the module stays
+  loaded in normal use).
 - *The runtime and the models*: Rockchip's `librknnrt.so` 2.5.0, fetched by
   `build_npusr.sh` from rknn-toolkit2's release and checked by sha256 (its
   license allows distribution with applications for Rockchip's chips and

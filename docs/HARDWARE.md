@@ -166,9 +166,10 @@ KNOWN-ISSUES, "Headphones: the speaker played too".
 | 4fe802d | 1.12 | the fbdev buffer 1920x1280 (`CONFIG_DRM_FBDEV_MIN_WIDTH`/`_HEIGHT`, new), the console takes the size of the output in use at each hotplug; the virtual size and `fb0/modes` as before (KNOWN-ISSUES, "The Options tools on a TV") |
 | 70524fc | 1.12 | `rk817_charger`: a charger stays charging through the Type-C side's PD tries, a charger with no BC type charges at 1.5 A, no boost into a powered hub's VBUS (KNOWN-ISSUES, "Some chargers stopped charging") |
 | 7001704 | 1.13 | the NPU: `vdd_npu` (a PWM DC-DC on `pwm6`, GPIO0_C1, not always-on), `rknpu` and its IOMMU on; `CONFIG_ROCKCHIP_RKNPU=m` (was built in, with no node to bind), `iommu_setup_dma_ops` exported for it; the image blacklists the module and NPU UPSCALE loads it (KNOWN-ISSUES, "NPU UPSCALE") |
+| c0c1473 | 1.13 | `rknpu`: a job that times out after an interrupt with an unexpected status no longer leaves the core pointing at it, or itself on the queue, once freed - the next submit crashed the kernel (use-after-free, soft lockups until a power cycle; KNOWN-ISSUES, "NPU UPSCALE") |
 
 The submodule was pinned at 84be12412 from 1.8 to 1.11; 70524fc9e is in
-1.12, 7001704c2 in master for 1.13.
+1.12, c0c147352 in master for 1.13.
 
 ## Babble filter
 
