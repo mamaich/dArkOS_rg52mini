@@ -1308,8 +1308,31 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   50 fps, Mali 4.9 -> 24%; the NPU 6.0-6.5 ms a frame, the hook 1.5-1.8 ms
   of CPU a frame. As for the 3DS, a menu or text over the frame (more than
   1% of the 3x3 blocks not one colour) shows as drawn.
-- Not yet checked from ES on the owner's console with the image's build of
-  the library (the console was in GammaOS when this went in).
+- Checked on the owner's console, 2026-11-24 (1.12 with the NPU UPSCALE
+  files of master installed by hand; the library built as `build_npusr.sh`
+  builds it, in a trixie armhf chroot with gcc 14 where the image's
+  Arkbuild32 has gcc 12), each game started as ES starts it with
+  `DARKOS_NPU_UPSCALE=on` (retroarch32, pcsx_rearmed_rumble, the owner's
+  settings: no integer scale, a shader and an overlay on, which the append
+  turns off for the run):
+  - Double Dragon: 320x240 enlarged to 960x720 at (160,0), 60 fps, the NPU
+    on every frame (6.4-6.5 ms at 600 MHz), the hook 1.4-1.5 ms of CPU a
+    frame, GPU load 22% (3% without the upscale).
+  - Hover Racing (PAL): 50 fps, the same 320x240, 6.6 ms.
+  - Final Fantasy IX (a Russian translation of the NTSC disc): 320x240, 50
+    fps with the upscale and without it (flips counted: 50.3 both) —
+    pcsx_rearmed's region detection takes it for PAL; nothing to do with
+    the upscale. CPU 11% of four cores with it, 6% without.
+  - RetroArch's quick menu (Home+X): shown exactly as RetroArch draws it
+    (183 of 300 frames counted as "menu" in the first 5 s, then all), the
+    upscale back when it closes.
+  - After each run: the record put back, the owner's `retroarch32` files
+    (retroarch.cfg, the core options) unchanged by sha256, and the library's
+    "exit: NPU work stopped".
+  - A screen grab of the 32-bit RetroArch (kmsgrab of the plane RGA writes)
+    often shows a black band or a slanted tear across the picture, with the
+    upscale and without it alike; the camera shows the screen whole. The
+    grab catches RGA's rotation half-way: not a fault of the picture.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

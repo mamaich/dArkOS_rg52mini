@@ -15,8 +15,9 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   firmware's dtb describes the NPU's rail as revision B's does).
   PS1 too (the owner, 2026-11-24: of the GLES emulators, PS1 only):
   pcsx_rearmed in the 32-bit RetroArch, through `libnpusr_gles.so`
-  (`npusr-gles/`). In master; still to check from ES on the console with the
-  image's build of the library.
+  (`npusr-gles/`). In master, checked on the console as ES starts it
+  (KNOWN-ISSUES); the option in ES's menu for PlayStation and a build with
+  Arkbuild32's gcc 12 come with the next test image.
 
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.
