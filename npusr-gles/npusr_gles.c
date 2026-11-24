@@ -7,7 +7,10 @@
  *                                enlarged by the scale, nearest (RetroArch: integer scale, no shader/overlay/smoothing)
  *   DARKOS_NPU_SR=x3:auto        the native size from the viewport the program draws the frame with (a viewport
  *                                that is S times an even size): PS1 256/320/368 wide, Saturn 320/352 ...; a model
- *                                for each size met (DARKOS_NPU_SR_MODEL with %d for S, W, H), loaded when first met
+ *                                for each size met (DARKOS_NPU_SR_MODEL with %d for S, W, H), loaded when first met.
+ *                                dArkOS, 2026-11-24: a viewport that is k > S times a 224- or 240-line frame (a TV at
+ *                                1920x1080: RetroArch's integer scale gives x4) is taken too, and the S times picture
+ *                                is stretched over it, bilinear
  *   DARKOS_NPU_SR_MODEL=...      the .rknn model; {S}, {W}, {H} in it (or printf %d, %d, %d) are the scale and size
  *                                (default /usr/share/darkos/npusr/espcn_x%d_%dx%d.rknn)
  *   DARKOS_NPU_SR_LIB=...        librknnrt.so (default: found by dlopen)
@@ -281,7 +284,8 @@ static struct {
     int vx, vy, vw, vh;         /* the last viewport that looked like the frame (S times an even size) */
     int bx, by, bw, bh;         /* the last large viewport that is not S times a size (a frame scaled by S..S+1) */
     int nw, nh;                 /* the last small viewport (a native frame drawn at its own size, into an FBO) */
-    unsigned vseq, bseq, seq;   /* which of vw / bw was set last */
+    int kx, ky, kw, kh, kk;     /* the last viewport that is kk (> S) times a console frame (HDMI 1080p: x4) */
+    unsigned vseq, bseq, kseq, seq;   /* which of vw / bw / kw was set last */
     unsigned long n_frames, n_prep, n_npu, n_skip, n_fail, n_geom;
     double swap_ms; unsigned long n_swap;   /* the real swap (SDL_GL_SwapWindow / eglSwapBuffers): how long it blocks */
     double npu_ms, t_last, hook_ms, ph[6];   /* CPU ms: make ours current, prep, count read, compose, flush, back */
@@ -875,9 +879,19 @@ static void viewport_seen(GLint x, GLint y, GLsizei w, GLsizei h)
     }
     if (!cfg.on || !S || w <= 0 || h <= 0) return;
     G.seq++;
+    int k = 0;
+    if (!(w % S == 0 && h % S == 0))
+        /* dArkOS: on a TV (1920x1080) RetroArch's integer scale enlarges a 224- or 240-line console frame x4: the
+         * x3 picture is then stretched over it (frame(); only those heights, so that no full-window viewport, 16:9,
+         * passes for a frame) */
+        for (k = S + 1; k <= 8; k++)
+            if (w % k == 0 && h % k == 0 && !((w / k) & 1) && (h / k == 224 || h / k == 240) &&
+                w / k >= 160 && w / k <= 400) break;
     if (w % S == 0 && h % S == 0 && !((w / S) & 1) && !((h / S) & 1) &&
         w / S >= 64 && h / S >= 64 && w / S <= 1024 && h / S <= 1024) {
         G.vx = x; G.vy = y; G.vw = w; G.vh = h; G.vseq = G.seq;
+    } else if (k > S && k <= 8) {
+        G.kx = x; G.ky = y; G.kw = w; G.kh = h; G.kk = k; G.kseq = G.seq;
     } else if (w >= S * 64 && h >= S * 64) {
         G.bx = x; G.by = y; G.bw = w; G.bh = h; G.bseq = G.seq;
     } else if (w >= 64 && h >= 64 && w <= 1024 && h <= 1024 && !(w & 1) && !(h & 1)) {
@@ -934,14 +948,20 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
     int S = cfg.S, W = 0, H = 0, ox, gy0;
     /* the native frame: the viewport the program drew it with, or (a fixed size) centred. fx, fy, fw2 x fh2: the
      * area the program drew it into - the same as the S times area, or larger (scaled by S..S+1, see native_from) */
-    int fx, fy, fw2, fh2;
+    int fx, fy, fw2, fh2, stretch = 0;
     if (cfg.autosize || (G.vw == cfg.W * S && G.vh == cfg.H * S)) {
         /* the scaled-by-more area only when it was set after the S times one and has a console shape (a full
          * window viewport such as 1280x720 set after the frame's does not) */
-        int nat = cfg.autosize && G.bw && G.bseq > G.vseq && native_from(G.bw, G.bh, &W, &H);
+        int nat = cfg.autosize && G.bw && G.bseq > G.vseq && G.bseq > G.kseq && native_from(G.bw, G.bh, &W, &H);
+        /* a frame enlarged an integer kk > S times (a TV): the S times picture is stretched over all of it */
+        int kk = cfg.autosize && G.kw && G.kseq > G.vseq;
         if (nat) {
             fx = G.bx; fy = G.by; fw2 = G.bw; fh2 = G.bh;
             ox = fx + (fw2 - W * S) / 2; gy0 = fy + (fh2 - H * S) / 2;
+        } else if (kk) {
+            W = G.kw / G.kk; H = G.kh / G.kk;
+            fx = ox = G.kx; fy = gy0 = G.ky; fw2 = G.kw; fh2 = G.kh;
+            stretch = 1;
         } else if (G.vw) {
             W = G.vw / S; H = G.vh / S; ox = G.vx; gy0 = G.vy;
             fx = ox; fy = gy0; fw2 = W * S; fh2 = H * S;
@@ -1030,6 +1050,36 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
         p_glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
         { double t1 = now_ms(); G.ph[2] += t1 - tp; tp = t1; }
         if ((int)s->count > E->over) E->n_menu++;
+        else if (!(cfg.exp & 2) && stretch) {
+            /* a frame enlarged kk > S times: the S times picture into an offscreen texture (the worker's own, when
+             * it composes), then stretched over the whole area, bilinear (x3 -> x4: 1.33 times) */
+            if (!s->fbrgb) {
+                s->trgb = tex_new(GL_RGBA8, E->OW, E->OH, GL_NEAREST);
+                s->fbrgb = fbo_for(s->trgb);
+            }
+            if (__atomic_load_n(&G.ac, __ATOMIC_SEQ_CST)) cfence_wait(s);
+            else {
+                p_glBindFramebuffer(GL_FRAMEBUFFER, s->fbrgb);
+                p_glViewport(0, 0, E->OW, E->OH);
+                p_glUseProgram(E->prog_comp);
+                p_glUniform2i(E->u_comp_org, 0, 0);
+                p_glActiveTexture(GL_TEXTURE0);
+                p_glBindTexture(GL_TEXTURE_2D, s->tout);
+                p_glActiveTexture(GL_TEXTURE1);
+                p_glBindTexture(GL_TEXTURE_2D, s->ta);
+                if (cfg.exp & 8) {
+                    p_glActiveTexture(GL_TEXTURE2); p_glBindTexture(GL_TEXTURE_2D, E->lut);
+                    p_glActiveTexture(GL_TEXTURE3); p_glBindTexture(GL_TEXTURE_2D, E->msk);
+                }
+                p_glDrawArrays(GL_TRIANGLES, 0, 3);
+            }
+            p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            if (!(cfg.exp & 1)) { static const GLenum col = GL_COLOR; p_glInvalidateSubFramebuffer(GL_DRAW_FRAMEBUFFER, 1, &col, fx, fy, fw2, fh2); }
+            p_glBindFramebuffer(GL_READ_FRAMEBUFFER, s->fbrgb);
+            p_glBlitFramebuffer(0, 0, E->OW, E->OH, fx, fy, fx + fw2, fy + fh2, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            p_glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+            E->n_comp++;
+        }
         else if (!(cfg.exp & 2)) {
             p_glBindFramebuffer(GL_FRAMEBUFFER, 0);
             /* the area is drawn over entirely: its old contents need not be loaded into the tile memory */

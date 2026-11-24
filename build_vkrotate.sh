@@ -5,7 +5,8 @@
 # on the Vulkan driver, PortMaster ports on SDL's KMSDRM Vulkan path - got the
 # portrait 720x1280 panel as it is and drew a stretched, sideways picture. The
 # layer shows them a landscape 1280x720 display and turns each frame onto the
-# panel with a small GPU pass. It does nothing on a landscape display.
+# panel with a small GPU pass. It does nothing on a landscape display, but for
+# NPU UPSCALE's (DARKOS_NPU_SR set: a TV on HDMI, nothing turned).
 # See docs/KNOWN-ISSUES.md.
 install_package 64 libvulkan-dev glslang-tools
 sudo rm -rf Arkbuild/tmp/vk-rotate-layer

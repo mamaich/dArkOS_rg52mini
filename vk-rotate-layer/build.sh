@@ -11,9 +11,11 @@ glslangValidator -V --target-env vulkan1.1 --vn sr_prep_spv -o sr_prep.h sr_prep
 glslangValidator -V --target-env vulkan1.1 --vn sr_prep_s2d_spv -o sr_prep_s2d.h sr_prep_s2d.comp > /dev/null
 glslangValidator -V --target-env vulkan1.1 --vn sr_prep_cell_spv -o sr_prep_cell.h sr_prep_cell.comp > /dev/null
 glslangValidator -V --target-env vulkan1.1 --vn sr_rotate_frag_spv -o sr_rotate.h sr_rotate.frag > /dev/null
-cat sr_prep.h sr_prep_s2d.h sr_prep_cell.h sr_rotate.h > sr_spv.h
+glslangValidator -V --target-env vulkan1.1 --vn sr_decode_spv -o sr_decode.h sr_decode.comp > /dev/null
+glslangValidator -V --target-env vulkan1.1 --vn sr_resample_frag_spv -o sr_resample.h sr_resample.frag > /dev/null
+cat sr_prep.h sr_prep_s2d.h sr_prep_cell.h sr_rotate.h sr_decode.h sr_resample.h > sr_spv.h
 # rknn_api.h is beside it (rknn-toolkit2 v2.5.0, LICENSE.rknn); librknnrt.so is dlopen'ed only with SR on
 ${CC:-gcc} -O2 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -fPIC -shared \
     -fvisibility=hidden -I. -o libVkLayer_DARKOS_rotate.so darkos_rotate_layer.c -lpthread -ldl
-rm -f rotate_vert.h rotate_frag.h sr_prep.h sr_prep_s2d.h sr_prep_cell.h sr_rotate.h
+rm -f rotate_vert.h rotate_frag.h sr_prep.h sr_prep_s2d.h sr_prep_cell.h sr_rotate.h sr_decode.h sr_resample.h
 echo "built: $(ls -l libVkLayer_DARKOS_rotate.so)"

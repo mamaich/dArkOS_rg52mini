@@ -44,6 +44,12 @@ DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so
 ```
 - `x3:auto`: the native size from `glViewport` - a viewport of exactly 3W x 3H gives W x H, and the model
   path with `{W}`, `{H}` (and `{S}` = 3) replaced. Up to 6 sizes get an engine per process.
+- A TV (HDMI, 1920x1080; 2026-11-25): RetroArch's integer scale shows a 224- or 240-line frame x4 there.
+  A viewport that is k > S times such a frame (k up to 8, the frame's width even and 160 to 400) is taken
+  too: the S times picture is composed into an image of the library's own (made at the first such frame)
+  and stretched over the viewport with one bilinear `glBlitFramebuffer`. Mega Drive on the TV: 60 fps,
+  Mali 27% (nearest x4: 7%). The panel never sees it (x4 does not fit 720 lines). An x4 model
+  (`x4:auto`) works too, but on the TV it gave the same picture at the same Mali, so it is not used.
 - No model for a size (an interlaced 640x480 or 512x240 mode, enhanced resolution left on): one line
   `darkos_npusr_gles: WxH: no model <path>`, that size is not tried again, its frames shown untouched
   (~0.3 ms of CPU a frame). No NPU (no rknpu node, no librknnrt, init failed): `NPU SR unavailable, off`,

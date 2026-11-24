@@ -34,7 +34,9 @@
  * draws fewer pixels.
  *
  * Displays that are landscape already are left alone, so the layer does
- * nothing on other devices. DARKOS_VK_ROTATE_DISABLE=1 turns it off (the
+ * nothing on other devices - but for NPU UPSCALE (DARKOS_NPU_SR set): then a
+ * landscape display (a TV on HDMI) is taken too, the pass turning nothing,
+ * to run the upscale in it. DARKOS_VK_ROTATE_DISABLE=1 turns it off (the
  * loader does that), DARKOS_VK_ROTATE=270 turns the other way,
  * DARKOS_VK_SCALED_MODES=0 leaves out the scaled modes,
  * DARKOS_VK_ROTATE_DEBUG=1 logs to stderr.
@@ -120,8 +122,9 @@ typedef struct Inst {
 /* Display modes of a portrait display (the swap happens at their reporting),
    and surfaces made on them. */
 typedef struct Mode { struct Mode *next; VkDisplayModeKHR mode; } Mode;
-/* ext: the program's landscape size; panel: the real surface, portrait */
-typedef struct Surf { struct Surf *next; VkSurfaceKHR surf; VkExtent2D ext, panel; int scaled; } Surf;
+/* ext: the program's landscape size; panel: the real surface, portrait. rot0: a landscape display (a TV)
+   taken only for NPU UPSCALE - the same size, nothing turned (dArkOS, 2026-11-24) */
+typedef struct Surf { struct Surf *next; VkSurfaceKHR surf; VkExtent2D ext, panel; int scaled, rot0; } Surf;
 
 /* A mode of the layer's own: a scaled one, or (plain) the panel's mode as it
    is, for a program that asked for it portrait and turns the picture itself.
@@ -191,6 +194,7 @@ typedef struct Swap {
     VkSampler samp;
     VkCommandPool pool;
     VkFormat fmt;
+    int32_t rot;            /* the turn the pass makes: g_rot, or 0 on a landscape display (NPU UPSCALE on a TV) */
     struct SRSwap *srs;     /* npusr: NULL = no SR */
 } Swap;
 
@@ -656,6 +660,23 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_CreateDisplayPlaneSurface(VkInstance ins
         LOG("display surface %ux%u, not turned: %d", ci->imageExtent.width, ci->imageExtent.height, r);
         return r;
     }
+    sr_cfg_early();
+    if (!v && !mode_rotated(ci->displayMode) && ci->transform == VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR && g_sr_on_early) {
+        /* a landscape display (a TV) with NPU UPSCALE asked for: the layer takes the swapchain all the same, to
+         * run the upscale in its pass, which then turns nothing (Surf.rot0) */
+        VkResult r = i->CreateDisplayPlaneSurface(instance, ci, alloc, out);
+        Surf *s = r == VK_SUCCESS ? calloc(1, sizeof(*s)) : NULL;
+        if (s) {
+            s->surf = *out;
+            s->ext = s->panel = ci->imageExtent;
+            s->rot0 = 1;
+            pthread_mutex_lock(&g_lock);
+            s->next = g_surfs; g_surfs = s;
+            pthread_mutex_unlock(&g_lock);
+        }
+        LOG("display surface %ux%u, landscape, for NPU UPSCALE: %d", ci->imageExtent.width, ci->imageExtent.height, r);
+        return r;
+    }
     if (!v && (!mode_rotated(ci->displayMode) || ci->transform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR))
         return i->CreateDisplayPlaneSurface(instance, ci, alloc, out);
 
@@ -702,6 +723,8 @@ static VKAPI_ATTR void VKAPI_CALL L_DestroySurface(VkInstance instance, VkSurfac
 
 static void fix_surf_caps(VkSurfaceCapabilitiesKHR *c, const Surf *s)
 {
+    if (s->rot0)
+        return;     /* a landscape display: as the driver says */
     if (s->scaled) {
         /* the program draws at the scaled mode's size and nothing else */
         c->currentExtent = c->minImageExtent = c->maxImageExtent = s->ext;
@@ -926,7 +949,13 @@ static int swap_build(Swap *s, const VkSwapchainCreateInfoKHR *ci)
     VkFormat fmt = ci->imageFormat;
     s->fmt = fmt;
     int scaled;
-    VkViewport vp = scaled_viewport(s->app_ext, s->real_ext, &scaled);
+    VkViewport vp;
+    if (s->rot == 0) {
+        /* a landscape display (NPU UPSCALE on a TV): the program's image is the swapchain's size, one to one */
+        scaled = !(s->app_ext.width == s->real_ext.width && s->app_ext.height == s->real_ext.height);
+        vp = (VkViewport){ 0, 0, (float)s->real_ext.width, (float)s->real_ext.height, 0, 1 };
+    } else
+        vp = scaled_viewport(s->app_ext, s->real_ext, &scaled);
 
     /* render pass: the swapchain image, written whole (cleared first when the
        picture leaves bars), left for presenting */
@@ -1091,7 +1120,7 @@ static int swap_build(Swap *s, const VkSwapchainCreateInfoKHR *ci)
         d->CmdBeginRenderPass(s->cb[k], &rbi, VK_SUBPASS_CONTENTS_INLINE);
         d->CmdBindPipeline(s->cb[k], VK_PIPELINE_BIND_POINT_GRAPHICS, s->pipe);
         d->CmdBindDescriptorSets(s->cb[k], VK_PIPELINE_BIND_POINT_GRAPHICS, s->pl, 0, 1, &s->ds[k], 0, NULL);
-        int32_t rot = g_rot;
+        int32_t rot = s->rot;
         d->CmdPushConstants(s->cb[k], s->pl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(rot), &rot);
         d->CmdDraw(s->cb[k], 3, 1, 0, 0);
         d->CmdEndRenderPass(s->cb[k]);
@@ -1119,7 +1148,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_CreateSwapchain(VkDevice device, const V
 
     VkSwapchainCreateInfoKHR c = *ci;
     VkExtent2D app = ci->imageExtent;
-    c.imageExtent = sf->panel;
+    c.imageExtent = sf->rot0 ? ci->imageExtent : sf->panel;
     c.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     c.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     VkResult r = d->CreateSwapchainKHR(device, &c, alloc, out);
@@ -1134,6 +1163,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_CreateSwapchain(VkDevice device, const V
     s->d = d;
     s->app_ext = app;
     s->real_ext = c.imageExtent;
+    s->rot = sf->rot0 ? 0 : g_rot;
     uint32_t n = 0;
     d->GetSwapchainImagesKHR(device, *out, &n, NULL);
     if (n == 0 || n > MAX_IMAGES) { free(s); goto plain; }

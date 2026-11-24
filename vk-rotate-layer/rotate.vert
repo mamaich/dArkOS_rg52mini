@@ -9,6 +9,6 @@ void main()
 {
     vec2 t = vec2((gl_VertexIndex << 1) & 2, gl_VertexIndex & 2);
     gl_Position = vec4(t * 2.0 - 1.0, 0.0, 1.0);
-    // t: 0..1 across the portrait image, y down
-    uv = (p.rot == 270) ? vec2(1.0 - t.y, t.x) : vec2(t.y, 1.0 - t.x);
+    // t: 0..1 across the portrait image, y down; rot 0: a landscape display (NPU UPSCALE on a TV), not turned
+    uv = (p.rot == 0) ? t : (p.rot == 270) ? vec2(1.0 - t.y, t.x) : vec2(t.y, 1.0 - t.x);
 }

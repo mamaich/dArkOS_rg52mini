@@ -1051,8 +1051,8 @@ Drive and the other systems the same models fit (the owner wants to see the
 result; in some games the cartoon look may even be a plus) (below).
 
 **Where it is on** (master, 2026-11-24), each with the option ON for its
-system, on the console's screen only (with HDMI connected the game starts
-as without it):
+system, on the console's screen and, since 2026-11-25, on a TV over HDMI
+("On a TV", below):
 
 | System (ES) | Emulator | Core | What is enlarged |
 |---|---|---|---|
@@ -1220,8 +1220,8 @@ drawn.
   being further from the right frame, and look the same.
 
 **Where it does nothing** (the game runs as with NPU UPSCALE off):
-HDMI connected (the layer leaves a landscape display alone); PSP on the
-RetroArch core or on standalone-2021; no NPU, model or runtime. A RetroArch
+PSP on the RetroArch core or on standalone-2021; no NPU, model or runtime
+(until 2026-11-25 also with HDMI connected). A RetroArch
 override that sets one of its keys is set to the upscale's value for the run
 and put back; a game's own Azahar options file is handled the same way.
 
@@ -1490,6 +1490,64 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   the owner's put back. Pictures (`shots/cmp/sys-*.png` on the PC): the
   dithering of Mega Drive grass and SNES backgrounds smoothed into flat colour,
   edges rounder and softer - the "cartoon" look.
+
+**On a TV (HDMI), 2026-11-25.** The owner asked for NPU UPSCALE on HDMI too,
+starting with the systems that have it; both the x3 picture brought up to the
+TV and an x4 network to be tried, the choice by the picture and by not losing
+frames in the heavy emulators such as Azahar. Until then `darkos-npusr` said
+status 1 with HDMI connected. Now all its systems are upscaled on a 1920x1080
+TV as on the panel:
+
+- **RetroArch's gl cores** (`libnpusr_gles.so`, PS1 and the 16-bit consoles).
+  RetroArch's integer scale shows a 224- or 240-line frame x4 on 1080 lines
+  (256x224 as 1024x896, 320x240 as 1280x960). The library takes a viewport
+  that is k > 3 times such a frame, runs the x3 model, composes the x3 picture
+  into an image of its own and stretches it over the x4 area with one bilinear
+  `glBlitFramebuffer` (npusr-gles/README.md). The panel's path is unchanged
+  (x4 does not fit 720 lines).
+- **The Vulkan layer** (3DS, PSP) takes a landscape display when
+  `DARKOS_NPU_SR` is set (the layer's notes, item 5), and the helper gives the
+  step the program shows the frame at there: the 3DS's top screen x4
+  (1600x960), the PSP x3 (1440x816), fit or fill as on the panel.
+- **The resample, once.** For an area of another size than the upscaled
+  frame (the PSP's fit and fill, the 3DS's x3 picture on the TV's x4) the layer
+  built each pixel from four luma fetches of the NPU's output and their
+  unpacking: on the TV the PSP (1440x816 into 1906x1080) ran at 54 fps with the
+  Mali at 99%, Azahar 54.8 fps at 88%. Now `sr_decode.comp` writes the
+  upscaled frame in RGBA once a new NPU output (in the present's command
+  buffer, before the pass) and `sr_resample.frag` samples it once a pixel,
+  bilinearly: the PSP 60 fps at 77%, Azahar 59.1 fps at 83%. The panel's PSP
+  with fit or fill (x3 brought down to 1271x720) takes the same path now.
+- **x4 networks.** The AI-SR session trained an x4 network and a new x3 one on
+  true high-resolution targets (point-sampled inputs, as a game draws them; no
+  teacher). They were tried as test files; they are not in the image until its
+  package with the licence manifest comes. On the TV from one saved state,
+  the gl cores' x4 gave the picture of x3 stretched (a touch crisper) at the
+  same Mali and 1.4 ms more of the NPU, so those keep x3 stretched (no more
+  model files). Azahar with x4 in place (one fetch a pixel, no resample) ran at
+  59.0 fps with the Mali at 68% and 74 C, against 83% and 77 C for x3
+  resampled. So the helper takes `espcn_x4_400x240.rknn` on the TV where the
+  image has it, and x3 resampled where not.
+
+  | TV, 1920x1080 | frame on the TV | fps | NPU | Mali (nearest) |
+  |---|---|---|---|---|
+  | Mega Drive, Zombies Ate My Neighbors, Genesis Plus GX, x3 stretched | 256x224 as 1024x896 | 60 | 5.2 ms | 27% (7%) |
+  | the same, x4 network | 256x224 as 1024x896 | 59.8 | 6.6 ms | 27% |
+  | SNES, AAAHH!!! Real Monsters (50 Hz), Snes9x | 256x224 as 1024x896 | 50 | | 23% |
+  | NES, The Addams Family, Nestopia | 256x224 as 1024x896 | 60 | | 26% |
+  | Neo Geo, Kizuna Encounter, FinalBurn Neo | 304x224 as 1216x896 | 58.8 (its 59.19 Hz) | | 32% |
+  | PS1, Double Dragon, pcsx_rearmed (retroarch32) | 320x240 as 1280x960 | 59.7 | 7.0 ms | 42% (6%) |
+  | PS1, the same, SwanStation (retroarch) | 320x240 as 1280x960 | 58.7 (59 each 5 s) | | 36% |
+  | 3DS, Castlevania: Mirror of Fate, Azahar, x3 resampled (the old pass) | 400x240 as 1600x960 | 54.8 | 9.2 ms | 88% |
+  | the same, x3 with the decode pass | 400x240 as 1600x960 | 59.1 | 9.2 ms | 83% |
+  | the same, x4 network in place | 400x240 as 1600x960 | 59.0 | 11.2 ms | 68% (layer off: 37%) |
+  | PSP, Daxter, x3, fit (the old pass) | 480x272 as 1906x1080 | 54.3 | 11.1 ms | 99% |
+  | the same, the decode pass | 480x272 as 1906x1080 | 60 | 11.6 ms | 77% (layer off: 30%) |
+  | the same, an x4 network (480x272 to 1920x1088, into the fit rectangle) | 480x272 as 1906x1080 | 60 | 14.5 ms | 94%, 81 C |
+
+  The grabs on the TV: kmsgrab tears there as on the panel unless the game is
+  paused (it is grabbed paused, on a saved state). Not tried on the TV:
+  retroarch-next, PC Engine, Sega CD and 32X (the same code as Mega Drive).
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)
@@ -1849,7 +1907,10 @@ Khronos loader loads it into every Vulkan program.
    The program's image goes back to PRESENT_SRC, and the real present waits on
    the pass.
 5. **Landscape displays are left alone**, so the layer does nothing on other
-   devices.
+   devices. One exception since 2026-11-25: with `DARKOS_NPU_SR` set (NPU
+   UPSCALE) a landscape display (a TV on HDMI) is taken too, the swapchain at
+   the display's size and the pass turning nothing (`Surf.rot0`,
+   `Swap.rot` = 0), so that the upscale runs in it.
 6. **Scaled modes** (after v1.0), as `sdl2-patch-0008` gives GL.
    - The Mali driver makes no display mode but the panel's own:
      `vkCreateDisplayModeKHR` for 640x480 fails with

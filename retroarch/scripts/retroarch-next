@@ -37,7 +37,7 @@ ext=""
 # NPU UPSCALE (ES's EMULATOR SETTINGS), as in the release's wrapper: a core darkos-npusr knows (PS1,
 # Mega Drive, SNES, NES, PC Engine, Neo Geo) drawn through gl, enlarged x3 by libnpusr_gles.so, preloaded
 # (npusr-gles/). darkos-npusr sets what that needs for this run and puts back afterwards what it changed;
-# status 1 from it (a core it does not know, HDMI, no NPU): the game starts as usual.
+# status 1 from it (a core it does not know, no NPU): the game starts as usual. On a 1080p TV too.
 npu=""
 npuenv=()
 if [ -x "$npusr" ] && [ "$DARKOS_NPU_UPSCALE" = on ]; then
