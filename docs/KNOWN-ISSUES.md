@@ -1537,13 +1537,19 @@ TV as on the panel:
   | NES, The Addams Family, Nestopia | 256x224 as 1024x896 | 60 | | 26% |
   | Neo Geo, Kizuna Encounter, FinalBurn Neo | 304x224 as 1216x896 | 58.8 (its 59.19 Hz) | | 32% |
   | PS1, Double Dragon, pcsx_rearmed (retroarch32) | 320x240 as 1280x960 | 59.7 | 7.0 ms | 42% (6%) |
-  | PS1, the same, SwanStation (retroarch) | 320x240 as 1280x960 | 58.7 (59 each 5 s) | | 36% |
+  | PS1, the same, SwanStation (retroarch) | 320x240 as 1280x960 | 58.7 (57.5-59.6 each 5 s) | 6.7 ms | 36% (7%, 60 fps) |
+  | 3DS, the same game, as installed (the image's x3 model, the decode pass) | 400x240 as 1600x960 | 58.3 (57, 60) | | 73%, 79 C |
   | 3DS, Castlevania: Mirror of Fate, Azahar, x3 resampled (the old pass) | 400x240 as 1600x960 | 54.8 | 9.2 ms | 88% |
   | the same, x3 with the decode pass | 400x240 as 1600x960 | 59.1 | 9.2 ms | 83% |
   | the same, x4 network in place | 400x240 as 1600x960 | 59.0 | 11.2 ms | 68% (layer off: 37%) |
   | PSP, Daxter, x3, fit (the old pass) | 480x272 as 1906x1080 | 54.3 | 11.1 ms | 99% |
   | the same, the decode pass | 480x272 as 1906x1080 | 60 | 11.6 ms | 77% (layer off: 30%) |
   | the same, an x4 network (480x272 to 1920x1088, into the fit rectangle) | 480x272 as 1906x1080 | 60 | 14.5 ms | 94%, 81 C |
+
+  SwanStation lost a frame or two a second on the TV (60 without the
+  upscale; on the panel 60 with it): not looked into yet. Azahar on the TV
+  runs hot (77-79 C after a minute and a half): the x4 network's 68% would
+  help there.
 
   The grabs on the TV: kmsgrab tears there as on the panel unless the game is
   paused (it is grabbed paused, on a saved state). Not tried on the TV:
