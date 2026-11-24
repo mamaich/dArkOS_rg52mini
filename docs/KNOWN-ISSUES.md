@@ -1086,8 +1086,8 @@ drawn.
   `<system>.npusr`; a game is launched with `DARKOS_NPU_UPSCALE=on` when it
   is ON (es-0011).
 - *The launchers*: `retroarch` (for the Azahar core) and `ppsspp.sh` (PPSSPP
-  standalone; for PS1 `retroarch32`, `retroarch` and `retroarch-next`
-  through `libnpusr_gles.so`, below) ask `darkos-npusr` (`npusr/`), which loads the NPU's driver,
+  standalone; for PS1 and the 16-bit consoles `retroarch32`, `retroarch` and
+  `retroarch-next` through `libnpusr_gles.so`, below) ask `darkos-npusr` (`npusr/`), which loads the NPU's driver,
   caps the NPU at 600 MHz (both models keep up there; at 1 GHz the console
   was 15 C warmer within 1.5 minutes) and gives the emulator what the upscale
   needs for this run: RetroArch gets an `--appendconfig` (Vulkan, integer
@@ -1311,7 +1311,8 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   the game itself does little). The space-to-depth model takes 0.2 W and
   2 C off that (the same series, ESPCN 3.87 W in it).
 
-**PS1 (the owner, 2026-11-24: of the GLES emulators, PS1 only).** The
+**PS1 (the owner, 2026-11-24: of the GLES emulators, PS1 only; the same day
+the 16-bit consoles too, "The 16-bit consoles" below).** The
 32-bit RetroArch draws with GLES and goes out through libgo2 and RGA, past
 the Vulkan layer (and so does the 64-bit one with `gl`, the image's
 default), so the AI-SR session wrote the same upscale as a library
@@ -4005,8 +4006,8 @@ How it is made:
   first start. Every path in that cfg is absolute to `~/.config/retroarch`,
   so the cores, BIOS, saves, states, playlists, remaps and overrides are the
   release's; a cores link there serves ES's `-L` path.
-- NPU UPSCALE for PS1 (DuckStation, SwanStation) in it as in the release
-  (since 2026-11-24, "NPU UPSCALE" above).
+- NPU UPSCALE for PS1 (DuckStation, SwanStation) and the 16-bit consoles'
+  cores in it as in the release (since 2026-11-24, "NPU UPSCALE" above).
 
 What porting to master took. Master rewrote the `drm_go2` context (no libgo2:
 its own dumb buffers, the RGA blit straight into them, for the Odroid Go
