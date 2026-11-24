@@ -45,7 +45,8 @@ DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so
   and everything passes through. rknpu must be loaded before the game, as `darkos-npusr` does.
 - Known limit: RetroArch sets a later viewport of its own (640x480 at (320,120)), so the last x3 viewport is
   kept as the frame's area. In a hi-res interlaced mode the NPU keeps working on that area and the result is
-  thrown away as "menu": the picture is right, at ~5 points of Mali, while such a mode lasts.
+  thrown away as "menu": the picture is right, at ~5 points of Mali, while such a mode lasts. Not to be
+  fixed (the owner, 2026-11-24): for a game that runs in such a mode, NPU UPSCALE is turned off.
 - Exit: `eglTerminate`, `SDL_Quit`, an `atexit` handler registered after librknnrt is loaded (so it runs
   before librknnrt's destructors) and a SIGTERM/SIGINT/SIGHUP/SIGQUIT handler (only where the program has
   none) stop the worker, wait for the job on the NPU (up to 1 s in the signal handler) and free its memory:

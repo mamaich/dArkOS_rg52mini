@@ -1308,6 +1308,10 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   50 fps, Mali 4.9 -> 24%; the NPU 6.0-6.5 ms a frame, the hook 1.5-1.8 ms
   of CPU a frame. As for the 3DS, a menu or text over the frame (more than
   1% of the 3x3 blocks not one colour) shows as drawn.
+- A hi-res interlaced mode (640x480, 512x480) is shown at x1 without the
+  upscale, but the NPU keeps working on the last x3 area (~5 points of
+  Mali) while it lasts (`npusr-gles/README.md`). The owner, 2026-11-24: not
+  to be fixed; for such a game NPU UPSCALE is turned off.
 - Checked on the owner's console, 2026-11-24 (1.12 with the NPU UPSCALE
   files of master installed by hand; the library built as `build_npusr.sh`
   builds it, in a trixie armhf chroot with gcc 14 where the image's
