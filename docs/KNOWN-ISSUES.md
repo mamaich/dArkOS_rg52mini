@@ -1457,7 +1457,7 @@ in neither does anything else use GPIO0_C1 (its other functions, `npu-pins`
 and `can1m1`, are unused; no GPIO user). The NPU is powered only when NPU
 UPSCALE is turned on.
 
-## RetroArch's shaders on the Mali-G52: GLSL presets that do not compile, slang ones that crash (2026-11-24)
+## RetroArch's shaders on the Mali-G52: GLSL presets that do not compile, slang ones that crashed (2026-11-24) — the crash fixed for 1.13
 
 Found while comparing NPU UPSCALE with RetroArch's shaders (above).
 
@@ -1486,11 +1486,28 @@ Found while comparing NPU UPSCALE with RetroArch's shaders (above).
   `artcnn-c4f16-2x-luma.slangp` on SwanStation, right after "[Vulkan]
   Updating framebuffer size 0x0" (the core's first frame is empty), and
   `xbr-lv3.slangp` on Azahar after "Creating framebuffer 24576x24576" (the
-  core's largest geometry x3, past Mali's image limit). The owner asked
-  for the slang shaders in the image (so that no one has to fetch them):
-  the change to `build_retroarch.sh` is written (one copy, 84 MB, for both
-  64-bit RetroArchs; the GLSL clones' `.git`, 24 MB each, left out) and
-  held back on these crashes — docs/TODO.md.
+  core's largest geometry x3, past the Mali-G52's 16384). Master
+  (retroarch-next) does not crash on them: its `shader_vulkan.c` refuses
+  such sizes ("Refusing invalid") and checks `vkCreateImage`; 1.22.2's
+  `Framebuffer::init` checked nothing and the driver crashed on the null
+  image. `retroarch-patches/retroarch-patch-0027-vulkan-slang-framebuffer-size.patch`
+  (the owner chose to fix it first): every framebuffer of the chain is kept
+  between 1 and 4096 pixels a side (the least `maxImageDimension2D` Vulkan
+  guarantees; each frame resizes a pass to what it needs; the console has
+  2 GB, and two 8192x8192 passes took 512 MB), and the frame history skips
+  an empty frame. Checked on the console with 1.22.2 built as the image
+  builds it (in `es-sysroot`, gcc 12.4, every patch but norotation; the
+  same size and libraries as the image's binary) and bound over it: the
+  build without the patch crashed as the image's does; with it
+  SwanStation ran `xbr-lv3` at 25.1 fps, `scalefx` 11.1, `artcnn` 2.6
+  (retroarch-next 23 / 10.4 / 2.6), Azahar `xbr-lv3` at 14.4 (59 without),
+  and Vulkan without a preset was as before (60 fps, Mali 11%). The heavy
+  edge and network shaders stay far from 60 fps at 960x720 on this GPU,
+  for any system (the cost follows the output's size): see "NPU UPSCALE".
+  The owner asked for the slang shaders in the image (so that no one has
+  to fetch them): the change to `build_retroarch.sh` is written (one copy,
+  84 MB, for both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB each,
+  left out), not in master — docs/TODO.md.
 
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
 

@@ -1,0 +1,99 @@
+dArkOS RG52 Mini: the Vulkan shader chain (slang presets) keeps each pass's framebuffer between 1 and
+4096 pixels a side, and the frame history skips an empty frame. Without it RetroArch 1.22.2 crashed
+as the game started with a preset whose passes are sized from the source: SwanStation's first frame
+is 0x0 (xbr-lv3, scalefx, artcnn: "Updating framebuffer size 0x0", then a segmentation fault), and
+Azahar's largest geometry is 8192x8192, so a x3 pass asked for 24576x24576, past the Mali-G52's 16384
+and the console's 2 GB; vkCreateImage failed, nothing checked it and the driver crashed on the null
+image. Master (retroarch-next) refuses such sizes instead (shader_vulkan.c, "Refusing invalid");
+checked on the console 2026-11-24: the same presets run (SwanStation 25 / 11 / 2.6 fps, Azahar 14.4).
+diff --git a/gfx/drivers_shader/shader_vulkan.cpp b/gfx/drivers_shader/shader_vulkan.cpp
+old mode 100755
+new mode 100644
+index af62226..d592923
+--- a/gfx/drivers_shader/shader_vulkan.cpp
++++ b/gfx/drivers_shader/shader_vulkan.cpp
+@@ -1002,6 +1002,11 @@ void vulkan_filter_chain::update_history(DeferredDisposer &disposer,
+    std::unique_ptr<Framebuffer> tmp;
+    VkImageLayout src_layout = input_texture.layout;
+ 
++   /* dArkOS RG52 Mini: an empty frame (a core's first can be 0x0) has nothing
++    * to keep, and a copy from it would read past its image. */
++   if (!input_texture.width || !input_texture.height)
++      return;
++
+    /* Transition input texture to something appropriate. */
+    if (input_texture.layout != VK_IMAGE_LAYOUT_GENERAL)
+    {
+@@ -1623,6 +1628,31 @@ void Pass::set_shader(VkShaderStageFlags stage,
+    }
+ }
+ 
++/* dArkOS RG52 Mini: a framebuffer of the chain is kept between 1 and 4096
++ * pixels a side. A core's first frame can be empty (SwanStation: 0x0), and the
++ * chain is first built for the core's largest geometry (Azahar: 8192x8192, so a
++ * pass at x3 the source 24576x24576, past the Mali-G52's 16384 and the console's
++ * 2 GB). vkCreateImage then failed, nothing here checked it, and the driver
++ * crashed on the null image as the game started. 4096 is the least
++ * maxImageDimension2D Vulkan guarantees, more than a 1280x720 panel or a 4K
++ * TV needs; each frame resizes a pass's framebuffer to what that frame needs. */
++#define SLANG_FB_MAX_DIM 4096u
++
++static unsigned slang_fb_dim(float v)
++{
++   if (!(v >= 1.0f)) /* NaN too */
++      return 1;
++   if (v >= (float)SLANG_FB_MAX_DIM)
++      return SLANG_FB_MAX_DIM;
++   return unsigned(roundf(v));
++}
++
++static Size2D slang_fb_size(const Size2D &s)
++{
++   return { MAX(1u, MIN(s.width,  SLANG_FB_MAX_DIM)),
++            MAX(1u, MIN(s.height, SLANG_FB_MAX_DIM)) };
++}
++
+ Size2D Pass::get_output_size(const Size2D &original,
+       const Size2D &source) const
+ {
+@@ -1672,7 +1702,7 @@ Size2D Pass::get_output_size(const Size2D &original,
+          break;
+    }
+ 
+-   return { unsigned(roundf(width)), unsigned(roundf(height)) };
++   return { slang_fb_dim(width), slang_fb_dim(height) };
+ }
+ 
+ Size2D Pass::set_pass_info(
+@@ -2658,14 +2688,14 @@ Framebuffer::Framebuffer(
+       const VkPhysicalDeviceMemoryProperties &mem_props,
+       const Size2D &max_size, VkFormat format,
+       unsigned max_levels) :
+-   size(max_size),
++   size(slang_fb_size(max_size)),
+    format(format),
+    max_levels(MAX(max_levels, 1u)),
+    memory_properties(mem_props),
+    device(device)
+ {
+    RARCH_LOG("[Vulkan] Creating framebuffer %ux%u (max %u level(s)).\n",
+-         max_size.width, max_size.height, max_levels);
++         size.width, size.height, max_levels);
+    vulkan_initialize_render_pass(device, format, &render_pass);
+    init(nullptr);
+ }
+@@ -2770,12 +2800,12 @@ void Framebuffer::init(DeferredDisposer *disposer)
+ 
+ void Framebuffer::set_size(DeferredDisposer &disposer, const Size2D &size, VkFormat format)
+ {
+-   this->size = size;
++   this->size = slang_fb_size(size);
+    if (format != VK_FORMAT_UNDEFINED)
+ 	  this->format = format;
+ 
+    RARCH_LOG("[Vulkan] Updating framebuffer size %ux%u (format: %u).\n",
+-         size.width, size.height, (unsigned)this->format);
++         this->size.width, this->size.height, (unsigned)this->format);
+ 
+    {
+       /* The current framebuffers, etc, might still be in use

@@ -35,12 +35,12 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   written (slang-shaders in `~/.config/retroarch/shaders/shaders_slang`, 84
   MB, read by both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB each,
   dropped; `slang-shaders` in `tools/upstream/components.json`), not in master:
-  on the console the multi-pass presets sized from the source (xBR-lv3,
-  ScaleFX, ArtCNN) crash RetroArch at the start with SwanStation and with
-  Azahar, and a one-pass xBRZ runs at 13 fps (KNOWN-ISSUES.md, "RetroArch's
-  shaders on the Mali-G52"). For the owner to decide: ship them as they
-  are, fix RetroArch's Vulkan filter chain first (sizes of 0 and past the
-  GPU's limit), or leave them to the Online Updater. Also open: the GLSL
+  the multi-pass presets sized from the source (xBR-lv3, ScaleFX, ArtCNN)
+  crashed RetroArch at the start with SwanStation and with Azahar; the owner
+  chose to fix that first: retroarch-patch-0027 in master, checked on the
+  console (KNOWN-ISSUES.md, "RetroArch's shaders on the Mali-G52"). They run
+  now, but at 2.6-25 fps where nearest keeps 60. Shipping the pack itself:
+  waiting for the owner's word. Also open: the GLSL
   `xbr-lv2` and `xbr-lv2-3d` do not compile on Mali (their `delta`,
   `delta_l` and `delta_u` made `const` would do: `XBR_SCALE` is a `#define`).
 
