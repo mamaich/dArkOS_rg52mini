@@ -2,11 +2,12 @@
 
 x3 super-resolution on the RK3562's NPU for programs that draw with EGL/GLES and show their native frame
 at an integer x3 scale, nearest - the counterpart of the Vulkan rotate layer's (`vk-rotate-layer/npusr.inc.c`)
-for what goes out past Vulkan. The image uses it for PS1 only: `pcsx_rearmed` and `pcsx_rearmed_rumble` in
-the 32-bit RetroArch, `duckstation` and `swanstation` in the 64-bit ones, the release and `retroarch-next` (gl,
-KMS, RGA turning the picture onto the panel; the library built for each). The emulator is not changed;
-`retroarch32`, `retroarch` and `retroarch-next` preload the library when NPU UPSCALE is on
-(docs/KNOWN-ISSUES.md, "NPU UPSCALE").
+for what goes out past Vulkan. The image uses it in RetroArch for the cores `darkos-npusr` lists in
+`GLES_CORES`: PS1 (`pcsx_rearmed` in the 32-bit RetroArch, `duckstation` and `swanstation` in the 64-bit
+ones) and, since 2026-11-24, Mega Drive, Sega CD and 32X, SNES, NES, PC Engine and Neo Geo, in whichever of the
+three RetroArchs ES starts them (gl, KMS, RGA turning the picture onto the panel; the library built for armhf
+and aarch64). The emulator is not changed; `retroarch32`, `retroarch` and `retroarch-next` preload the library
+when NPU UPSCALE is on (docs/KNOWN-ISSUES.md, "NPU UPSCALE").
 Written by the AI-SR session (2026-11-24); `npusr_gles.c` is byte for byte the source of the build tested on
 the console (sha256 7e1a3c04d47a359110a36c770be1c507226a8d08b0f89da10d353d391620fd58).
 
@@ -59,23 +60,28 @@ DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so
   `_DUMP`, `_DUMP_AT`.
 
 ## Models (`npusr/models/x3_<W>x<H>.rknn`)
-Six sizes, all of one network: `s2d_x3_b7.pt`, the 3DS's (npusr/NOTICE), made with `npusr/models/s2d_rknn.py`
+Seven sizes, all of one network: `s2d_x3_b7.pt`, the 3DS's (npusr/NOTICE), made with `npusr/models/s2d_rknn.py`
 (`--weights s2d_x3_b7.pt --scale 3 --blocks 7 --size WxH --calib <the 3DS's calibration frames>`: the same
-14 frames of Super Mario 3D Land, each resized to W x H; no PS1 frames) - a rebuild gives the same files.
+14 frames of Super Mario 3D Land, each resized to W x H; no PS1 frames) - a rebuild gives the same files
+(checked 2026-11-24 with `x3_320x224.rknn`: the `onnx` step in a venv with a torch that knows `dynamo=`, 2.11,
+the `rknn` step with rknn-toolkit2 2.5.0). The 256, 320 and 224/240 sizes are also the Mega Drive's, SNES's,
+NES's and PC Engine's frames; 304x224, added 2026-11-24, is Neo Geo's visible area (FinalBurn Neo).
 PS1 widths are 256, 320, 368, 512 and 640; only up to 426 x 240 fits x3 on 1280x720, so 512 and 640 wide
 and PAL's 256 or 288 lines get no model. The 224-line ones are for NTSC games with a shorter range and for
 DuckStation's default overscan crop. RetroArch shows a frame at exactly x3 only when the core's aspect is the
-frame's own: DuckStation and SwanStation get `PAR 1:1` for the run, pcsx_rearmed reports 4:3 always, so of its
-frames only 320x240 is enlarged (docs/KNOWN-ISSUES.md, "Which frames get exactly x3").
+frame's own: DuckStation and SwanStation get `PAR 1:1` for the run, the other cores (pcsx_rearmed and the 16-bit
+consoles', which report 4:3 whatever the frame) RetroArch's square pixel (docs/KNOWN-ISSUES.md, "Which frames
+get exactly x3").
 
 | file | sha256 | on the console |
 |---|---|---|
-| x3_256x240.rknn | a9b30e5689d512c309b4efc67bb07d7bf2a896c463e4ad6bff1a93c3dce1d82c | |
+| x3_256x240.rknn | a9b30e5689d512c309b4efc67bb07d7bf2a896c463e4ad6bff1a93c3dce1d82c | P-47 (PC Engine) |
 | x3_320x240.rknn | 88fdb208a19f889fe570378786d0b450f460ae157f893ed449fb0366c4a38fed | Double Dragon, Hover Racing (pcsx_rearmed); Double Dragon (SwanStation) |
 | x3_368x240.rknn | 6376aad8403a2961683b1fc9cfaef158fabfbed8aa92f1a30b6ab1c69ca9864d | |
-| x3_256x224.rknn | 0b926d27b893cc6fd2b181d805618c4d11774a9705a1c6bd7f1a6f6871284e89 | the BIOS logo (DuckStation) |
-| x3_320x224.rknn | a442be0b167242cd448dcc56eb9ae6a52e4072d7cd1b2aad23cc1fd066a50158 | Double Dragon, Hover Racing (DuckStation) |
+| x3_256x224.rknn | 0b926d27b893cc6fd2b181d805618c4d11774a9705a1c6bd7f1a6f6871284e89 | the BIOS logo (DuckStation); Zombies Ate My Neighbors (Mega Drive), Real Monsters (SNES), The Addams Family (NES) |
+| x3_320x224.rknn | a442be0b167242cd448dcc56eb9ae6a52e4072d7cd1b2aad23cc1fd066a50158 | Double Dragon, Hover Racing (DuckStation); Blackthorne (32X) |
 | x3_368x224.rknn | e5788ed026513d42e8573409b0609c719a58d952618b682383ad5ca7c712a2ba | |
+| x3_304x224.rknn | 88543c2df05d7d3c4afb7c4906737ae12234331a4d9edf4dfbf23966534580b8 | Kizuna Encounter (Neo Geo, FinalBurn Neo) |
 
 ## Measured (retroarch32 + pcsx_rearmed, NPU at 600 MHz, the AI-SR session)
 Double Dragon 60 fps, Mali 3.8 -> 23.5-24%; Hover Racing (PAL) 50 fps, Mali 4.9 -> 23.5-24.8%; the NPU
@@ -85,3 +91,5 @@ and does nothing for 2D games; the upscale smooths textures and dithering too.
 In the 64-bit RetroArch (2026-11-24, this session): Double Dragon on DuckStation (320x224) 60 fps, the NPU
 4.8-5.8 ms, the hook 1.0-1.3 ms, GPU 3 -> 21-24%; on SwanStation (320x240) 60 fps, 6.4-6.5 ms, GPU 21%.
 In `retroarch-next` the same: DuckStation 60 fps, 4.9-5.2 ms, GPU 4 -> 19%; SwanStation 60 fps, 6.5 ms.
+The 16-bit consoles (2026-11-24): 60 fps (the SNES game 50, a PAL release) at 4.9-6.0 ms of NPU, GPU 2-4 ->
+14-20%; the table in docs/KNOWN-ISSUES.md, "The 16-bit consoles".

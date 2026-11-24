@@ -86,10 +86,11 @@ else
   ext=""
   [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "/home/ark/.config/${emulator}")
   # dArkOS RG52 Mini: NPU UPSCALE (EmulationStation's EMULATOR SETTINGS): 3DS - Azahar's top screen
-  # enlarged x3 by the NPU in the Vulkan rotate layer; PS1 - DuckStation's or SwanStation's frame, drawn
-  # through gl (GLES, past the Vulkan layer), enlarged x3 by libnpusr_gles.so, preloaded (npusr-gles/).
-  # darkos-npusr sets what that needs for this run and puts back afterwards what it changed; status 1
-  # from it: the game starts as usual.
+  # enlarged x3 by the NPU in the Vulkan rotate layer; any other core darkos-npusr knows (PS1, Mega Drive,
+  # SNES, NES, PC Engine, Neo Geo: its GLES_CORES) - the frame, drawn through gl (GLES, past the Vulkan
+  # layer), enlarged x3 by libnpusr_gles.so, preloaded (npusr-gles/). darkos-npusr sets what that needs
+  # for this run and puts back afterwards what it changed; status 1 from it (a core it does not know,
+  # HDMI, no NPU): the game starts as usual.
   npusr=/usr/local/bin/darkos-npusr
   npu=""
   npuenv=()
@@ -101,8 +102,8 @@ else
       case "$npucore" in
         azahar)
           npu=$("$npusr" retroarch "/home/ark/.config/${emulator}" "${@: -1}") && export DARKOS_NPU_SR=x3:400x240 ;;
-        duckstation|swanstation)
-          if npu=$("$npusr" ps1 "/home/ark/.config/${emulator}" "$npucore" "${@: -1}"); then
+        ?*)
+          if npu=$("$npusr" gles "/home/ark/.config/${emulator}" "$npucore" "${@: -1}"); then
             npuenv=("LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libnpusr_gles.so${LD_PRELOAD:+:$LD_PRELOAD}"
                     "DARKOS_NPU_SR=x3:auto"
                     "DARKOS_NPU_SR_MODEL=/usr/share/darkos/npusr/x3_{W}x{H}.rknn"

@@ -34,18 +34,18 @@ fi
 # USB pads first, the console's own controls last (ra-extpads.py, as for the release)
 ext=""
 [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "$N")
-# NPU UPSCALE (ES's EMULATOR SETTINGS), as in the release's wrapper: PS1 on DuckStation or SwanStation
-# drawn through gl, enlarged x3 by libnpusr_gles.so, preloaded (npusr-gles/). darkos-npusr sets what
-# that needs for this run and puts back afterwards what it changed; status 1 from it: the game starts
-# as usual.
+# NPU UPSCALE (ES's EMULATOR SETTINGS), as in the release's wrapper: a core darkos-npusr knows (PS1,
+# Mega Drive, SNES, NES, PC Engine, Neo Geo) drawn through gl, enlarged x3 by libnpusr_gles.so, preloaded
+# (npusr-gles/). darkos-npusr sets what that needs for this run and puts back afterwards what it changed;
+# status 1 from it (a core it does not know, HDMI, no NPU): the game starts as usual.
 npu=""
 npuenv=()
 if [ -x "$npusr" ] && [ "$DARKOS_NPU_UPSCALE" = on ]; then
   npucore=""
   for a in "$@"; do case "$a" in */cores/*_libretro.so) npucore=${a##*/}; npucore=${npucore%_libretro.so} ;; esac; done
   case "$npucore" in
-    duckstation|swanstation)
-      if npu=$("$npusr" ps1 "$N" "$npucore" "${@: -1}"); then
+    ?*)
+      if npu=$("$npusr" gles "$N" "$npucore" "${@: -1}"); then
         npuenv=("LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libnpusr_gles.so${LD_PRELOAD:+:$LD_PRELOAD}"
                 "DARKOS_NPU_SR=x3:auto"
                 "DARKOS_NPU_SR_MODEL=/usr/share/darkos/npusr/x3_{W}x{H}.rknn"

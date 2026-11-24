@@ -73,6 +73,6 @@ sudo install -m 644 Arkbuild/home/ark/npusr-gles/libnpusr_gles.so Arkbuild/usr/l
 sudo rm -rf Arkbuild/home/ark/npusr-gles
 sudo install -m 644 npusr/models/x3_256x240.rknn npusr/models/x3_320x240.rknn npusr/models/x3_368x240.rknn \
   npusr/models/x3_256x224.rknn npusr/models/x3_320x224.rknn npusr/models/x3_368x224.rknn \
-  Arkbuild/usr/share/darkos/npusr/
+  npusr/models/x3_304x224.rknn Arkbuild/usr/share/darkos/npusr/
 sudo install -m 644 npusr-gles/README.md Arkbuild/usr/share/doc/darkos-npusr/README-gles.md
 sudo chroot Arkbuild/ ldconfig -X

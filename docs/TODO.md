@@ -4,7 +4,7 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 
 ## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day)
 
-* **NPU UPSCALE for the 3DS, the PSP and PS1** (the owner, 2026-11-23: into 1.13,
+* **NPU UPSCALE for the 3DS, the PSP, PS1 and the 16-bit consoles** (the owner, 2026-11-23: into 1.13,
   both systems, off by default). **In master** and checked on the owner's
   console (KNOWN-ISSUES.md, "NPU UPSCALE"); both systems on space-to-depth
   models of dArkOS's own (the 3DS 8.3 ms at 600 MHz instead of ESPCN's
@@ -21,14 +21,14 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   master, checked on the console as ES starts it (KNOWN-ISSUES); the option
   in ES's menu for PlayStation and the builds in the image's own chroots
   (Arkbuild32's gcc 12, Arkbuild's) come with the next test image.
-  For the owner to decide: pcsx_rearmed reports 4:3 whatever its frame's
-  width, so with the upscale only its 320x240 frames get exactly x3 (256 and
-  368 wide and 224-line frames are shown as without it). RetroArch's square
-  pixels (`aspect_ratio_index` 21) in its append would enlarge them all, at
-  their square-pixel shape (256 wide narrower than 4:3, 368 wider, 224-line
-  ones 960x672), as DuckStation and SwanStation are now. Of the owner's PS1
-  games checked so far none is 256 or 368 wide (Double Dragon, Hover Racing,
-  Final Fantasy IX's opening: 320; Emotion and FF9 in play not checked).
+  pcsx_rearmed gets RetroArch's square pixels too since 2026-11-24, so all its
+  256/320/368 x 224/240 frames are enlarged (the owner: a little wider than
+  4:3 is fine). The same day the 16-bit consoles (Mega Drive, Sega CD, 32X,
+  SNES, NES, PC Engine, Neo Geo, with a new 304x224 model for Neo Geo), in
+  master and checked on the console as ES starts them (KNOWN-ISSUES, "The
+  16-bit consoles"); the ES option for those systems comes with the next
+  test image's ES too. Not tried: Geolith and NeoCD (no game for them on the
+  card), Sega CD and the CD PC Engines in a game.
 
 * **RetroArch's slang shaders in the image** (the owner, 2026-11-24: so that
   no one has to fetch them for Vulkan). The change to `build_retroarch.sh` is

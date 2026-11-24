@@ -16,21 +16,24 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       DARKOS_NPU_SR to - the picture as big as PPSSPP's own settings make it without the upscale:
       x3:480x272:a2:fit (the screen's height, the PSP's shape; x3 brought down to it is sharper
       than x2 brought up), :fill with Stretch on, x2:480x272 in place with Integer scale on.
-  darkos-npusr ps1 <RetroArch's config dir> <core> <game>
-      PS1 in RetroArch's gl (GLES on KMS, past the Vulkan layer): pcsx_rearmed(_rumble) in the
-      32-bit RetroArch, duckstation and swanstation in the 64-bit ones (retroarch and retroarch-next,
-      RetroArch from master). Brings the NPU up; turns the core's own higher resolution off for the
-      run (the upscale needs the native frame) and makes DuckStation's and SwanStation's pixels
-      square (their 320x224 is then 960x672, not 897x672); prints a config for --appendconfig (gl,
-      integer scale, no smoothing, shader or overlay). The
+  darkos-npusr gles <RetroArch's config dir> <core> <game>     (also as "ps1", its first name)
+      A core of GLES_CORES in RetroArch's gl (GLES on KMS, past the Vulkan layer): PS1 (pcsx_rearmed
+      in the 32-bit RetroArch, duckstation and swanstation in the 64-bit ones), Mega Drive, Sega CD
+      and 32X, SNES, NES, PC Engine and Neo Geo, in whichever RetroArch ES starts them (retroarch32,
+      retroarch, retroarch-next). Status 1 at once for any other core. Brings the NPU up; turns the
+      core's own higher resolution off for the run where it has one (the upscale needs the native
+      frame), makes the pixels square (RetroArch's square pixel, or DuckStation's and SwanStation's
+      PAR 1:1: integer scale then gives exactly x3 - 320x224 is 960x672, not 897x672 at 4:3);
+      prints a config for --appendconfig (gl, integer scale, no smoothing, shader or overlay). The
       launcher then preloads libnpusr_gles.so (npusr-gles/; armhf or aarch64, as RetroArch is) with
-      DARKOS_NPU_SR=x3:auto: the frame's size from the viewport, a model for each size there is one.
+      DARKOS_NPU_SR=x3:auto: the frame's size from the viewport, a model for each size there is one
+      (256, 320 and 368 wide by 224 and 240; any other frame is shown as drawn).
   darkos-npusr restore
       puts back every key the last run changed, in the files it changed - or that the emulator
       writes the appended settings into. The launchers run it after the emulator, and before one
       when a record is left over (the console was switched off in a game).
 
-Status 1 from retroarch, ppsspp or ps1: no upscale this time (HDMI, no NPU, model or runtime); nothing
+Status 1 from retroarch, ppsspp or gles: no upscale this time (HDMI, no NPU, model or runtime); nothing
 is changed and the game starts as it would with NPU UPSCALE off. docs/KNOWN-ISSUES.md, "NPU UPSCALE".
 """
 import glob
@@ -65,23 +68,51 @@ RA_APPEND = [
 # PS1's video goes out through RetroArch's gl (GLES on KMS, RGA turning it onto the panel), so the upscale
 # there is libnpusr_gles.so's, preloaded, and needs gl
 GL_APPEND = [("video_driver", "gl")] + RA_APPEND[1:]
+# RetroArch's square pixel (aspect_ratio_index 21): the picture is the frame's own shape, so integer scale
+# enlarges it exactly x3 (the owner, 2026-11-24: a little wider than 4:3 is fine)
+GL_APPEND_SQUARE = [(k, "21" if k == "aspect_ratio_index" else v) for k, v in GL_APPEND]
 # the library and runtime for each RetroArch (its config dir's name)
 GLES_LIB_DIRS = {
     "retroarch32": "/usr/lib/arm-linux-gnueabihf",
     "retroarch": "/usr/lib/aarch64-linux-gnu",
     "retroarch-next": "/usr/lib/aarch64-linux-gnu",
 }
-# each PS1 core: RetroArch's name for it (its config dir), the options that would make the frame bigger
-# than native - set to native only where set already (their default), and those the frame needs, added
-PS1_CORES = {
-    "pcsx_rearmed": ("PCSX-ReARMed", [("pcsx_rearmed_neon_enhancement_enable", "disabled")], []),
-    "pcsx_rearmed_rumble": ("PCSX-ReARMed", [("pcsx_rearmed_neon_enhancement_enable", "disabled")], []),
+# each core libnpusr_gles.so upscales: RetroArch's name for it (its config dir), the options that would make
+# the frame bigger than native - set to native only where set already (their default) -, those the frame
+# needs, added, and the append: GL_APPEND_SQUARE (RetroArch's square pixel) where the core reports 4:3
+# whatever its frame, GL_APPEND (the core's aspect) where a core option makes the pixels square
+GLES_CORES = {
+    "pcsx_rearmed": ("PCSX-ReARMed", [("pcsx_rearmed_neon_enhancement_enable", "disabled")], [], GL_APPEND_SQUARE),
+    "pcsx_rearmed_rumble": ("PCSX-ReARMed", [("pcsx_rearmed_neon_enhancement_enable", "disabled")], [],
+                            GL_APPEND_SQUARE),
     # the default renderer in the image is Software (1x whatever the scale); for the hardware ones the scale
     # matters. PAR 1:1: the core's aspect is then its frame's, so integer scale gives exactly x3
     "duckstation": ("DuckStation", [("duckstation_GPU.ResolutionScale", "1")],
-                    [("duckstation_Display.AspectRatio", "PAR 1:1")]),
+                    [("duckstation_Display.AspectRatio", "PAR 1:1")], GL_APPEND),
     "swanstation": ("SwanStation", [("swanstation_GPU_ResolutionScale", "1")],
-                    [("swanstation_Display_AspectRatio", "PAR 1:1")]),
+                    [("swanstation_Display_AspectRatio", "PAR 1:1")], GL_APPEND),
+    # Mega Drive, Sega CD, 32X: 320x224 and 256x224 (PAL 240 lines)
+    "genesis_plus_gx": ("Genesis Plus GX", [], [], GL_APPEND_SQUARE),
+    "genesis_plus_gx_EX": ("Genesis Plus GX EX", [], [], GL_APPEND_SQUARE),
+    "picodrive": ("PicoDrive", [], [], GL_APPEND_SQUARE),
+    # SNES: 256x224 (its 512-wide hi-res frames are shown as drawn)
+    "snes9x": ("Snes9x", [], [], GL_APPEND_SQUARE),
+    "snes9x2002": ("Snes9x 2002", [], [], GL_APPEND_SQUARE),
+    "snes9x2005": ("Snes9x 2005", [], [], GL_APPEND_SQUARE),
+    "snes9x2010": ("Snes9x 2010", [], [], GL_APPEND_SQUARE),
+    "chimerasnes": ("ChimeraSNES", [], [], GL_APPEND_SQUARE),
+    "mednafen_supafaust": ("Beetle Supafaust", [], [], GL_APPEND_SQUARE),
+    # NES: 256x240, or 256x224 with the overscan cropped
+    "nestopia": ("Nestopia", [], [], GL_APPEND_SQUARE),
+    "fceumm": ("FCEUmm", [], [], GL_APPEND_SQUARE),
+    "quicknes": ("QuickNES", [], [], GL_APPEND_SQUARE),
+    # PC Engine: 256 wide in most games (others are shown as drawn)
+    "mednafen_pce_fast": ("Beetle PCE Fast", [], [], GL_APPEND_SQUARE),
+    "mednafen_supergrafx": ("Beetle SuperGrafx", [], [], GL_APPEND_SQUARE),
+    # Neo Geo: 320x224
+    "fbneo": ("FinalBurn Neo", [], [], GL_APPEND_SQUARE),
+    "geolith": ("Geolith", [], [], GL_APPEND_SQUARE),
+    "neocd": ("NeoCD", [], [], GL_APPEND_SQUARE),
 }
 AZAHAR = "Azahar"
 AZAHAR_OPTIONS = [
@@ -352,12 +383,13 @@ def cmd_retroarch(cfgdir, game):
     return 0
 
 
-def cmd_ps1(cfgdir, core, game):
-    """PS1 through libnpusr_gles.so: the core's own higher resolution off, square pixels, the append for gl."""
-    if core not in PS1_CORES:
+def cmd_gles(cfgdir, core, game):
+    """A core of GLES_CORES through libnpusr_gles.so: its own higher resolution off, square pixels, the append
+    for gl."""
+    if core not in GLES_CORES:
         log(f"no upscale for the core {core}")
         return 1
-    name, off, need = PS1_CORES[core]
+    name, off, need, append = GLES_CORES[core]
     ra = os.path.basename(os.path.normpath(cfgdir))
     libdir = GLES_LIB_DIRS.get(ra)
     if not libdir:
@@ -385,10 +417,10 @@ def cmd_ps1(cfgdir, core, game):
             if os.path.isfile(own):
                 set_keys(rec, own, off + need, add=False)
     for over in (name, folder, base):
-        set_keys(rec, os.path.join(core_dir, over + ".cfg"), GL_APPEND, add=False)
+        set_keys(rec, os.path.join(core_dir, over + ".cfg"), append, add=False)
     app = f"/tmp/darkos-npusr-{ra}.cfg"
     with open(app, "w") as f:
-        f.write("".join(ra_line(k, v) + "\n" for k, v in GL_APPEND))
+        f.write("".join(ra_line(k, v) + "\n" for k, v in append))
     print(app)
     return 0
 
@@ -439,8 +471,8 @@ def main(argv):
         restore()   # left over from a run that did not end (power off in a game)
     if len(argv) == 3 and argv[0] == "retroarch":
         return cmd_retroarch(argv[1], argv[2])
-    if len(argv) == 4 and argv[0] == "ps1":
-        return cmd_ps1(argv[1], argv[2], argv[3])
+    if len(argv) == 4 and argv[0] in ("gles", "ps1"):
+        return cmd_gles(argv[1], argv[2], argv[3])
     if len(argv) == 2 and argv[0] == "ppsspp":
         return cmd_ppsspp(argv[1])
     print(__doc__, file=sys.stderr)

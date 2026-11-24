@@ -1035,7 +1035,7 @@ beats an upscale of the 1x frame (as for the PSP), and DSperate presents
 through its own KMS output, past the Vulkan layer, so the layer could not
 upscale it anyway.
 
-## NPU UPSCALE: the 3DS, the PSP and PS1 enlarged on the NPU — for 1.13
+## NPU UPSCALE: the 3DS, the PSP, PS1 and the 16-bit consoles enlarged on the NPU — for 1.13
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
 every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
@@ -1046,7 +1046,9 @@ the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240 to
 x2 to 960x544 with integer scale), each with a network of dArkOS's own
 trained to give what ESPCN gives, faster on the NPU. Worked out by a separate
 session (AI-SR, 2026-11-22/23); the owner asked for it in 1.13 for both
-systems, off by default, and on 2026-11-24 for PS1 as well (below).
+systems, off by default, and on 2026-11-24 for PS1 as well, then for Mega
+Drive and the other systems the same models fit (the owner wants to see the
+result; in some games the cartoon look may even be a plus) (below).
 
 **Where it is on** (master, 2026-11-24), each with the option ON for its
 system, on the console's screen only (with HDMI connected the game starts
@@ -1056,8 +1058,13 @@ as without it):
 |---|---|---|---|
 | 3DS (3ds, n3ds) | `retroarch` (64-bit) | Azahar | the top screen 400x240 x3; the one-screen layout for the run |
 | PSP (ppsspp, pspminis) | PPSSPP standalone (`ppsspp.sh`) | — | 480x272 x3, brought down to the screen's height (x2 with integer scale); PPSSPP's 2x render set to 1x for the run |
-| PS1 (psx) | `retroarch32` | pcsx_rearmed, pcsx_rearmed_rumble | x3, exactly only the 320x240 frames (the core reports 4:3 always) |
-| PS1 (psx) | `retroarch` and `retroarch-next` (64-bit) | DuckStation, SwanStation | x3 for 256, 320 and 368 wide by 224 and 240; square pixels (`PAR 1:1`) for the run |
+| PS1 (psx) | `retroarch32` | pcsx_rearmed, pcsx_rearmed_rumble | x3 for 256, 320 and 368 wide by 224 and 240; RetroArch's square pixel for the run (until 2026-11-24 its 4:3: only 320x240 got x3) |
+| PS1 (psx) | `retroarch` and `retroarch-next` (64-bit) | DuckStation, SwanStation | the same; square pixels by the cores' `PAR 1:1` for the run |
+| Mega Drive, Sega CD, 32X (megadrive, megadrivejp, genesis, segacd, megacd, megacdjp, sega32x, sega32xjp, sega32xna) | whichever RetroArch ES starts | Genesis Plus GX (and EX), PicoDrive | 320x224 and 256x224 (a mode change in the game followed) x3; RetroArch's square pixel for the run |
+| SNES (snes, sfc, snesna, snes-hacks) | the same | Snes9x (2002, 2005, 2010, current), ChimeraSNES, Beetle Supafaust | 256x224 x3 (hi-res 512-wide frames as drawn); square pixel |
+| NES (nes, famicom, famicom disk system) | the same | Nestopia, FCEUmm, QuickNES | 256x224 (the overscan cropped, Nestopia's default) or 256x240 x3; square pixel |
+| PC Engine (pcengine, pcenginecd, turbografx16, tg16, turbografxcd, tg-cd, supergrafx) | the same | Beetle PCE Fast, Beetle SuperGrafx | 256x240 and 256x224 x3 (wider modes as drawn); square pixel |
+| Neo Geo (neogeo, neogeocd, neogeocdjp) | the same | FinalBurn Neo, Geolith, NeoCD | 304x224 (the visible area FBNeo gives) x3, its own model; square pixel (Geolith and NeoCD not tried: Geolith takes `.neo` files, the card has MAME zips) |
 
 Not there: PPSSPP as a RetroArch core (with RetroArch's `gl` its picture
 goes past the Vulkan layer; the launcher asks only for Azahar) and the
@@ -1065,14 +1072,17 @@ standalone-2021 (probably on Vulkan already, but its branch of `ppsspp.sh`
 has no NPU part, and it takes no `--appendconfig` and keeps its layout under
 other keys than 1.20); 3DS in `retroarch-next` (ES does not offer it there); PS1's
 hi-res modes (512 and 640 wide) and PAL's 256 and 288 lines (x3 does not fit
-on 720 lines: shown at x1, as drawn); other systems (N64 looks better
-rendered at 960x720 by its core, Saturn loses frames: PS1 only of the GLES
-emulators, the owner's choice). RetroArch's and PPSSPP's menus are shown as
+on 720 lines: shown at x1, as drawn); N64 and Saturn (N64 looks better
+rendered at 960x720 by its core, Saturn loses frames: the owner's choice);
+systems whose frame no model fits (Master System and SG-1000 256x192, Game
+Boy, GBA, Game Gear, Lynx, CPS1-3 384x224 and most arcade boards: the
+option is not offered for them). RetroArch's and PPSSPP's menus are shown as
 drawn.
 
 **How it is put together.**
 - *ES*: EMULATOR SETTINGS has NPU UPSCALE (OFF, ON) for the systems
-  `/etc/darkos/npusr.conf` names (3ds, n3ds, ppsspp, pspminis; psx, below), kept as
+  `/etc/darkos/npusr.conf` names (3ds, n3ds, ppsspp, pspminis; psx and the
+  16-bit consoles' systems, below), kept as
   `<system>.npusr`; a game is launched with `DARKOS_NPU_UPSCALE=on` when it
   is ON (es-0011).
 - *The launchers*: `retroarch` (for the Azahar core) and `ppsspp.sh` (PPSSPP
@@ -1317,7 +1327,9 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   `swanstation` (the owner asked for those too, 2026-11-24; the image runs
   both with their software renderer, so their frame goes out through
   RetroArch's gl like pcsx_rearmed's), ask `darkos-npusr ps1 <config dir>
-  <core> <game>`: the NPU up, the core's own higher resolution off for the
+  <core> <game>` (since the 16-bit consoles `gles`, `ps1` kept as its other
+  name; the three launchers ask it for any core, and it answers status 1 at
+  once for a core not in its `GLES_CORES`): the NPU up, the core's own higher resolution off for the
   run where it is set (pcsx_rearmed's enhanced resolution, DuckStation's and
   SwanStation's resolution scale; the upscale needs the native frame), for
   DuckStation and SwanStation their aspect `PAR 1:1` (below), all put back
@@ -1342,9 +1354,10 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   which makes their aspect their frame's: every size above gets exactly x3,
   with square pixels — 320x240 is 4:3 as before, DuckStation's default
   overscan crop (320x224 for an NTSC game) 960x672, 7% wider than 4:3, 256
-  wide narrower than 4:3 (768x672), 368 wider. Whether pcsx_rearmed should
-  get square pixels as well (RetroArch's `aspect_ratio_index` 21 in its
-  append) is the owner's to decide (docs/TODO.md).
+  wide narrower than 4:3 (768x672), 368 wider. pcsx_rearmed gets square
+  pixels as well since 2026-11-24 (RetroArch's `aspect_ratio_index` 21 in its
+  append; the owner, of the Mega Drive's: a little wider than 4:3 is fine),
+  and so every size above, as the 16-bit consoles' cores do (below).
 - The models are the 3DS's network made for each size (npusr/NOTICE); the
   32-bit librknnrt 2.5.0 comes from the same release as the 64-bit one,
   checked by sha256 in `build_npusr.sh`, which builds the library in the
@@ -1447,6 +1460,35 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   upscale looks like a softer higher-resolution render: textures and
   dithering smoothed, text visibly softer than xBR's. "RetroArch's shaders
   on the Mali-G52" below for what does not work.
+- **The 16-bit consoles** (the owner, 2026-11-24: Mega Drive and the like,
+  wherever the models fit). Their cores in all three RetroArchs draw a
+  native frame through gl, as PS1's do, so they are `GLES_CORES` of
+  `darkos-npusr` too, each with RetroArch's square pixel for the run (these
+  cores report 4:3 whatever the frame); their systems are in `npusr.conf`.
+  Neo Geo's FBNeo frame is 304x224, the visible area, so
+  `x3_304x224.rknn` was made like the others (`s2d_rknn.py`, the same
+  weights and 3DS frames; rebuilding `x3_320x224.rknn` the same way gave
+  the repository's file byte for byte). Checked on the owner's console as
+  ES starts each, 10 s measured, NPU at 600 MHz (Mali with nearest x3 and
+  square pixels: 2-4% for all):
+
+  | System, game, core | frame | fps | NPU | Mali |
+  |---|---|---|---|---|
+  | Mega Drive, Zombies Ate My Neighbors, Genesis Plus GX | 256x224, then 320x224 | 60 | 5.0 ms | 17% |
+  | 32X, Blackthorne, PicoDrive | 320x224 | 60 | 6.0 ms | 20% |
+  | SNES, AAAHH!!! Real Monsters (BR, 50 Hz), Snes9x | 256x224 | 50 | 5.0 ms | 14% |
+  | NES, The Addams Family, Nestopia | 256x224 | 60 | 4.9 ms | 16% |
+  | PC Engine, P-47, Beetle PCE Fast | 256x240 | 60 | 5.1 ms | 17% |
+  | Neo Geo, Kizuna Encounter, FinalBurn Neo | 304x224 | 60 | 5.8 ms | 20% |
+  | PS1, Double Dragon, pcsx_rearmed (now square) | 320x240 | 60 | 6.3 ms | 22% |
+  | Mega Drive, the same game, PicoDrive in retroarch32 | 256x224, then 320x224 | 60 | 5.1 ms | 18% |
+
+  After each run (left by RetroArch's network QUIT): no record left. As for
+  any core's first run, RetroArch wrote FBNeo's and the 32-bit PicoDrive's
+  defaults (Kizuna's DIP switches among them) into the core options files:
+  the owner's put back. Pictures (`shots/cmp/sys-*.png` on the PC): the
+  dithering of Mega Drive grass and SNES backgrounds smoothed into flat colour,
+  edges rounder and softer - the "cartoon" look.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

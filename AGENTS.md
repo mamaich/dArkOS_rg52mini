@@ -37,7 +37,7 @@ inference. Keep that distinction in what you add.
     malisx2/, pcsx2/, dolphin/, ...    per-component files: settings, launchers, profiles
     vk-rotate-layer/                   the Vulkan layer that turns frames onto the portrait panel, and NPU UPSCALE's part of it
     npusr/                             NPU UPSCALE's helper, models, NOTICE and the RKNN runtime's license (build_npusr.sh)
-    npusr-gles/                        NPU UPSCALE for GLES emulators (PS1 in RetroArch's gl): libnpusr_gles.so, preloaded
+    npusr-gles/                        NPU UPSCALE for GLES emulators (PS1 and 16-bit consoles in RetroArch's gl): libnpusr_gles.so
     rk3562_core_builds/                submodule: RetroArch cores, one recipe each, patches/<core>-patch-NNN-*.patch
     kernel_rk3562/                     submodule: the kernel with the hardware patches
     bootloader/                        submodule: the loader packing tool
