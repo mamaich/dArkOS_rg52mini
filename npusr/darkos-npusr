@@ -15,6 +15,12 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       DARKOS_NPU_SR to - the picture as big as PPSSPP's own settings make it without the upscale:
       x3:480x272:a2:fit (the screen's height, the PSP's shape; x3 brought down to it is sharper
       than x2 brought up), :fill with Stretch on, x2:480x272 in place with Integer scale on.
+  darkos-npusr retroarch32 <RetroArch32's config dir> <game>
+      PS1 on pcsx_rearmed in the 32-bit RetroArch (GLES on KMS, past the Vulkan layer): brings the
+      NPU up; turns pcsx_rearmed's enhanced resolution off for the run (the upscale needs the native
+      frame); prints a config for --appendconfig (gl, integer scale, no smoothing, shader or
+      overlay). The launcher then preloads libnpusr_gles.so (npusr-gles/) with
+      DARKOS_NPU_SR=x3:auto: the frame's size from the viewport, a model for each size there is one.
   darkos-npusr restore
       puts back every key the last run changed, in the files it changed - or that the emulator
       writes the appended settings into. The launchers run it after the emulator, and before one
@@ -52,6 +58,14 @@ RA_APPEND = [
     ("input_overlay_enable", "false"),
     ("aspect_ratio_index", "22"),
 ]
+# The 32-bit RetroArch's video goes out through GLES and libgo2 (RGA turns it onto the panel), so the
+# upscale there is libnpusr_gles.so's, preloaded, and needs gl
+RA32_APPEND = [("video_driver", "gl")] + RA_APPEND[1:]
+PCSX = "PCSX-ReARMed"
+PCSX_OPTIONS = [
+    ("pcsx_rearmed_neon_enhancement_enable", "disabled"),
+]
+GLES_LIB_DIR = "/usr/lib/arm-linux-gnueabihf"
 AZAHAR = "Azahar"
 AZAHAR_OPTIONS = [
     ("citra_resolution_factor", "1"),
@@ -91,19 +105,19 @@ def hdmi_connected():
     return False
 
 
-def npu_up(scale, w, h):
-    """The NPU ready for the model of x<scale> from <w>x<h>; False (and why on stderr) if not."""
+def npu_up(scale, w, h, models=None, lib_dirs=("/usr/lib/aarch64-linux-gnu", "/usr/lib", "/usr/local/lib")):
+    """The NPU ready for the model of x<scale> from <w>x<h> (or for any of the models the glob <models>
+    names); False (and why on stderr) if not."""
     if hdmi_connected():
         # the rotate layer leaves a landscape display alone, and the upscale with it
         log("HDMI is connected: no upscale")
         return False
-    model = f"{MODELS}/espcn_x{scale}_{w}x{h}.rknn"
-    if not os.path.isfile(model):
-        log(f"no model {model}")
+    pattern = models or f"{MODELS}/espcn_x{scale}_{w}x{h}.rknn"
+    if not glob.glob(pattern):
+        log(f"no model {pattern}")
         return False
-    if not any(os.path.isfile(os.path.join(d, "librknnrt.so"))
-               for d in ("/usr/lib/aarch64-linux-gnu", "/usr/lib", "/usr/local/lib")):
-        log("no librknnrt.so")
+    if not any(os.path.isfile(os.path.join(d, "librknnrt.so")) for d in lib_dirs):
+        log("no librknnrt.so in " + " ".join(lib_dirs))
         return False
     if not os.path.isdir("/sys/module/rknpu"):
         # blacklisted (modprobe.d/dArkOS-rknpu.conf): nothing loads it but this
@@ -312,6 +326,38 @@ def cmd_retroarch(cfgdir, game):
     return 0
 
 
+def cmd_retroarch32(cfgdir, game):
+    """PS1 on pcsx_rearmed (retroarch32): the core's enhanced resolution off, the append for gl."""
+    if not npu_up(3, 320, 240, models=f"{MODELS}/x3_*x*.rknn", lib_dirs=(GLES_LIB_DIR,)):
+        return 1
+    if not os.path.isfile(os.path.join(GLES_LIB_DIR, "libnpusr_gles.so")):
+        log("no libnpusr_gles.so in " + GLES_LIB_DIR)
+        return 1
+    rc = read_lines(os.path.join(cfgdir, "retroarch.cfg")) or []
+    core_dir = os.path.join(cfgdir, "config", PCSX)
+    base = os.path.splitext(os.path.basename(game))[0]
+    folder = os.path.basename(os.path.dirname(os.path.abspath(game)))
+    rec = load_record()
+    if ra_value(rc, "global_core_options") == "true":
+        opts = os.path.expanduser(ra_value(rc, "core_options_path") or "") or \
+            os.path.join(cfgdir, "retroarch-core-options.cfg")
+    else:
+        opts = os.path.join(core_dir, PCSX + ".opt")
+    # only where the option is set already: the core's own default is off
+    set_keys(rec, opts, PCSX_OPTIONS, add=False)
+    if ra_value(rc, "game_specific_options") != "false":
+        for own in (os.path.join(core_dir, base + ".opt"), os.path.join(core_dir, folder + ".opt")):
+            if os.path.isfile(own):
+                set_keys(rec, own, PCSX_OPTIONS, add=False)
+    for over in (PCSX, folder, base):
+        set_keys(rec, os.path.join(core_dir, over + ".cfg"), RA32_APPEND, add=False)
+    app = "/tmp/darkos-npusr-retroarch32.cfg"
+    with open(app, "w") as f:
+        f.write("".join(ra_line(k, v) + "\n" for k, v in RA32_APPEND))
+    print(app)
+    return 0
+
+
 def ppsspp_sr(sysdir):
     """DARKOS_NPU_SR for PPSSPP: as big as its own layout settings make the picture without the upscale."""
     lines = read_lines(os.path.join(sysdir, "ppsspp.ini")) or []
@@ -358,6 +404,8 @@ def main(argv):
         restore()   # left over from a run that did not end (power off in a game)
     if len(argv) == 3 and argv[0] == "retroarch":
         return cmd_retroarch(argv[1], argv[2])
+    if len(argv) == 3 and argv[0] == "retroarch32":
+        return cmd_retroarch32(argv[1], argv[2])
     if len(argv) == 2 and argv[0] == "ppsspp":
         return cmd_ppsspp(argv[1])
     print(__doc__, file=sys.stderr)

@@ -2,7 +2,9 @@ dArkOS RG52 Mini - NPU UPSCALE: third-party components
 =======================================================
 
 NPU UPSCALE enlarges an emulator's native frame with a small neural network on the RK3562's
-NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate). It uses:
+NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate), and for PS1 in the 32-bit
+RetroArch, which draws with GLES, in libnpusr_gles.so (dArkOS's own, npusr-gles/ in the
+dArkOS sources). It uses:
 
 1. librknnrt.so - Rockchip RKNN runtime 2.5.0
    Rockchip Electronics Co., Ltd.
@@ -15,9 +17,14 @@ NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate). It uses:
    sha256 4b6cc575bedf8952b13db4b1190fa3b3d2ac213f00be774ff6ccd19d651970c0
    Installed as /usr/lib/aarch64-linux-gnu/librknnrt.so; loaded by the layer only when a game
    starts with NPU UPSCALE on.
+   The same release's 32-bit one, rknpu2/runtime/Linux/librknn_api/armhf/librknnrt.so
+   sha256 267193f5f32f01f6e9137072c67ca737d57528257f1a63ce4d65e3698369ffa3
+   is installed unmodified as /usr/lib/arm-linux-gnueabihf/librknnrt.so, under the same
+   license; loaded by libnpusr_gles.so only when a PS1 game starts with NPU UPSCALE on.
 
 2. rknn_api.h - the runtime's header, from the same release and under the same license
-   (vk-rotate-layer/rknn_api.h in the dArkOS sources; LICENSE.rknn beside it).
+   (vk-rotate-layer/rknn_api.h in the dArkOS sources; LICENSE.rknn beside it). libnpusr_gles.so
+   is built with it too.
 
 3. ESPCN x2 and x3, TF-ESPCN by Fanny Monori, https://github.com/fannymonori/TF-ESPCN (the
    models OpenCV's dnn_superres module uses), Apache License 2.0 (LICENSE-TF-ESPCN, installed
@@ -48,3 +55,12 @@ NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate). It uses:
    sha256 202e80e75c3376175717aa95367b3075467fc73701e9d29f9fcc96936144f58b  espcn_x3_400x240.rknn
    sha256 cab079b291e7dc2ae0e07552463388e1276a2621dfb3165a58be00abca320366  espcn_x3_480x272.rknn
    sha256 d2cf6854545702c7331b3747527170047894feba658a6bf1c06a49488fa88bbc  espcn_x2_480x272.rknn
+   PS1's, /usr/share/darkos/npusr/x3_<W>x<H>.rknn for the frame sizes 256, 320 and 368 by 240
+   and by 224: the 3DS's network (s2d_x3_b7.pt) made into a model for each size by s2d_rknn.py,
+   calibrated on the same 3DS screenshots, each resized to that size (no PS1 screenshots).
+   sha256 a9b30e5689d512c309b4efc67bb07d7bf2a896c463e4ad6bff1a93c3dce1d82c  x3_256x240.rknn
+   sha256 88fdb208a19f889fe570378786d0b450f460ae157f893ed449fb0366c4a38fed  x3_320x240.rknn
+   sha256 6376aad8403a2961683b1fc9cfaef158fabfbed8aa92f1a30b6ab1c69ca9864d  x3_368x240.rknn
+   sha256 0b926d27b893cc6fd2b181d805618c4d11774a9705a1c6bd7f1a6f6871284e89  x3_256x224.rknn
+   sha256 a442be0b167242cd448dcc56eb9ae6a52e4072d7cd1b2aad23cc1fd066a50158  x3_320x224.rknn
+   sha256 e5788ed026513d42e8573409b0609c719a58d952618b682383ad5ca7c712a2ba  x3_368x224.rknn

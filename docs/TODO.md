@@ -13,6 +13,10 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   (KNOWN-ISSUES; about half of it is the NPU itself, a two-pass bicubic
   shader costs 0.45 W). Still open: nothing to try on revision A (its
   firmware's dtb describes the NPU's rail as revision B's does).
+  PS1 too (the owner, 2026-11-24: of the GLES emulators, PS1 only):
+  pcsx_rearmed in the 32-bit RetroArch, through `libnpusr_gles.so`
+  (`npusr-gles/`). In master; still to check from ES on the console with the
+  image's build of the library.
 
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.

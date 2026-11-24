@@ -1050,7 +1050,7 @@ systems, off by default.
 
 **How it is put together.**
 - *ES*: EMULATOR SETTINGS has NPU UPSCALE (OFF, ON) for the systems
-  `/etc/darkos/npusr.conf` names (3ds, n3ds, ppsspp, pspminis), kept as
+  `/etc/darkos/npusr.conf` names (3ds, n3ds, ppsspp, pspminis; psx, below), kept as
   `<system>.npusr`; a game is launched with `DARKOS_NPU_UPSCALE=on` when it
   is ON (es-0011).
 - *The launchers*: `retroarch` (for the Azahar core) and `ppsspp.sh` (PPSSPP
@@ -1277,6 +1277,39 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
   4 points of RetroArch's thread here (16 on the title screen above, where
   the game itself does little). The space-to-depth model takes 0.2 W and
   2 C off that (the same series, ESPCN 3.87 W in it).
+
+**PS1 (the owner, 2026-11-24: of the GLES emulators, PS1 only).** The
+32-bit RetroArch draws with GLES and goes out through libgo2 and RGA, past
+the Vulkan layer, so the AI-SR session wrote the same upscale as a library
+preloaded into it: `libnpusr_gles.so` (`npusr-gles/`, its README has how it
+works). Compared on the console the same day: PS1 on pcsx_rearmed gains
+(textures and dithering smoothed, 2D games most; pcsx_rearmed's own
+enhanced resolution sharpens only the 3D geometry, costs its GPU thread
+7 -> 25% of a core and does nothing for 2D); N64 looks better rendered at
+960x720 by the core itself; Saturn (yabasanshiro) loses frames. So:
+- `psx` is in `npusr.conf`; `retroarch32`, for the cores `pcsx_rearmed` and
+  `pcsx_rearmed_rumble` only (DuckStation and SwanStation run in the 64-bit
+  RetroArch and get nothing), asks `darkos-npusr retroarch32`: the NPU up,
+  pcsx_rearmed's enhanced resolution off for the run where it is set (the
+  upscale needs the native frame; put back after), and an `--appendconfig`
+  (gl, integer scale, no smoothing, shader or overlay). It then preloads the
+  library with `DARKOS_NPU_SR=x3:auto` and the model path
+  `/usr/share/darkos/npusr/x3_{W}x{H}.rknn`: the frame's size is taken from
+  RetroArch's viewport (exactly 3W x 3H), one model a size — 256, 320 and
+  368 wide by 240 and by 224 (512 and 640 wide, PAL's 256 and 288 lines do
+  not fit x3 on 720 lines and are shown as without the upscale).
+- The models are the 3DS's network made for each size (npusr/NOTICE); the
+  32-bit librknnrt 2.5.0 comes from the same release as the 64-bit one,
+  checked by sha256 in `build_npusr.sh`, which builds the library in the
+  armhf chroot (its EGL and GLES headers unpacked, not installed, so that
+  libglvnd stays off the chroot's libmali links).
+- Measured by the AI-SR session (retroarch32 + pcsx_rearmed, NPU at 600
+  MHz): Double Dragon 60 fps, Mali 3.8 -> 24%; Hover Racing (PAL, 320x240)
+  50 fps, Mali 4.9 -> 24%; the NPU 6.0-6.5 ms a frame, the hook 1.5-1.8 ms
+  of CPU a frame. As for the 3DS, a menu or text over the frame (more than
+  1% of the 3x3 blocks not one colour) shows as drawn.
+- Not yet checked from ES on the owner's console with the image's build of
+  the library (the console was in GammaOS when this went in).
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

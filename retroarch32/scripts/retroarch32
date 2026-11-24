@@ -77,8 +77,32 @@ else
   # retroarch.cfg.ext does (ra-extpads.py; only in the RG52 Mini's image)
   ext=""
   [ -x /usr/local/bin/ra-extpads.py ] && ext=$(/usr/local/bin/ra-extpads.py "/home/ark/.config/${emulator}")
+  # dArkOS RG52 Mini: NPU UPSCALE (EmulationStation's EMULATOR SETTINGS) for PS1 on pcsx_rearmed: the
+  # 32-bit RetroArch draws through GLES, past the Vulkan layer, so libnpusr_gles.so is preloaded and
+  # enlarges the native frame x3 on the NPU (npusr-gles/). darkos-npusr prints an --appendconfig
+  # (integer scale, nearest, gl) and turns the core's enhanced resolution off for the run.
+  npusr=/usr/local/bin/darkos-npusr
+  npu=""
+  npuenv=()
+  if [ -x "$npusr" ]; then
+    [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
+    if [ "$DARKOS_NPU_UPSCALE" = on ]; then
+      case "$*" in
+        *cores/pcsx_rearmed_libretro.so*|*cores/pcsx_rearmed_rumble_libretro.so*)
+          if npu=$("$npusr" retroarch32 "/home/ark/.config/${emulator}" "${@: -1}"); then
+            npuenv=("LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libnpusr_gles.so${LD_PRELOAD:+:$LD_PRELOAD}"
+                    "DARKOS_NPU_SR=x3:auto"
+                    "DARKOS_NPU_SR_MODEL=/usr/share/darkos/npusr/x3_{W}x{H}.rknn"
+                    "DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so")
+          else
+            npu=""
+          fi ;;
+      esac
+    fi
+  fi
+  ext="$ext${ext:+${npu:+|}}$npu"
   start=$SECONDS
-  /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} "$@"
+  env "${npuenv[@]}" /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} "$@"
   rc=$?
   # Status 1 within seconds: RetroArch could not load the game (a BIOS the check does not know of,
   # a damaged file). Started again with its log on, it says why on the screen rather than drop
@@ -89,5 +113,6 @@ else
     [ "${PIPESTATUS[0]}" -eq 1 ] && "$bioscheck" failed "$emulator" "$log" "$@"
     rm -f "$log"
   fi
+  [ -n "$npu" ] && "$npusr" restore
   exit $rc
 fi
