@@ -17,8 +17,9 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       than x2 brought up), :fill with Stretch on, x2:480x272 in place with Integer scale on.
   darkos-npusr ps1 <RetroArch's config dir> <core> <game>
       PS1 in RetroArch's gl (GLES on KMS, past the Vulkan layer): pcsx_rearmed(_rumble) in the
-      32-bit RetroArch, duckstation and swanstation in the 64-bit one. Brings the NPU up; turns the
-      core's own higher resolution off for the run (the upscale needs the native frame) and makes
+      32-bit RetroArch, duckstation and swanstation in the 64-bit ones (retroarch and retroarch-next,
+      RetroArch from master). Brings the NPU up; turns the core's own higher resolution off for the
+      run (the upscale needs the native frame) and makes
       DuckStation's and SwanStation's pixels square (their 320x224 is then 960x672, not 897x672);
       prints a config for --appendconfig (gl, integer scale, no smoothing, shader or overlay). The
       launcher then preloads libnpusr_gles.so (npusr-gles/; armhf or aarch64, as RetroArch is) with
@@ -67,6 +68,7 @@ GL_APPEND = [("video_driver", "gl")] + RA_APPEND[1:]
 GLES_LIB_DIRS = {
     "retroarch32": "/usr/lib/arm-linux-gnueabihf",
     "retroarch": "/usr/lib/aarch64-linux-gnu",
+    "retroarch-next": "/usr/lib/aarch64-linux-gnu",
 }
 # each PS1 core: RetroArch's name for it (its config dir), the options that would make the frame bigger
 # than native - set to native only where set already (their default), and those the frame needs, added
@@ -226,6 +228,15 @@ def ra_value(lines, key):
     return lines[i].split("=", 1)[1].strip().strip('"')
 
 
+def ra_config_dir(rc, cfgdir):
+    """Where RetroArch keeps the cores' overrides and own options: its rgui_config_directory. retroarch-next's
+    retroarch.cfg is a copy of the release's, so both use ~/.config/retroarch/config."""
+    v = ra_value(rc, "rgui_config_directory") or ""
+    if v in ("", "default") or v.startswith(":"):
+        return os.path.join(cfgdir, "config")
+    return os.path.expanduser(v)
+
+
 # --- the restore record: {path: [[section, key, the line before or null], ...]} -------------------------
 
 def load_record():
@@ -315,7 +326,7 @@ def cmd_retroarch(cfgdir, game):
     if not npu_up(3, 400, 240):
         return 1
     rc = read_lines(os.path.join(cfgdir, "retroarch.cfg")) or []
-    core_dir = os.path.join(cfgdir, "config", AZAHAR)
+    core_dir = os.path.join(ra_config_dir(rc, cfgdir), AZAHAR)
     base = os.path.splitext(os.path.basename(game))[0]
     folder = os.path.basename(os.path.dirname(os.path.abspath(game)))
     rec = load_record()
@@ -357,7 +368,7 @@ def cmd_ps1(cfgdir, core, game):
         log("no libnpusr_gles.so in " + libdir)
         return 1
     rc = read_lines(os.path.join(cfgdir, "retroarch.cfg")) or []
-    core_dir = os.path.join(cfgdir, "config", name)
+    core_dir = os.path.join(ra_config_dir(rc, cfgdir), name)
     base = os.path.splitext(os.path.basename(game))[0]
     folder = os.path.basename(os.path.dirname(os.path.abspath(game)))
     rec = load_record()

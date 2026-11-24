@@ -1289,7 +1289,8 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
 7 -> 25% of a core and does nothing for 2D); N64 looks better rendered at
 960x720 by the core itself; Saturn (yabasanshiro) loses frames. So:
 - `psx` is in `npusr.conf`. `retroarch32` for the cores `pcsx_rearmed` and
-  `pcsx_rearmed_rumble`, and `retroarch` (64-bit) for `duckstation` and
+  `pcsx_rearmed_rumble`, and `retroarch` (64-bit) and `retroarch-next`
+  (RetroArch from master, ES's third choice for PS1) for `duckstation` and
   `swanstation` (the owner asked for those too, 2026-11-24; the image runs
   both with their software renderer, so their frame goes out through
   RetroArch's gl like pcsx_rearmed's), ask `darkos-npusr ps1 <config dir>
@@ -1389,6 +1390,17 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
     console): with or without the upscale, not its doing. A run killed with
     its launcher (`estest.sh stop`) left its record, put back by the next
     launch, as for the 3DS.
+- `retroarch-next`, the same day (the owner played PS1 in it and asked for
+  the upscale there too). Its `retroarch.cfg` is a copy of the release's, so
+  its core options are its own (`~/.config/retroarch-next/`) but the cores'
+  overrides and own options are the release's (`rgui_config_directory` =
+  `~/.config/retroarch/config`): `darkos-npusr` takes that directory from
+  the cfg rather than from the config dir. Its launcher puts a left record
+  back before the first-start copy of the release's files. Checked as
+  above: Double Dragon on DuckStation 320x224 to 960x672, 60 fps, 4.9-5.2
+  ms, GPU 19%; on SwanStation 320x240 to 960x720, 60 fps, 6.5 ms; with NPU
+  UPSCALE off nothing preloaded or changed (GPU 4%); after Home+Start no
+  record, the owner's files of all three RetroArchs unchanged.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)
@@ -3853,6 +3865,8 @@ How it is made:
   first start. Every path in that cfg is absolute to `~/.config/retroarch`,
   so the cores, BIOS, saves, states, playlists, remaps and overrides are the
   release's; a cores link there serves ES's `-L` path.
+- NPU UPSCALE for PS1 (DuckStation, SwanStation) in it as in the release
+  (since 2026-11-24, "NPU UPSCALE" above).
 
 What porting to master took. Master rewrote the `drm_go2` context (no libgo2:
 its own dumb buffers, the RGA blit straight into them, for the Odroid Go

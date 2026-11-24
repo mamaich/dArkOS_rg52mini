@@ -3,9 +3,10 @@
 x3 super-resolution on the RK3562's NPU for programs that draw with EGL/GLES and show their native frame
 at an integer x3 scale, nearest - the counterpart of the Vulkan rotate layer's (`vk-rotate-layer/npusr.inc.c`)
 for what goes out past Vulkan. The image uses it for PS1 only: `pcsx_rearmed` and `pcsx_rearmed_rumble` in
-the 32-bit RetroArch, `duckstation` and `swanstation` in the 64-bit one (gl, KMS, RGA turning the picture onto
-the panel; the library built for each). The emulator is not changed; `retroarch32` and `retroarch` preload the
-library when NPU UPSCALE is on (docs/KNOWN-ISSUES.md, "NPU UPSCALE").
+the 32-bit RetroArch, `duckstation` and `swanstation` in the 64-bit ones, the release and `retroarch-next` (gl,
+KMS, RGA turning the picture onto the panel; the library built for each). The emulator is not changed;
+`retroarch32`, `retroarch` and `retroarch-next` preload the library when NPU UPSCALE is on
+(docs/KNOWN-ISSUES.md, "NPU UPSCALE").
 Written by the AI-SR session (2026-11-24); `npusr_gles.c` is byte for byte the source of the build tested on
 the console (sha256 7e1a3c04d47a359110a36c770be1c507226a8d08b0f89da10d353d391620fd58).
 
@@ -83,3 +84,4 @@ one sharpens only the 3D geometry (textures and dithering stay) and costs the GP
 and does nothing for 2D games; the upscale smooths textures and dithering too.
 In the 64-bit RetroArch (2026-11-24, this session): Double Dragon on DuckStation (320x224) 60 fps, the NPU
 4.8-5.8 ms, the hook 1.0-1.3 ms, GPU 3 -> 21-24%; on SwanStation (320x240) 60 fps, 6.4-6.5 ms, GPU 21%.
+In `retroarch-next` the same: DuckStation 60 fps, 4.9-5.2 ms, GPU 4 -> 19%; SwanStation 60 fps, 6.5 ms.
