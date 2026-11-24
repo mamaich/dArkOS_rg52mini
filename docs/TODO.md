@@ -15,9 +15,17 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   firmware's dtb describes the NPU's rail as revision B's does).
   PS1 too (the owner, 2026-11-24: of the GLES emulators, PS1 only):
   pcsx_rearmed in the 32-bit RetroArch, through `libnpusr_gles.so`
-  (`npusr-gles/`). In master, checked on the console as ES starts it
-  (KNOWN-ISSUES); the option in ES's menu for PlayStation and a build with
-  Arkbuild32's gcc 12 come with the next test image.
+  (`npusr-gles/`), and the same day DuckStation and SwanStation in the
+  64-bit one (the owner asked), with the library built for aarch64. In
+  master, checked on the console as ES starts it (KNOWN-ISSUES); the option
+  in ES's menu for PlayStation and the builds in the image's own chroots
+  (Arkbuild32's gcc 12, Arkbuild's) come with the next test image.
+  For the owner to decide: pcsx_rearmed reports 4:3 whatever its frame's
+  width, so with the upscale only its 320x240 frames get exactly x3 (256 and
+  368 wide and 224-line frames are shown as without it). RetroArch's square
+  pixels (`aspect_ratio_index` 21) in its append would enlarge them all, at
+  their square-pixel shape (256 wide narrower than 4:3, 368 wider, 224-line
+  ones 960x672), as DuckStation and SwanStation are now.
 
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.

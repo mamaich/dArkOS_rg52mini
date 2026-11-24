@@ -87,9 +87,11 @@ else
   if [ -x "$npusr" ]; then
     [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
     if [ "$DARKOS_NPU_UPSCALE" = on ]; then
-      case "$*" in
-        *cores/pcsx_rearmed_libretro.so*|*cores/pcsx_rearmed_rumble_libretro.so*)
-          if npu=$("$npusr" retroarch32 "/home/ark/.config/${emulator}" "${@: -1}"); then
+      npucore=""
+      for a in "$@"; do case "$a" in */cores/*_libretro.so) npucore=${a##*/}; npucore=${npucore%_libretro.so} ;; esac; done
+      case "$npucore" in
+        pcsx_rearmed|pcsx_rearmed_rumble)
+          if npu=$("$npusr" ps1 "/home/ark/.config/${emulator}" "$npucore" "${@: -1}"); then
             npuenv=("LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libnpusr_gles.so${LD_PRELOAD:+:$LD_PRELOAD}"
                     "DARKOS_NPU_SR=x3:auto"
                     "DARKOS_NPU_SR_MODEL=/usr/share/darkos/npusr/x3_{W}x{H}.rknn"

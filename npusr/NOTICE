@@ -2,9 +2,9 @@ dArkOS RG52 Mini - NPU UPSCALE: third-party components
 =======================================================
 
 NPU UPSCALE enlarges an emulator's native frame with a small neural network on the RK3562's
-NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate), and for PS1 in the 32-bit
-RetroArch, which draws with GLES, in libnpusr_gles.so (dArkOS's own, npusr-gles/ in the
-dArkOS sources). It uses:
+NPU, inside dArkOS's Vulkan rotate layer (VK_LAYER_DARKOS_rotate), and for PS1 in RetroArch
+(32-bit and 64-bit), which draws with GLES, in libnpusr_gles.so (dArkOS's own, npusr-gles/ in
+the dArkOS sources). It uses:
 
 1. librknnrt.so - Rockchip RKNN runtime 2.5.0
    Rockchip Electronics Co., Ltd.
@@ -15,12 +15,13 @@ dArkOS sources). It uses:
    published in https://github.com/airockchip/rknn-toolkit2 at the tag v2.5.0,
    rknpu2/runtime/Linux/librknn_api/aarch64/librknnrt.so
    sha256 4b6cc575bedf8952b13db4b1190fa3b3d2ac213f00be774ff6ccd19d651970c0
-   Installed as /usr/lib/aarch64-linux-gnu/librknnrt.so; loaded by the layer only when a game
-   starts with NPU UPSCALE on.
+   Installed as /usr/lib/aarch64-linux-gnu/librknnrt.so; loaded by the layer, or by the 64-bit
+   libnpusr_gles.so, only when a game starts with NPU UPSCALE on.
    The same release's 32-bit one, rknpu2/runtime/Linux/librknn_api/armhf/librknnrt.so
    sha256 267193f5f32f01f6e9137072c67ca737d57528257f1a63ce4d65e3698369ffa3
    is installed unmodified as /usr/lib/arm-linux-gnueabihf/librknnrt.so, under the same
-   license; loaded by libnpusr_gles.so only when a PS1 game starts with NPU UPSCALE on.
+   license; loaded by the 32-bit libnpusr_gles.so only when a PS1 game starts with NPU UPSCALE
+   on.
 
 2. rknn_api.h - the runtime's header, from the same release and under the same license
    (vk-rotate-layer/rknn_api.h in the dArkOS sources; LICENSE.rknn beside it). libnpusr_gles.so

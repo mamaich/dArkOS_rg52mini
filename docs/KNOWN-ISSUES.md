@@ -1280,29 +1280,53 @@ the layer, `darkos-npusr` and the launchers as in master, ES with es-0011:
 
 **PS1 (the owner, 2026-11-24: of the GLES emulators, PS1 only).** The
 32-bit RetroArch draws with GLES and goes out through libgo2 and RGA, past
-the Vulkan layer, so the AI-SR session wrote the same upscale as a library
+the Vulkan layer (and so does the 64-bit one with `gl`, the image's
+default), so the AI-SR session wrote the same upscale as a library
 preloaded into it: `libnpusr_gles.so` (`npusr-gles/`, its README has how it
 works). Compared on the console the same day: PS1 on pcsx_rearmed gains
 (textures and dithering smoothed, 2D games most; pcsx_rearmed's own
 enhanced resolution sharpens only the 3D geometry, costs its GPU thread
 7 -> 25% of a core and does nothing for 2D); N64 looks better rendered at
 960x720 by the core itself; Saturn (yabasanshiro) loses frames. So:
-- `psx` is in `npusr.conf`; `retroarch32`, for the cores `pcsx_rearmed` and
-  `pcsx_rearmed_rumble` only (DuckStation and SwanStation run in the 64-bit
-  RetroArch and get nothing), asks `darkos-npusr retroarch32`: the NPU up,
-  pcsx_rearmed's enhanced resolution off for the run where it is set (the
-  upscale needs the native frame; put back after), and an `--appendconfig`
-  (gl, integer scale, no smoothing, shader or overlay). It then preloads the
-  library with `DARKOS_NPU_SR=x3:auto` and the model path
+- `psx` is in `npusr.conf`. `retroarch32` for the cores `pcsx_rearmed` and
+  `pcsx_rearmed_rumble`, and `retroarch` (64-bit) for `duckstation` and
+  `swanstation` (the owner asked for those too, 2026-11-24; the image runs
+  both with their software renderer, so their frame goes out through
+  RetroArch's gl like pcsx_rearmed's), ask `darkos-npusr ps1 <config dir>
+  <core> <game>`: the NPU up, the core's own higher resolution off for the
+  run where it is set (pcsx_rearmed's enhanced resolution, DuckStation's and
+  SwanStation's resolution scale; the upscale needs the native frame), for
+  DuckStation and SwanStation their aspect `PAR 1:1` (below), all put back
+  after; and an `--appendconfig` (gl, integer scale, no smoothing, shader or
+  overlay). The launcher then preloads the library (armhf or aarch64, as
+  that RetroArch is) with `DARKOS_NPU_SR=x3:auto` and the model path
   `/usr/share/darkos/npusr/x3_{W}x{H}.rknn`: the frame's size is taken from
   RetroArch's viewport (exactly 3W x 3H), one model a size — 256, 320 and
   368 wide by 240 and by 224 (512 and 640 wide, PAL's 256 and 288 lines do
-  not fit x3 on 720 lines and are shown as without the upscale).
+  not fit x3 on 720 lines and are shown as without the upscale, at x1 by
+  the integer scale).
+- *Which frames get exactly x3.* RetroArch 1.22's integer scale sizes the
+  picture from the core's aspect ratio: a 4:3 core's 224-line frame, 320 or
+  256 wide, becomes 897x672 (seen on the console with DuckStation set to 4:3,
+  2026-11-24), no multiple of 3, so no upscale. pcsx_rearmed reports 4:3
+  whatever its width (`retro_get_system_av_info` in its `libretro.c`): of its
+  frames only 320x240 is enlarged; 256x240 and 368x240 come out 960x720 too,
+  where the library takes them for 320x240, finds the blocks not one colour
+  and shows them as drawn (the NPU working on them in vain, as in the
+  hi-res mode below; by that rule, not seen on the console), and 224-line
+  ones 897x672 without it. DuckStation and SwanStation have `PAR 1:1`,
+  which makes their aspect their frame's: every size above gets exactly x3,
+  with square pixels — 320x240 is 4:3 as before, DuckStation's default
+  overscan crop (320x224 for an NTSC game) 960x672, 7% wider than 4:3, 256
+  wide narrower than 4:3 (768x672), 368 wider. Whether pcsx_rearmed should
+  get square pixels as well (RetroArch's `aspect_ratio_index` 21 in its
+  append) is the owner's to decide (docs/TODO.md).
 - The models are the 3DS's network made for each size (npusr/NOTICE); the
   32-bit librknnrt 2.5.0 comes from the same release as the 64-bit one,
   checked by sha256 in `build_npusr.sh`, which builds the library in the
   armhf chroot (its EGL and GLES headers unpacked, not installed, so that
-  libglvnd stays off the chroot's libmali links).
+  libglvnd stays off the chroot's libmali links) and in the aarch64 one (its
+  headers installed with the deps).
 - Measured by the AI-SR session (retroarch32 + pcsx_rearmed, NPU at 600
   MHz): Double Dragon 60 fps, Mali 3.8 -> 24%; Hover Racing (PAL, 320x240)
   50 fps, Mali 4.9 -> 24%; the NPU 6.0-6.5 ms a frame, the hook 1.5-1.8 ms
@@ -1337,6 +1361,34 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
     often shows a black band or a slanted tear across the picture, with the
     upscale and without it alike; the camera shows the screen whole. The
     grab catches RGA's rotation half-way: not a fault of the picture.
+- DuckStation and SwanStation, checked on the owner's console the same day
+  (the aarch64 library built as `build_npusr.sh` builds it, in a copy of
+  Arkbuild after the deps: gcc 12.4; `retroarch`, `retroarch32` and
+  `darkos-npusr` as in master; each game started as ES starts it with
+  `DARKOS_NPU_UPSCALE=on` and left with Home+Start, as a player leaves it):
+  - Double Dragon on DuckStation: 320x224 enlarged to 960x672 at (160,24),
+    60 fps, the NPU on every frame (4.8-5.8 ms at 600 MHz), the hook 1.0-1.3
+    ms of CPU a frame, GPU load 21-24% (3% without the upscale), RetroArch
+    52-57% of a core (43% without). The BIOS logo before it, 256x224, to
+    768x672 with its own model; the game's 640x448 intro at x1 without the
+    upscale (the hi-res mode above). RetroArch's quick menu shown as drawn
+    (counted as "menu"); grabs of the 64-bit RetroArch show the same moving
+    tear as above.
+  - Hover Racing on DuckStation: the PAL BIOS logo at 50 fps (256x224), then
+    the game in 320x224 at 60 fps — DuckStation follows the 60 Hz mode the
+    game sets (pcsx_rearmed keeps the PAL disc at 50) — 5.1-5.9 ms.
+  - Double Dragon on SwanStation: 320x240 (its default crop is the game's
+    borders) to 960x720 at (160,0), 60 fps, 6.4-6.5 ms, GPU 21%.
+  - Double Dragon on pcsx_rearmed again, with the launchers changed: as
+    before (60 fps, 6.5 ms, 320x240).
+  - After each run left with Home+Start: no record left, the core options
+    as before the run (the added `PAR 1:1` gone), "eglTerminate: NPU work
+    stopped". RetroArch writes every option of a core into
+    `retroarch-core-options.cfg` the first time it runs that core (with
+    their defaults; here the first DuckStation and SwanStation runs on that
+    console): with or without the upscale, not its doing. A run killed with
+    its launcher (`estest.sh stop`) left its record, put back by the next
+    launch, as for the 3DS.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

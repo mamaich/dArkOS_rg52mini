@@ -4,7 +4,7 @@
 # top screen, the PSP's - enlarged by a small neural network (npusr/NOTICE) on the RK3562's NPU, inside
 # VK_LAYER_DARKOS_rotate (build_vkrotate.sh builds that part). This installs what the layer and the
 # launchers need beside it: Rockchip's RKNN runtime (from its release, checked by sha256; aarch64 and
-# armhf), the models, libnpusr_gles.so (the same for PS1's GLES in the 32-bit RetroArch, npusr-gles/),
+# armhf), the models, libnpusr_gles.so (the same for PS1's GLES in RetroArch, both of them, npusr-gles/),
 # darkos-npusr (the launchers' helper), the list of systems EmulationStation offers it for,
 # the blacklist that keeps rknpu.ko from loading at boot, and the notice and licenses of all that.
 # The kernel side (the NPU in the dts, rknpu as a module) is in kernel_rk3562.
@@ -59,6 +59,18 @@ if [ ! -f Arkbuild32/home/ark/npusr-gles/libnpusr_gles.so ]; then
 fi
 sudo install -m 644 Arkbuild32/home/ark/npusr-gles/libnpusr_gles.so Arkbuild/usr/lib/arm-linux-gnueabihf/libnpusr_gles.so
 sudo rm -rf Arkbuild32/home/ark/npusr-gles
+# and for PS1 in the 64-bit RetroArch (DuckStation, SwanStation): the same library for aarch64, built in the
+# main chroot (its EGL and GLES headers are installed there)
+sudo rm -rf Arkbuild/home/ark/npusr-gles
+sudo mkdir -p Arkbuild/home/ark/npusr-gles
+sudo cp npusr-gles/npusr_gles.c npusr-gles/build.sh vk-rotate-layer/rknn_api.h Arkbuild/home/ark/npusr-gles/
+call_chroot "cd /home/ark/npusr-gles && sh build.sh"
+if [ ! -f Arkbuild/home/ark/npusr-gles/libnpusr_gles.so ]; then
+  echo "ERROR: the aarch64 libnpusr_gles.so was not built (npusr-gles/)"
+  exit 1
+fi
+sudo install -m 644 Arkbuild/home/ark/npusr-gles/libnpusr_gles.so Arkbuild/usr/lib/aarch64-linux-gnu/libnpusr_gles.so
+sudo rm -rf Arkbuild/home/ark/npusr-gles
 sudo install -m 644 npusr/models/x3_256x240.rknn npusr/models/x3_320x240.rknn npusr/models/x3_368x240.rknn \
   npusr/models/x3_256x224.rknn npusr/models/x3_320x224.rknn npusr/models/x3_368x224.rknn \
   Arkbuild/usr/share/darkos/npusr/
