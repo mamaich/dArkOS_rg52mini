@@ -30,6 +30,20 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   games checked so far none is 256 or 368 wide (Double Dragon, Hover Racing,
   Final Fantasy IX's opening: 320; Emotion and FF9 in play not checked).
 
+* **RetroArch's slang shaders in the image** (the owner, 2026-11-24: so that
+  no one has to fetch them for Vulkan). The change to `build_retroarch.sh` is
+  written (slang-shaders in `~/.config/retroarch/shaders/shaders_slang`, 84
+  MB, read by both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB each,
+  dropped; `slang-shaders` in `tools/upstream/components.json`), not in master:
+  on the console the multi-pass presets sized from the source (xBR-lv3,
+  ScaleFX, ArtCNN) crash RetroArch at the start with SwanStation and with
+  Azahar, and a one-pass xBRZ runs at 13 fps (KNOWN-ISSUES.md, "RetroArch's
+  shaders on the Mali-G52"). For the owner to decide: ship them as they
+  are, fix RetroArch's Vulkan filter chain first (sizes of 0 and past the
+  GPU's limit), or leave them to the Online Updater. Also open: the GLSL
+  `xbr-lv2` and `xbr-lv2-3d` do not compile on Mali (their `delta`,
+  `delta_l` and `delta_u` made `const` would do: `XBR_SCALE` is a `#define`).
+
 * **Dolphin: a Wiimote on the console's pad by default.** The image ships
   `dolphin/Config/WiimoteNew.ini` empty, so Wii games start and take no input.
   Wii games already show under GameCube in ES (the system takes `.wbfs`,

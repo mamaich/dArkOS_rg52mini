@@ -1424,6 +1424,29 @@ enhanced resolution sharpens only the 3D geometry, costs its GPU thread
   ms, GPU 19%; on SwanStation 320x240 to 960x720, 60 fps, 6.5 ms; with NPU
   UPSCALE off nothing preloaded or changed (GPU 4%); after Home+Start no
   record, the owner's files of all three RetroArchs unchanged.
+- Against RetroArch's own upscaling shaders (the owner asked, 2026-11-24):
+  retroarch32 + pcsx_rearmed_rumble as ES starts it, gl, integer x3 to
+  960x720, each run loading the same saved moment and paused for the grab
+  (Double Dragon's character select: drawn portraits, pixel text; Hover
+  Racing's attract race: textured 3D), 10 s measured before it:
+
+  | | Double Dragon fps / Mali | Hover Racing (PAL) fps / Mali |
+  |---|---|---|
+  | nearest x3 | 60 / 4% | 50 / 5% |
+  | NPU UPSCALE | 60 / 22% | 50 / 22% |
+  | `xbr/xbr-lv3.glslp` | 25.6 / 80% | 21.6 / 68% |
+  | `xbrz/xbrz-freescale.glslp` | 17.8 / 88% | 7.6 / 91% |
+  | `scalefx/scalefx.glslp` | 9.6 / 91% | 9.1 / 83% |
+
+  At 960x720 the Mali-G52 has no room for these edge shaders, even with
+  the emulator itself taking 4-5% of it. Pictures: the xBR family keeps 2D art and text crisp with
+  smooth diagonals; on 3D textures it turns noise into worm-like blobs
+  (Hover Racing's road); ScaleFX changes only edges (rounder letters), and
+  its passes asked RetroArch for float buffers it did not get ("Floating-point
+  FBO was requested, but is not supported. Falling back to UNORM"). The
+  upscale looks like a softer higher-resolution render: textures and
+  dithering smoothed, text visibly softer than xBR's. "RetroArch's shaders
+  on the Mali-G52" below for what does not work.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)
@@ -1433,6 +1456,41 @@ pwm-regulator on `pwm6` (`pwm@ff700020`, `pwm6m0` = GPIO0_C1, 0.8 to 1.1 V,
 in neither does anything else use GPIO0_C1 (its other functions, `npu-pins`
 and `can1m1`, are unused; no GPIO user). The NPU is powered only when NPU
 UPSCALE is turned on.
+
+## RetroArch's shaders on the Mali-G52: GLSL presets that do not compile, slang ones that crash (2026-11-24)
+
+Found while comparing NPU UPSCALE with RetroArch's shaders (above).
+
+- **GLSL (the `gl` driver, the image's default; libretro's glsl-shaders in
+  `~/.config/retroarch*/shaders/shaders_glsl`).** Arm's GLES compiler keeps
+  to the GLSL ES 3.00 rule that a global's initializer is a constant
+  expression; Mesa lets it pass. `xbr/xbr-lv2.glslp`, the xBR preset most
+  guides name, has `vec4 delta_u = delta_l.yxwz;` at global scope: "S0012:
+  Global variable initializer must be a constant expression", and RetroArch
+  falls back to the stock shader with no message on the screen (the picture
+  stays nearest; seen with `--verbose`). Compiling every preset's shaders
+  as RetroArch does on GLES 3 (`#version 300 es`, `VERTEX`/`FRAGMENT`,
+  `PARAMETER_UNIFORM`, a default precision) with glslangValidator, 28 of
+  623 presets have that fault — among them `xbr-lv2`, `xbr-lv2-3d`,
+  `crt-hyllian`, `crt-royale-kurozumi`, `advcartoon` and procedural demos;
+  about 80 more fail the validator for other reasons (GLSL 1.x shaders,
+  `##` in macros, type mismatches), not tried on the console. The ones in
+  the comparison (`xbr-lv3`, `xbrz-freescale`, `scalefx`) compile and run.
+- **slang (the `vulkan` driver: Azahar, or a core set to Vulkan in the
+  64-bit RetroArchs; not in the image, libretro's slang-shaders tried from
+  `comptest`).** RetroArch 1.22.2 and retroarch-next load them:
+  `edge-smoothing/xbrz/xbrz-freescale.slangp` (one pass, the viewport's
+  size) on SwanStation runs, 13.4 and 13.6 fps at 99% of Mali. Presets
+  whose passes are sized from the source crash RetroArch at the start
+  (segmentation fault, back to ES): `xbr-lv3.slangp`, `scalefx.slangp` and
+  `artcnn-c4f16-2x-luma.slangp` on SwanStation, right after "[Vulkan]
+  Updating framebuffer size 0x0" (the core's first frame is empty), and
+  `xbr-lv3.slangp` on Azahar after "Creating framebuffer 24576x24576" (the
+  core's largest geometry x3, past Mali's image limit). The owner asked
+  for the slang shaders in the image (so that no one has to fetch them):
+  the change to `build_retroarch.sh` is written (one copy, 84 MB, for both
+  64-bit RetroArchs; the GLSL clones' `.git`, 24 MB each, left out) and
+  held back on these crashes — docs/TODO.md.
 
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
 
