@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """dArkOS RG52 Mini: NPU UPSCALE - an emulator's native frame enlarged by a small network on the RK3562's NPU,
-in the Vulkan rotate layer (vk-rotate-layer/npusr.inc.c). EmulationStation's EMULATOR SETTINGS has it
+in the Vulkan rotate layer (vk-rotate-layer/npusr.inc.c) or, for PS1 in RetroArch's gl, in libnpusr_gles.so
+(npusr-gles/), preloaded. EmulationStation's EMULATOR SETTINGS has it
 for the systems /etc/darkos/npusr.conf names; a game of such a system with it ON is launched with
 DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
 
@@ -19,9 +20,9 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       PS1 in RetroArch's gl (GLES on KMS, past the Vulkan layer): pcsx_rearmed(_rumble) in the
       32-bit RetroArch, duckstation and swanstation in the 64-bit ones (retroarch and retroarch-next,
       RetroArch from master). Brings the NPU up; turns the core's own higher resolution off for the
-      run (the upscale needs the native frame) and makes
-      DuckStation's and SwanStation's pixels square (their 320x224 is then 960x672, not 897x672);
-      prints a config for --appendconfig (gl, integer scale, no smoothing, shader or overlay). The
+      run (the upscale needs the native frame) and makes DuckStation's and SwanStation's pixels
+      square (their 320x224 is then 960x672, not 897x672); prints a config for --appendconfig (gl,
+      integer scale, no smoothing, shader or overlay). The
       launcher then preloads libnpusr_gles.so (npusr-gles/; armhf or aarch64, as RetroArch is) with
       DARKOS_NPU_SR=x3:auto: the frame's size from the viewport, a model for each size there is one.
   darkos-npusr restore
@@ -29,7 +30,7 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       writes the appended settings into. The launchers run it after the emulator, and before one
       when a record is left over (the console was switched off in a game).
 
-Status 1 from retroarch or ppsspp: no upscale this time (HDMI, no NPU, model or runtime); nothing
+Status 1 from retroarch, ppsspp or ps1: no upscale this time (HDMI, no NPU, model or runtime); nothing
 is changed and the game starts as it would with NPU UPSCALE off. docs/KNOWN-ISSUES.md, "NPU UPSCALE".
 """
 import glob

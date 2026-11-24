@@ -1035,7 +1035,7 @@ beats an upscale of the 1x frame (as for the PSP), and DSperate presents
 through its own KMS output, past the Vulkan layer, so the layer could not
 upscale it anyway.
 
-## NPU UPSCALE: the 3DS and the PSP enlarged on the NPU — for 1.13
+## NPU UPSCALE: the 3DS, the PSP and PS1 enlarged on the NPU — for 1.13
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
 every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
@@ -1046,7 +1046,29 @@ the nearest-neighbour enlargement: the 3DS's top screen x3 (400x240 to
 x2 to 960x544 with integer scale), each with a network of dArkOS's own
 trained to give what ESPCN gives, faster on the NPU. Worked out by a separate
 session (AI-SR, 2026-11-22/23); the owner asked for it in 1.13 for both
-systems, off by default.
+systems, off by default, and on 2026-11-24 for PS1 as well (below).
+
+**Where it is on** (master, 2026-11-24), each with the option ON for its
+system, on the console's screen only (with HDMI connected the game starts
+as without it):
+
+| System (ES) | Emulator | Core | What is enlarged |
+|---|---|---|---|
+| 3DS (3ds, n3ds) | `retroarch` (64-bit) | Azahar | the top screen 400x240 x3; the one-screen layout for the run |
+| PSP (ppsspp, pspminis) | PPSSPP standalone (`ppsspp.sh`) | — | 480x272 x3, brought down to the screen's height (x2 with integer scale); PPSSPP's 2x render set to 1x for the run |
+| PS1 (psx) | `retroarch32` | pcsx_rearmed, pcsx_rearmed_rumble | x3, exactly only the 320x240 frames (the core reports 4:3 always) |
+| PS1 (psx) | `retroarch` and `retroarch-next` (64-bit) | DuckStation, SwanStation | x3 for 256, 320 and 368 wide by 224 and 240; square pixels (`PAR 1:1`) for the run |
+
+Not there: PPSSPP as a RetroArch core (with RetroArch's `gl` its picture
+goes past the Vulkan layer; the launcher asks only for Azahar) and the
+standalone-2021 (probably on Vulkan already, but its branch of `ppsspp.sh`
+has no NPU part, and it takes no `--appendconfig` and keeps its layout under
+other keys than 1.20); 3DS in `retroarch-next` (ES does not offer it there); PS1's
+hi-res modes (512 and 640 wide) and PAL's 256 and 288 lines (x3 does not fit
+on 720 lines: shown at x1, as drawn); other systems (N64 looks better
+rendered at 960x720 by its core, Saturn loses frames: PS1 only of the GLES
+emulators, the owner's choice). RetroArch's and PPSSPP's menus are shown as
+drawn.
 
 **How it is put together.**
 - *ES*: EMULATOR SETTINGS has NPU UPSCALE (OFF, ON) for the systems
@@ -1054,7 +1076,8 @@ systems, off by default.
   `<system>.npusr`; a game is launched with `DARKOS_NPU_UPSCALE=on` when it
   is ON (es-0011).
 - *The launchers*: `retroarch` (for the Azahar core) and `ppsspp.sh` (PPSSPP
-  standalone) ask `darkos-npusr` (`npusr/`), which loads the NPU's driver,
+  standalone; for PS1 `retroarch32`, `retroarch` and `retroarch-next`
+  through `libnpusr_gles.so`, below) ask `darkos-npusr` (`npusr/`), which loads the NPU's driver,
   caps the NPU at 600 MHz (both models keep up there; at 1 GHz the console
   was 15 C warmer within 1.5 minutes) and gives the emulator what the upscale
   needs for this run: RetroArch gets an `--appendconfig` (Vulkan, integer

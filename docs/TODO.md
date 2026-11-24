@@ -4,7 +4,7 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 
 ## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day)
 
-* **NPU UPSCALE for the 3DS and the PSP** (the owner, 2026-11-23: into 1.13,
+* **NPU UPSCALE for the 3DS, the PSP and PS1** (the owner, 2026-11-23: into 1.13,
   both systems, off by default). **In master** and checked on the owner's
   console (KNOWN-ISSUES.md, "NPU UPSCALE"); both systems on space-to-depth
   models of dArkOS's own (the 3DS 8.3 ms at 600 MHz instead of ESPCN's

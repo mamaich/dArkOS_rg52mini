@@ -581,11 +581,15 @@ In master for 1.13, not released yet (VERSION says 1.13):
   under GameCube in ES.
 - Dolphin no longer hangs in Soulcalibur II: the GPU thread is synchronized
   for that game (KNOWN-ISSUES.md, "Dolphin: Soulcalibur II hung").
-- NPU UPSCALE, an option in ES's EMULATOR SETTINGS for the 3DS and the PSP
-  (off by default): the emulator's native frame enlarged by a small neural
-  network (ESPCN) on the RK3562's NPU instead of by nearest pixels — the
-  3DS's top screen x3, the PSP x2. The kernel powers the NPU now, as a module
-  loaded only for such a game (KNOWN-ISSUES.md, "NPU UPSCALE").
+- NPU UPSCALE, an option in ES's EMULATOR SETTINGS for the 3DS, the PSP and
+  PS1 (off by default): the emulator's native frame enlarged by a small
+  neural network of dArkOS's own on the RK3562's NPU instead of by nearest
+  pixels — the 3DS's top screen x3 (Azahar, one screen shown), the PSP x3
+  brought down to the screen's height (PPSSPP standalone, rendering at 1x),
+  PS1 x3 (pcsx_rearmed in the 32-bit RetroArch, DuckStation and SwanStation
+  in both 64-bit ones). The kernel powers the NPU now, as a module loaded
+  only for such a game (KNOWN-ISSUES.md, "NPU UPSCALE", where a table says
+  which emulators and frames).
 
 See TODO.md, "For 1.13", for what else is planned.
 
