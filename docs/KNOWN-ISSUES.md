@@ -1192,32 +1192,45 @@ drawn.
   license allows distribution with applications for Rockchip's chips and
   asks that its notices be kept: `/usr/share/doc/librknnrt/LICENSE`,
   `/usr/share/doc/darkos-npusr/NOTICE`); the models in
-  `/usr/share/darkos/npusr/`, INT8, still named `espcn_x<S>_<W>x<H>.rknn`
-  (the names the layer looks for): `espcn_x3_400x240.rknn` (the 3DS),
-  `espcn_x3_480x272.rknn` (the PSP: the 3DS's weights, calibrated on PSP
-  frames) and `espcn_x2_480x272.rknn` (the PSP with integer scale). Both
-  networks trained by
-  `npusr/models/s2d_distill.py` from a bicubic start, with ESPCN (TF-ESPCN,
-  Apache 2.0) as the teacher, on screenshots of the owner's PSP and 3DS
-  games, scikit-image's sample photographs and drawn shapes and text — no
-  other network's weights and no image dataset (a first try started from
-  weights taken out of another device's firmware and saw BSDS300, which is
-  for non-commercial research only; it was dropped). The 3DS's was trained
-  on with quantisation noise after that (its INT8 model 0.35 dB closer to
-  the right frame; for the PSP's x2 it made things worse). `s2d_rknn.py`
-  makes each .rknn from the weights kept beside it (`s2d_x3_b7.pt`,
-  `s2d_x2_v7.pt`) byte for byte; the screenshots are not in the sources.
+  `/usr/share/darkos/npusr/`, INT8, named `espcn_x<S>_<W>x<H>.rknn` for the
+  layer and `x3_<W>x<H>.rknn` for libnpusr_gles.so: `espcn_x3_400x240.rknn`
+  (the 3DS), `espcn_x4_400x240.rknn` (the 3DS on a 1080p TV),
+  `espcn_x3_480x272.rknn` (the PSP), `espcn_x2_480x272.rknn` (the PSP with
+  integer scale) and seven `x3_<W>x<H>.rknn` (PS1 and the 16-bit consoles).
+  Since 2026-11-25 (the owner's word) every x3 model and the x4 are networks
+  the AI-SR session trained with no teacher on true high-resolution targets:
+  the input a point sample of a larger picture (as a game draws it, no
+  anti-aliasing), the target that picture averaged down; the pictures are
+  drawn shapes and text, 224 screenshots of free games (each file's game,
+  licence and source in `npusr/models/gt/freeshots-manifest.json`), frames of
+  the owner's games and scikit-image's sample photographs. One x3 network for
+  every size; the x4 has two blocks more. The PSP's x2 is still the earlier
+  kind: trained by `npusr/models/s2d_distill.py` from a bicubic start, with
+  ESPCN (TF-ESPCN, Apache 2.0) as the teacher, on screenshots of the owner's
+  PSP and 3DS games, scikit-image's sample photographs and drawn shapes and
+  text. No network in the image started from another network's weights or
+  saw an image dataset (a first try started from weights taken out of another
+  device's firmware and saw BSDS300, which is for non-commercial research
+  only; it was dropped). `s2d_rknn.py` makes each .rknn from the weights kept
+  beside it (`x3_b7_gtr_last.pt`, `x4_b9_gtr_last.pt`, `s2d_x2_v7.pt`) byte for
+  byte; the owner's game frames (training and calibration) are not in the
+  sources, the calibration frames' sha256 are
+  (`npusr/models/gt/calib-mix.SHA256SUMS`), and `npusr/models/gt/` has the
+  scripts that fetch the screenshots, build the data and train (npusr/NOTICE).
   `make_espcn.py` still makes ESPCN itself for the NPU. Against an honest
-  render at 3x and 2x of Super Mario 3D Land (toolkit simulator, INT8):
+  render of Super Mario 3D Land (toolkit simulator, INT8; x3: 3x of three
+  scenes, one never trained on; x4: 4x grabbed on the TV, 8 frames):
 
-  | | x3 | x2 |
+  | | x3 | x4 |
   |---|---|---|
-  | the model in the image | 31.15 dB | 30.60 dB |
-  | ESPCN | 31.21 dB | 30.69 dB |
-  | bicubic | 30.57 dB | 30.38 dB |
+  | the models since 2026-11-25 | 31.56 dB | 30.97 dB |
+  | the x3 before them (ESPCN-distilled; for x4 stretched bilinearly) | 31.16 dB | 30.71 dB |
+  | bicubic | 30.57 dB | 30.08 dB |
 
-  The models differ from ESPCN's output (the PSP's 39.4 dB to it) without
-  being further from the right frame, and look the same.
+  The x2 against an honest 2x: 30.60 dB (ESPCN 30.69, bicubic 30.38). By eye
+  the new x3 keeps edges and text clearly sharper than the one before it. On
+  the console's NPU every model gives what the float network does within
+  43.6-46.0 dB (x3) and 42.8-44.6 dB (x4), as in the simulator.
 
 **Where it does nothing** (the game runs as with NPU UPSCALE off):
 PSP on the RetroArch core or on standalone-2021; no NPU, model or runtime
@@ -1520,8 +1533,8 @@ TV as on the panel:
   with fit or fill (x3 brought down to 1271x720) takes the same path now.
 - **x4 networks.** The AI-SR session trained an x4 network and a new x3 one on
   true high-resolution targets (point-sampled inputs, as a game draws them; no
-  teacher). They were tried as test files; they are not in the image until its
-  package with the licence manifest comes. On the TV from one saved state,
+  teacher). Both are in the image since 2026-11-25 (the owner's word; the
+  models paragraph above). On the TV from one saved state,
   the gl cores' x4 gave the picture of x3 stretched (a touch crisper) at the
   same Mali and 1.4 ms more of the NPU, so those keep x3 stretched (no more
   model files). Azahar with x4 in place (one fetch a pixel, no resample) ran at

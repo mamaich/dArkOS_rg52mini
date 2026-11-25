@@ -31,10 +31,11 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   card), Sega CD and the CD PC Engines in a game.
   On a TV over HDMI too since 2026-11-25 (the owner asked; KNOWN-ISSUES, "On
   a TV"): the gl cores' x3 stretched to RetroArch's x4, the layer on a
-  landscape display, its resample as a decode pass. Open: the x4 network for
-  Azahar on the TV (and the AI-SR session's better x3) into the image when
-  its package with the licence manifest comes; the panel's PSP with fit or
-  fill, now through the decode pass, to be checked on the panel.
+  landscape display, its resample as a decode pass. The x4 network for
+  Azahar on the TV and the AI-SR session's better x3 (all sizes) in master
+  since 2026-11-25 with their licence notes (npusr/NOTICE, item 5). Open: the
+  panel's PSP with fit or fill, now through the decode pass, and the new x3
+  on the panel, to be checked on the panel.
 
 * **RetroArch's slang shaders in the image** (the owner, 2026-11-24: so that
   no one has to fetch them for Vulkan). The change to `build_retroarch.sh` is

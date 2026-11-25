@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A space-to-depth model's weights (s2d_distill.py) -> ONNX -> RKNN INT8 for the RK3562, for NPU UPSCALE.
+"""A space-to-depth model's weights (s2d_distill.py, gt/s2d_gt.py) -> ONNX -> RKNN INT8 for the RK3562, for NPU UPSCALE.
 
 The network: the input is space-to-depth 2x2 of the luma, [1, 4, H/2, W/2] (channel dy*2+dx, 0..255, std 255);
 conv 3x3 4->C, NB x (conv 3x3 C->C, ReLU), conv 3x3 C->(2S)^2, Clip [0,1]. The output is [1, (2S)^2, H/2, W/2]
@@ -8,7 +8,10 @@ before the pixel shuffle (channel dy*2S+dx); the layer's shaders shuffle it and 
 usage, in two steps (as the PSP's model was made: torch 2.x for the export, rknn-toolkit2 2.5.0 for the rest):
   python s2d_rknn.py onnx --weights s2d_x2_v7.pt --scale 2 --size 480x272 --calib calib-psp [--work out]
   python s2d_rknn.py rknn --weights s2d_x2_v7.pt --scale 2 --size 480x272 --calib calib-psp [--work out]
-  --calib  a directory of the system's frames (png, colour or Y already); other sizes are resized to WxH.
+  --calib  a directory of the system's frames (png, colour or Y already); other sizes are resized to WxH
+           (0-2 pixels bigger: cropped). The x3 and x4 of 2026-11-25: --weights x3_b7_gtr_last.pt --blocks 7, or
+           x4_b9_gtr_last.pt --scale 4 --blocks 9, --calib calib-mix (gt/calib-mix.SHA256SUMS; not in the sources);
+           the 16-bit and PS1 sizes are installed as x3_<W>x<H>.rknn.
   Makes <work>/espcn_x<S>_<W>x<H>.rknn (the name the layer looks for in /usr/share/darkos/npusr/) and prints its
   sha256. The calibration frames (screenshots of the system's games) are not in the sources; the same weights and
   frames give the same model, byte for byte."""
@@ -36,6 +39,9 @@ def frames():
     out = []
     for f in sorted(glob.glob(os.path.join(a.calib, "*.png"))):
         y = Yof(cv2.imread(f, cv2.IMREAD_UNCHANGED))
+        dh, dw = y.shape[0] - H, y.shape[1] - W
+        if 0 <= dh <= 2 and 0 <= dw <= 2:      # 480x272 -> 480x270 (as PPSSPP DisplayCropTo16x9), 400 -> 399: crop, not resize
+            y = y[dh // 2:dh // 2 + H, dw // 2:dw // 2 + W]
         if y.shape != (H, W): y = cv2.resize(y, (W, H), interpolation=cv2.INTER_AREA if y.shape[0] > H else cv2.INTER_CUBIC)
         out.append(y)
     return out

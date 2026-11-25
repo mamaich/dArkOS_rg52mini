@@ -25,7 +25,7 @@ sudo mkdir -p Arkbuild/usr/share/doc/librknnrt Arkbuild/usr/share/doc/darkos-npu
 sudo install -m 644 npusr/LICENSE.rknn Arkbuild/usr/share/doc/librknnrt/LICENSE
 sudo install -m 644 npusr/NOTICE npusr/models/LICENSE-TF-ESPCN Arkbuild/usr/share/doc/darkos-npusr/
 sudo install -m 644 npusr/models/espcn_x3_400x240.rknn npusr/models/espcn_x3_480x272.rknn \
-  npusr/models/espcn_x2_480x272.rknn Arkbuild/usr/share/darkos/npusr/
+  npusr/models/espcn_x2_480x272.rknn npusr/models/espcn_x4_400x240.rknn Arkbuild/usr/share/darkos/npusr/
 sudo install -m 755 npusr/darkos-npusr Arkbuild/usr/local/bin/darkos-npusr
 sudo install -m 644 npusr/npusr.conf Arkbuild/etc/darkos/npusr.conf
 sudo install -m 644 npusr/dArkOS-rknpu.conf Arkbuild/etc/modprobe.d/dArkOS-rknpu.conf

@@ -28,41 +28,76 @@ draws with GLES, in libnpusr_gles.so (dArkOS's own, npusr-gles/ in the dArkOS so
 
 3. ESPCN x2 and x3, TF-ESPCN by Fanny Monori, https://github.com/fannymonori/TF-ESPCN (the
    models OpenCV's dnn_superres module uses), Apache License 2.0 (LICENSE-TF-ESPCN, installed
-   beside this file). The teacher both of item 4's models learned from: they were trained to
-   give what ESPCN gives. ESPCN_x2.pb and ESPCN_x3.pb (TF-ESPCN's export/ files) are kept in
-   npusr/models/ in the dArkOS sources, with make_espcn.py, which makes ESPCN itself into a
-   model for the NPU (its first layer rebuilt as five rows; NPU UPSCALE ran on it before item
-   4's models, and the layer still takes such a model).
+   beside this file). The teacher the PSP's x2 model (item 4) learned from: it was trained to
+   give what ESPCN gives (item 5's models have no teacher). ESPCN_x2.pb and ESPCN_x3.pb
+   (TF-ESPCN's export/ files) are kept in npusr/models/ in the dArkOS sources, with
+   make_espcn.py, which makes ESPCN itself into a model for the NPU (its first layer rebuilt
+   as five rows; NPU UPSCALE ran on it before items 4 and 5, and the layer still takes such
+   a model).
 
-4. The models, /usr/share/darkos/npusr/espcn_x3_400x240.rknn (the 3DS's, x3 from 400x240),
-   espcn_x3_480x272.rknn (the PSP's, x3 from 480x272: the same network as the 3DS's) and
-   espcn_x2_480x272.rknn (the PSP's with PPSSPP's integer scale, x2) - the file names the layer
-   looks for; the networks are not ESPCN. Made for dArkOS in 2026.
-   Space-to-depth networks: 4 luma channels of a 2x2 cell in, 3x3 convolutions of 32 channels
-   (the 3DS's 9 of them, 76 324 weights; the PSP's 7, 52 048 weights), 1.7 and 2.4 times faster
-   than ESPCN on the NPU. Their weights started from a bicubic interpolation written into the
-   network plus random noise (seed 0) - no other network's weights - and were trained to give
-   what ESPCN (item 3) gives on the same inputs: screenshots of PSP and 3DS games taken on the
-   console; scikit-image's sample photographs (skimage.data: astronaut, coffee, chelsea,
-   rocket, camera, coins, moon, page, text - public domain or CC0 by their notes there; moon
-   and page have no note of their own and come with scikit-image under its BSD-3-Clause
-   license); shapes, text and textures the training script draws. No image dataset. The 3DS's
-   was then trained on with quantisation noise. Quantised to INT8 with rknn-toolkit2 2.5.0,
-   calibrated on 3DS screenshots (10 distinct frames; the PSP's x3 and x2 on PSP ones, 15).
-   In the dArkOS sources: npusr/models/s2d_distill.py trains them, s2d_rknn.py makes the
-   .rknn files from their weights (s2d_x3_b7.pt, s2d_x2_v7.pt, kept there: training on a GPU
-   is not bit-exact). The screenshots are not in the sources.
-   sha256 202e80e75c3376175717aa95367b3075467fc73701e9d29f9fcc96936144f58b  espcn_x3_400x240.rknn
-   sha256 cab079b291e7dc2ae0e07552463388e1276a2621dfb3165a58be00abca320366  espcn_x3_480x272.rknn
+4. The PSP's model with PPSSPP's integer scale, /usr/share/darkos/npusr/espcn_x2_480x272.rknn
+   (x2 from 480x272; the file name the layer looks for - the network is not ESPCN). Made for
+   dArkOS in 2026. A space-to-depth network: 4 luma channels of a 2x2 cell in, 3x3
+   convolutions of 32 channels (7 of them, 52 048 weights), 2.4 times faster than ESPCN on
+   the NPU. Its weights started from a bicubic interpolation written into the network plus
+   random noise (seed 0) - no other network's weights - and were trained to give what ESPCN
+   (item 3) gives on the same inputs: screenshots of PSP and 3DS games taken on the console;
+   scikit-image's sample photographs (skimage.data: astronaut, coffee, chelsea, rocket,
+   camera, coins, moon, page, text - public domain or CC0 by their notes there; moon and page
+   have no note of their own and come with scikit-image under its BSD-3-Clause license);
+   shapes, text and textures the training script draws. No image dataset. Quantised to INT8
+   with rknn-toolkit2 2.5.0, calibrated on 15 PSP screenshots. In the dArkOS sources:
+   npusr/models/s2d_distill.py trains it, s2d_rknn.py makes the .rknn file from its weights
+   (s2d_x2_v7.pt, kept there: training on a GPU is not bit-exact). The screenshots are not in
+   the sources. (s2d_x3_b7.pt beside it is the x3 network of this kind that the image had
+   until 2026-11-25; it is not installed.)
    sha256 d2cf6854545702c7331b3747527170047894feba658a6bf1c06a49488fa88bbc  espcn_x2_480x272.rknn
-   PS1's and the 16-bit consoles', /usr/share/darkos/npusr/x3_<W>x<H>.rknn for the frame sizes
-   256, 320 and 368 by 240 and by 224, and 304x224 (Neo Geo): the 3DS's network (s2d_x3_b7.pt)
-   made into a model for each size by s2d_rknn.py, calibrated on the same 3DS screenshots, each
-   resized to that size (no screenshots of those systems).
-   sha256 a9b30e5689d512c309b4efc67bb07d7bf2a896c463e4ad6bff1a93c3dce1d82c  x3_256x240.rknn
-   sha256 88fdb208a19f889fe570378786d0b450f460ae157f893ed449fb0366c4a38fed  x3_320x240.rknn
-   sha256 6376aad8403a2961683b1fc9cfaef158fabfbed8aa92f1a30b6ab1c69ca9864d  x3_368x240.rknn
-   sha256 0b926d27b893cc6fd2b181d805618c4d11774a9705a1c6bd7f1a6f6871284e89  x3_256x224.rknn
-   sha256 a442be0b167242cd448dcc56eb9ae6a52e4072d7cd1b2aad23cc1fd066a50158  x3_320x224.rknn
-   sha256 e5788ed026513d42e8573409b0609c719a58d952618b682383ad5ca7c712a2ba  x3_368x224.rknn
-   sha256 88543c2df05d7d3c4afb7c4906737ae12234331a4d9edf4dfbf23966534580b8  x3_304x224.rknn
+
+5. The x3 and x4 models, made for dArkOS by its AI-SR session (2026-11-25), in
+   /usr/share/darkos/npusr/: espcn_x3_400x240.rknn (the 3DS), espcn_x3_480x272.rknn (the PSP)
+   and x3_<W>x<H>.rknn (PS1 and the 16-bit consoles: 256, 320 and 368 by 240 and by 224, and
+   304x224 for Neo Geo) - one x3 network made into a model for each frame size - and
+   espcn_x4_400x240.rknn (the 3DS on a 1920x1080 TV), an x4 network. The file names are those
+   the layer and libnpusr_gles.so look for; the networks are not ESPCN.
+   Space-to-depth networks: 4 luma channels of a 2x2 cell in, a 3x3 convolution 4 -> 32
+   channels, 7 (x3) or 9 (x4) of 32 -> 32 with ReLU, one 32 -> (2S)^2, clipped to [0,1].
+   Their weights started from a bicubic interpolation written into the network - no other
+   network's weights - and were trained without a teacher on true high-resolution targets:
+   the input a point sample of a larger picture (as a game draws it, no anti-aliasing), the
+   target that picture averaged down. The pictures:
+   - shapes, text, outlines, triangulations, gradients, textures and pixel patterns the data
+     script draws;
+   - 224 screenshots of free games (23 more held out for checking): 244 of the 247 from the
+     games' own Flathub (appstream) metadata, 3 from Wikimedia Commons. Only games with free
+     code and free data; their licences are GPL, LGPL, BSD, MIT, Apache, Zlib, ISC,
+     Artistic, GFDL, OFL and CC BY / CC BY-SA mixes, none non-commercial. npusr/models/gt/freeshots-manifest.json in
+     the dArkOS sources lists every file: the game, the licence (the project's; for the
+     Commons files the file's own and its author), the page and URL, the sha256;
+   - frames of the owner's own games taken on the console: Super Mario 3D Land rendered at
+     1x, 3x and 4x (pairs of the same moment), native PSP, 3DS, PS1, N64, Saturn and 16-bit
+     frames;
+   - scikit-image's sample photographs (as in item 4) and procedural textures.
+   12% of the inputs got PS1-style dithering (the target clean). Trained in two stages, the
+   second with quantisation noise; quantised to INT8 (w8a8) with rknn-toolkit2 2.5.0,
+   calibrated on 47 luma frames ("calib-mix": frames of the owner's games as above, and
+   sheets of the drawn and screenshot inputs). The owner's game frames are not in the
+   sources; npusr/models/gt/calib-mix.SHA256SUMS lists each calibration frame's sha256 (the
+   list's own: e14a6eab57ad4f26a99483e68294bd38efc878fa75b30377992a7a3fdbb1757f).
+   In the dArkOS sources: npusr/models/gt/ - fetch_flathub.py and fetch_freeshots.py fetch the
+   screenshots, sr_data.py builds the training data, mk_calib_mix.py the calibration frames,
+   s2d_gt.py trains (with the AI-SR session's paths); npusr/models/s2d_rknn.py makes each
+   .rknn from the weights kept beside it (training on a GPU is not bit-exact; from these weights
+   and the same calibration frames all ten came out byte for byte on 2026-11-25, with torch
+   2.11, onnx 1.23 and OpenCV 4.14 for its onnx step and rknn-toolkit2 2.5.0 for the rknn one):
+   sha256 8ff5ac283b43148c66f572d4d46ae3ed5394377bed7f2c59fedcb81951091be7  x3_b7_gtr_last.pt
+   sha256 2e9e18c139a17dad47ccb20c9d1e1eca0d4f44d084eb69163a455d0d5cf07004  x4_b9_gtr_last.pt
+   sha256 783341b8915c3ad4ea890017954e9b6449f98954228fb1d3c685937ccf473cba  espcn_x3_400x240.rknn
+   sha256 346c3c46ee95ffd8bfd4eb21b145843304b7eca41145beded4b4cce57387ca86  espcn_x3_480x272.rknn
+   sha256 11993fdfadfb42929be90084471b33ae34ad18583084a761774fc3ac9760b61a  espcn_x4_400x240.rknn
+   sha256 07f48bf9ad625106aeb5faec2ffda3cde882134e54e5a7b953de8d870c1dc032  x3_256x240.rknn
+   sha256 7450a6987c17279f3f9317af391c4a817a84071bcd1629f64a2fc81e19d6b669  x3_320x240.rknn
+   sha256 d8086c704fdc101acb6ce414ba19be1557eeb6a4d946d787cb57dce620e43cf4  x3_368x240.rknn
+   sha256 cd8f2573a8e556ae7e856ca28f6a647716e529566f15709401973fc39e508aa7  x3_256x224.rknn
+   sha256 2fb7e9e25c2cdb570ce20dbcbc9b87555f517eaf734aa68671c412c2da02094f  x3_320x224.rknn
+   sha256 60eda41ba888b81d7ad74cd8b67d32fcf40266ce8228d0efab6581a1738aee4b  x3_368x224.rknn
+   sha256 c5beaac45a77a499518afa6a7ae0d07cf19320b44acf124647de4c03238cbcbf  x3_304x224.rknn

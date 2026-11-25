@@ -66,28 +66,35 @@ DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so
   `_DUMP`, `_DUMP_AT`.
 
 ## Models (`npusr/models/x3_<W>x<H>.rknn`)
-Seven sizes, all of one network: `s2d_x3_b7.pt`, the 3DS's (npusr/NOTICE), made with `npusr/models/s2d_rknn.py`
-(`--weights s2d_x3_b7.pt --scale 3 --blocks 7 --size WxH --calib <the 3DS's calibration frames>`: the same
-14 frames of Super Mario 3D Land, each resized to W x H; no PS1 frames) - a rebuild gives the same files
-(checked 2026-11-24 with `x3_320x224.rknn`: the `onnx` step in a venv with a torch that knows `dynamo=`, 2.11,
-the `rknn` step with rknn-toolkit2 2.5.0). The 256, 320 and 224/240 sizes are also the Mega Drive's, SNES's,
+Seven sizes, all of one network: since 2026-11-25 `x3_b7_gtr_last.pt`, the AI-SR session's x3 trained on true
+high-resolution targets with no teacher (npusr/NOTICE, item 5; the 3DS's and the PSP's x3 are the same network),
+made with `npusr/models/s2d_rknn.py` (`--weights x3_b7_gtr_last.pt --scale 3 --blocks 7 --size WxH --calib
+calib-mix`, the output renamed from `espcn_x3_<W>x<H>.rknn`) - a rebuild gives the same files (all of them checked
+2026-11-25: the `onnx` step with torch 2.11, the `rknn` step with rknn-toolkit2 2.5.0). The calibration frames
+(`calib-mix`: frames of the owner's games, among them these systems', and sheets of the training inputs) are not
+in the sources, their sha256 are (`npusr/models/gt/calib-mix.SHA256SUMS`). Until 2026-11-25 the models were
+`s2d_x3_b7.pt` (distilled from ESPCN) calibrated on 3DS frames only; the new ones gave clearly sharper edges and
+text (by eye on 16-bit, PS1, N64 and Saturn frames) and +0.4 dB on Super Mario 3D Land against an honest 3x.
+The 256, 320 and 224/240 sizes are also the Mega Drive's, SNES's,
 NES's and PC Engine's frames; 304x224, added 2026-11-24, is Neo Geo's visible area (FinalBurn Neo).
 PS1 widths are 256, 320, 368, 512 and 640; only up to 426 x 240 fits x3 on 1280x720, so 512 and 640 wide
 and PAL's 256 or 288 lines get no model. The 224-line ones are for NTSC games with a shorter range and for
 DuckStation's default overscan crop. RetroArch shows a frame at exactly x3 only when the core's aspect is the
 frame's own: DuckStation and SwanStation get `PAR 1:1` for the run, the other cores (pcsx_rearmed and the 16-bit
 consoles', which report 4:3 whatever the frame) RetroArch's square pixel (docs/KNOWN-ISSUES.md, "Which frames
-get exactly x3").
+get exactly x3"). The column on the right: games of that frame size NPU UPSCALE ran in on the console (with the
+models before 2026-11-25; the new ones ran 256x224, 320x224 and 320x240 in a game on the TV, and all seven on
+the NPU against the float network, 43.6-46.0 dB).
 
 | file | sha256 | on the console |
 |---|---|---|
-| x3_256x240.rknn | a9b30e5689d512c309b4efc67bb07d7bf2a896c463e4ad6bff1a93c3dce1d82c | P-47 (PC Engine) |
-| x3_320x240.rknn | 88fdb208a19f889fe570378786d0b450f460ae157f893ed449fb0366c4a38fed | Double Dragon, Hover Racing (pcsx_rearmed); Double Dragon (SwanStation) |
-| x3_368x240.rknn | 6376aad8403a2961683b1fc9cfaef158fabfbed8aa92f1a30b6ab1c69ca9864d | |
-| x3_256x224.rknn | 0b926d27b893cc6fd2b181d805618c4d11774a9705a1c6bd7f1a6f6871284e89 | the BIOS logo (DuckStation); Zombies Ate My Neighbors (Mega Drive), Real Monsters (SNES), The Addams Family (NES) |
-| x3_320x224.rknn | a442be0b167242cd448dcc56eb9ae6a52e4072d7cd1b2aad23cc1fd066a50158 | Double Dragon, Hover Racing (DuckStation); Blackthorne (32X) |
-| x3_368x224.rknn | e5788ed026513d42e8573409b0609c719a58d952618b682383ad5ca7c712a2ba | |
-| x3_304x224.rknn | 88543c2df05d7d3c4afb7c4906737ae12234331a4d9edf4dfbf23966534580b8 | Kizuna Encounter (Neo Geo, FinalBurn Neo) |
+| x3_256x240.rknn | 07f48bf9ad625106aeb5faec2ffda3cde882134e54e5a7b953de8d870c1dc032 | P-47 (PC Engine) |
+| x3_320x240.rknn | 7450a6987c17279f3f9317af391c4a817a84071bcd1629f64a2fc81e19d6b669 | Double Dragon, Hover Racing (pcsx_rearmed); Double Dragon (SwanStation) |
+| x3_368x240.rknn | d8086c704fdc101acb6ce414ba19be1557eeb6a4d946d787cb57dce620e43cf4 | |
+| x3_256x224.rknn | cd8f2573a8e556ae7e856ca28f6a647716e529566f15709401973fc39e508aa7 | the BIOS logo (DuckStation); Zombies Ate My Neighbors (Mega Drive), Real Monsters (SNES), The Addams Family (NES) |
+| x3_320x224.rknn | 2fb7e9e25c2cdb570ce20dbcbc9b87555f517eaf734aa68671c412c2da02094f | Double Dragon, Hover Racing (DuckStation); Blackthorne (32X) |
+| x3_368x224.rknn | 60eda41ba888b81d7ad74cd8b67d32fcf40266ce8228d0efab6581a1738aee4b | |
+| x3_304x224.rknn | c5beaac45a77a499518afa6a7ae0d07cf19320b44acf124647de4c03238cbcbf | Kizuna Encounter (Neo Geo, FinalBurn Neo) |
 
 ## Measured (retroarch32 + pcsx_rearmed, NPU at 600 MHz, the AI-SR session)
 Double Dragon 60 fps, Mali 3.8 -> 23.5-24%; Hover Racing (PAL) 50 fps, Mali 4.9 -> 23.5-24.8%; the NPU
