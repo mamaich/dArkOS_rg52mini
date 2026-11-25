@@ -605,6 +605,9 @@ In master for 1.13, not released yet (VERSION says 1.13):
   GPU they are slow (KNOWN-ISSUES.md, "RetroArch's shaders on the Mali-G52").
   The GLSL ones, for `gl`, were there already; their clones' `.git` (24 MB in
   each RetroArch) is left out.
+- Emulators updated: DSperate 4.0.2 (DS: saves written safely, DSi sound
+  and cameras, a tenth less CPU in Diddy Kong Racing DS), armGBA 2.0, the PS2
+  game patches (TODO.md, "Upstream updates for 1.13").
 
 See TODO.md, "For 1.13", for what else is planned.
 

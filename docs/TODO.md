@@ -300,6 +300,41 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
+## Upstream updates for 1.13 (2026-11-25, the owner: the light ones and armN64)
+
+The check of 2026-11-25 (`report-20261125-1550.txt`). Each built in the test
+chroot (`cb.sh`) and tried on the owner's dual-boot card (1.12 with the hand
+installs of 2026-11-23/25), the new binary bound over the one there for its
+run against it, each run after the SoC cooled below 62 C
+(`~/rg52/sess19/oe/ab-core.sh`):
+
+**armGBA: df6b263 (v1.8.1) -> fad6c4b (v2.0)**, 50 commits: the recompiler
+reuses the code a game copies back into RAM, a CPU Emulation option
+(recompiler or interpreter), interrupt and fetch timing fixes, HD affine
+backgrounds, Threaded Video off by default again. Apotris: 60.00 fps with
+both, the CPU 8% of the four cores with both. RetroArch writes the new sound
+channel options into retroarch-core-options.cfg at the first run.
+
+**DSperate: 3a2bcd2 (v3.5.0) -> 70af4fc (v4.0.2)**, 122 commits: saves, states
+and the config written safely, NAND and DeSmuME `.dsv` saves, the DSi's sound
+processor and cameras, accuracy fixes, faster DSi Menu launches, PGO profiles
+refreshed. Nothing new linked, our patch applies, `dsperate.ini` as it was
+after the run. Diddy Kong Racing DS: 59.93 -> 60.00 fps, the CPU 28% -> 25%
+of the four cores (the main thread 47% -> 38%). A `.sav` it cannot read now
+stops the launch instead of starting the game without it.
+
+**armN64: 10141db (v1.4.1) -> 33680bc**, Quit Twice and Quit Hold in the
+standalone app; the core built from it is byte for byte the one before.
+
+**pcsx2_patches: b919d7f -> 1fd9810**, Haunted Mansion (SLUS-20681): 480p,
+HUD and camera fixes; still 4719 patches.
+
+Not taken now: ARMSX2 2.9.6, Azahar 2127.0.1, Dolphin master and RetroArch
+next (heavy: to be measured first, and Azahar's patches and ARMSX2's profile
+redone); OpenBOR, openMSX 22, SDL2's release-2.32.x branch and GameTank, as
+before. mupen64plus_next and same_cdi follow their branches and come with the
+build.
+
 ## Upstream updates for 1.12 (2026-11-21, the owner: take the light ones, armN64, zeebx, and the heavy ones if nothing gets worse; released 2026-11-22)
 
 **Released as 1.12 on 2026-11-22**: build 20261122092638, from b86c72a (tag
