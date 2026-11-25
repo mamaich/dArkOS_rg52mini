@@ -234,25 +234,91 @@ def pick_hooks(hooks_dir, old, new):
     return [h for _, h in sorted(own)] + sorted(every)
 
 
+# Properties whose cells are phandles, each followed by the number of cells that
+# the node it points to names in the given property (0: phandles only).
+PHANDLE_CELLS = {"io-channels": "#io-channel-cells", "clocks": "#clock-cells",
+                 "assigned-clocks": "#clock-cells",
+                 "assigned-clock-parents": "#clock-cells",
+                 "resets": "#reset-cells", "power-domains": "#power-domain-cells",
+                 "pwms": "#pwm-cells", "phys": "#phy-cells", "iommus": "#iommu-cells",
+                 "dmas": "#dma-cells", "interrupts-extended": "#interrupt-cells",
+                 "thermal-sensors": "#thermal-sensor-cells"}
+PHANDLE_ONLY = re.compile(r"^(pinctrl-\d+|remote-endpoint|interrupt-parent|backlight|"
+                          r"memory-region|nvmem-cells|native-mode|.*-supply|rockchip,grf|"
+                          r"rockchip,pmu|ddc-i2c-bus)$")
+
+
+def parse_dts(text):
+    """{path: {property: value}} of dtc's output, and {phandle: path}."""
+    nodes, stack = {}, []
+    for ln in text.splitlines():
+        s = ln.strip()
+        if not s or s.startswith(("/dts-v1/", "/memreserve/")):
+            continue
+        if s.endswith("{"):
+            name = s[:-1].strip().split(": ")[-1]
+            stack.append(name)
+            nodes.setdefault("/" + "/".join(x for x in stack if x != "/"), {})
+        elif s == "};":
+            stack.pop()
+        else:
+            m = re.match(r"([^\s=]+)\s*(?:=\s*(.*))?;$", s)
+            if m:
+                nodes["/" + "/".join(x for x in stack if x != "/")][m.group(1)] = m.group(2)
+    phandles = {}
+    for path, props in nodes.items():
+        v = props.get("phandle")
+        if v:
+            phandles[int(v.strip("<>"), 16)] = path
+    return nodes, phandles
+
+
+def resolved(name, value, nodes, phandles):
+    """value with each phandle in it written as the path of its node."""
+    if value is None or not value.startswith("<") or name == "phandle":
+        return value
+    if PHANDLE_ONLY.match(name):
+        spec = None
+    elif name in PHANDLE_CELLS:
+        spec = PHANDLE_CELLS[name]
+    elif re.match(r"^(.*-)?gpios?$", name):
+        spec = "#gpio-cells"
+    else:
+        return value
+    cells = [int(c, 16) for c in re.findall(r"0x[0-9a-f]+", value)]
+    out, i = [], 0
+    while i < len(cells):
+        target = phandles.get(cells[i])
+        if target is None:
+            out += ["0x%x" % c for c in cells[i:]]
+            break
+        out.append("&" + target)
+        n = 0
+        if spec:
+            v = nodes[target].get(spec)
+            n = int(v.strip("<>"), 16) if v else 0
+        out += ["0x%x" % c for c in cells[i + 1:i + 1 + n]]
+        i += 1 + n
+    return "<" + " ".join(out) + ">"
+
+
 def dtb_nodes(path):
+    """{name: [lines]} of the nodes DTB_NODES names (each with its subnodes):
+    the properties in path order, phandles resolved to node paths (their
+    numbers shift between builds when a node elsewhere is enabled)."""
     dts = subprocess.run(["dtc", "-q", "-I", "dtb", "-O", "dts", path],
                          capture_output=True, text=True, check=True).stdout
-    # phandle numbers shift between builds; compare without them
-    dts = re.sub(r"<&?0x[0-9a-f]+", "<P", dts)
-    dts = re.sub(r"phandle = <[^>]*>;", "", dts)
+    nodes, phandles = parse_dts(dts)
     out = {}
-    lines = dts.splitlines()
     for name in DTB_NODES:
-        rx = re.compile(r"^\s*(\S+: )?%s \{" % re.escape(name))
-        for i, ln in enumerate(lines):
-            if rx.match(ln):
-                depth, body = 0, []
-                for ln2 in lines[i:]:
-                    depth += ln2.count("{") - ln2.count("}")
-                    body.append(ln2.strip())
-                    if depth == 0:
-                        break
-                out.setdefault(name, []).append("\n".join(body))
+        tops = [p for p in nodes if p.rsplit("/", 1)[-1] == name]
+        for top in tops:
+            for p in sorted(q for q in nodes if q == top or q.startswith(top + "/")):
+                for k, v in nodes[p].items():
+                    if k == "phandle":
+                        continue
+                    out.setdefault(name, []).append(
+                        "%s %s = %s" % (p[len(top):] or ".", k, resolved(k, v, nodes, phandles)))
     return out
 
 

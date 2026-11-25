@@ -249,9 +249,14 @@ may change, so the client checks free space and assumes no sizes.
   `play_joystick`, `adc-keys`, `saradc@ffaa0000`, `dsi@ffb10000`, `panel@0`
   and `backlight`. It refuses the package if they differ, unless
   `--allow-dtb-change` after the menu was checked on a dual-boot card.
-  Phandle numbers are ignored in the comparison; the pinctrl groups
-  `play_joystick` points to are not compared, so a change of key pins needs
-  the same manual check.
+  Each phandle is compared as the path of the node it points to, not as its
+  number. The numbers shift when a node elsewhere in the tree is enabled:
+  1.13's NPU renumbered every reference in `play_joystick`. Before
+  2026-11-26 only the first cell of each `<...>` was normalised, so 1.13 was
+  refused, and a changed `pwms` in `backlight` would have passed. The nodes
+  referred to are not compared themselves: the pinctrl groups `play_joystick`
+  points to, for example. So a change of key pins there still needs the same
+  manual check.
 - **p3 is small.** On the test card it is 97 MiB.
   - `Image` and `uInitrd` take 44 MB and differ in every build, so every
     package carries them.
