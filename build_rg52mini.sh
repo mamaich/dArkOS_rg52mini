@@ -74,6 +74,10 @@ if [[ "${CORE_BUILDS_SYMLINK_NEEDED}" == "y" ]]; then
 fi
 
 source ./build_deps.sh
+# Run or from its cache, the deps stage has to leave libgo2. Its clones have no
+# retry; see setup_arkbuild32 in utils.sh for the 32-bit chroot.
+ls Arkbuild/usr/lib/aarch64-linux-gnu/libgo2.so* > /dev/null
+verify_action
 source ./build_sdl2.sh
 source ./build_sdl3shim.sh
 source ./build_ppssppsa.sh

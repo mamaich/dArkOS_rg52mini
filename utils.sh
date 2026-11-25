@@ -211,7 +211,16 @@ function setup_arkbuild32() {
     setup_ark_user 32
     sudo mkdir -p Arkbuild32/home/ark
     #sudo chroot Arkbuild32/ umount /proc
+    # build_deps.sh clones with a plain chroot. It stays as it is, since it is part of
+    # the key of the 64-bit deps cache. So the retrying git goes first in this chroot's
+    # PATH, as /usr/local/bin/git; Arkbuild32 is not in the image. A DNS outage in the
+    # 1.13 test build (2026-11-25) cost this chroot meson and libgo2, and the build went
+    # on: no armhf libgo2.so in the image, nor in the retroarch32 cache that keeps it.
+    install_chroot_git Arkbuild32
+    sudo cp Arkbuild32${CHROOT_GIT_DIR}/git Arkbuild32/usr/local/bin/git
     source build_deps.sh 32
+    ls Arkbuild32/usr/lib/arm-linux-gnueabihf/libgo2.so* > /dev/null && [ -e Arkbuild32/meson/meson.py ]
+    verify_action
     source build_sdl2.sh 32
     sudo cp -a Arkbuild32/usr/lib/arm-linux-gnueabihf/libSDL2-2.0.so.0.${extension} Arkbuild/usr/lib/arm-linux-gnueabihf/libSDL2-2.0.so.0.${extension}
     sudo chroot Arkbuild/ bash -c "ln -sfv /usr/lib/arm-linux-gnueabihf/libSDL2.so /usr/lib/arm-linux-gnueabihf/libSDL2-2.0.so.0"
