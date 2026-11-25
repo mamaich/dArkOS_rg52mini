@@ -39,7 +39,8 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   Mali's clock down to 700 MHz). The same day the AI-SR session made the
   layer's passes cheaper (KNOWN-ISSUES, "Cheaper passes"; the decode draws
   now): on the panel the PSP fitted 57-58% -> 40%, offscreen the 3DS fitted
-  to a 1080p TV 8.4 -> 6.6 ms a frame. To run on the TV when the cable is in,
+  to a 1080p TV 8.4 -> 6.6 ms a frame; and the GLES library's compose (Mega
+  Drive 23% -> 19%, PS1 23% -> 20%). To run on the TV when the cable is in,
   with `DARKOS_VK_ROTATE=270` and the cells models (neither run yet). Further:
   an x4.5 network (400x240 to 1800x1080, no resample), or a 1280x720 output
   the display scales (the AI-SR session's idea, the owner's call); a TV below
@@ -52,6 +53,10 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   the LED, a long press switched it off. The journal is not kept across boots,
   so the cause is not known (asleep when the cable went? hdmi-hotplug.sh
   switching back to the panel?). Try it again on purpose.
+  Once in 30 stops on 2026-11-25 (the AI-SR session's runs) RetroArch with
+  Azahar, paused, under the layer before cf25a84, did not end on SIGTERM:
+  systemd killed it after 90 s; ES came back, no NPU timeout, nothing left
+  behind. Not seen with the new layer (10 stops). Watch for it.
 
 * **RetroArch's slang shaders in the image** (the owner, 2026-11-24: so that
   no one has to fetch them for Vulkan). The change to `build_retroarch.sh` is

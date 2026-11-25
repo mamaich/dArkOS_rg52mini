@@ -8,8 +8,8 @@ ones) and, since 2026-11-24, Mega Drive, Sega CD and 32X, SNES, NES, PC Engine a
 three RetroArchs ES starts them (gl, KMS, RGA turning the picture onto the panel; the library built for armhf
 and aarch64). The emulator is not changed; `retroarch32`, `retroarch` and `retroarch-next` preload the library
 when NPU UPSCALE is on (docs/KNOWN-ISSUES.md, "NPU UPSCALE").
-Written by the AI-SR session (2026-11-24); `npusr_gles.c` is byte for byte the source of the build tested on
-the console (sha256 7e1a3c04d47a359110a36c770be1c507226a8d08b0f89da10d353d391620fd58).
+Written by the AI-SR session (2026-11-24; its compose made cheaper 2026-11-25); `npusr_gles.c` is byte for byte
+the source of the builds tested on the console (sha256 707c7e299c49e06bdda48a849cf3d80f4a03ef088f9730ce783014f029adce20).
 
 ## Build
 `build_npusr.sh` runs `build.sh` twice. In the armhf build chroot (Arkbuild32) with its gcc, the EGL, GLES
@@ -29,11 +29,14 @@ librknnrt with `dlopen(DARKOS_NPU_SR_LIB)`. Exported: `eglSwapBuffers`, `eglGetP
   channels = a 2x2 space-to-depth cell) and a compute pass counts the blocks not one colour; an EGL fence.
 - A worker thread waits for the fence and runs the NPU; three slots for each size, as in the layer: the
   program never waits for the NPU, the picture can be a frame behind.
-- The compose: the NPU's finished output (NC1HWC2 as an RGBA8 texture) and the colour of the same slot drawn
+- The compose: the NPU's finished output (NC1HWC2, imported one byte a texel, `DRM_FORMAT_R8`, where the
+  driver takes it - both libmali do -, else as RGBA8) and the colour of the same slot drawn
   into the back buffer (`DARKOS_NPU_SR_COMPOSE=swap`, the default; `async` composes on the worker's own
   surfaceless context and only copies on the swap - for heavy emulators, +6 points of Mali). With more than
   1% of the blocks not one colour (a menu, text over the frame, a frame not at its native size) the frame is
-  shown as the program drew it.
+  shown as the program drew it. The compose shader gets its coordinates as varyings and works in mediump
+  integers: since 2026-11-25 the library's GPU part of a frame is 3.3 -> 2.35 ms (64-bit driver) and 2.15 ->
+  1.6 ms (32-bit), offscreen at 900 MHz (docs/KNOWN-ISSUES.md, "Cheaper passes").
 
 ## Runtime
 ```
@@ -70,7 +73,7 @@ DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so
   before librknnrt's destructors) and a SIGTERM/SIGINT/SIGHUP/SIGQUIT handler (only where the program has
   none) stop the worker, wait for the job on the NPU (up to 1 s in the signal handler) and free its memory:
   a program leaving with a job on the NPU crashed rknpu 0.9.8 on 2026-11-24 (fixed in kernel_rk3562 too).
-- `DARKOS_NPU_SR_STATS=1`: a line every 5 s. Test knobs, inert unless set: `_EXP`, `_ALLOC`, `_HEAP`,
+- `DARKOS_NPU_SR_STATS=1`: a line every 5 s. Test knobs, inert unless set: `_EXP` (bit 32: the output as RGBA8), `_ALLOC`, `_HEAP`,
   `_DUMP`, `_DUMP_AT`.
 
 ## Models (`npusr/models/x3_<W>x<H>.rknn`)

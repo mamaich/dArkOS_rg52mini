@@ -593,9 +593,10 @@ In master for 1.13, not released yet (VERSION says 1.13):
   only for such a game (KNOWN-ISSUES.md, "NPU UPSCALE", where a table says
   which emulators and frames). On a TV over HDMI too, the picture as large as
   the screen allows in the frame's shape (KNOWN-ISSUES.md, "On a TV"). The
-  Vulkan layer's part of it costs the GPU less since 2026-11-25 (the AI-SR
-  session; the PSP fitted on the panel: Mali 58% -> 40%; KNOWN-ISSUES.md,
-  "Cheaper passes").
+  Vulkan layer's part of it and the GLES library's cost the GPU less since
+  2026-11-25 (the AI-SR session; on the panel the PSP fitted: Mali 58% ->
+  40%, Mega Drive 23% -> 19%, PS1 23% -> 20%; KNOWN-ISSUES.md, "Cheaper
+  passes").
 - RetroArch's slang shaders come with the image (libretro's slang-shaders in
   `~/.config/retroarch/shaders/shaders_slang`, about 84 MB; the owner,
   2026-11-24/25): its Vulkan driver reads only these — Azahar's 3DS, or a core

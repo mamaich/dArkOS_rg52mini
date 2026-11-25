@@ -5,6 +5,9 @@
 // by the hardware. Run once a new NPU output, not once a present. A fragment pass into a colour attachment (it
 // was a compute pass storing into a storage image: 2.6 ms of the Mali for 1200x720, this 2.1): the image has no
 // STORAGE usage, so the driver compresses it and writes it from the tile buffer. rotate.vert with rot 0: uv 0..1.
+// The integers are mediump (16 bits are enough for a pixel, a cell and a channel: the frame shader took 2.2 ms of
+// the Mali for 1200x720, with them 1.9); only the index into the NPU's buffer needs more and is highp.
+precision mediump int;
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 color;
 layout(std430, set = 0, binding = 0) readonly buffer Nout { uint w[]; } nout;
@@ -22,8 +25,9 @@ void main()
     ivec2 g = r / B;
     ivec2 in_cell = r - g * B;
     int c = in_cell.y * B + in_cell.x;
-    uint word = nout.w[(((c >> 4) * GH + g.y) * WSTRIDE + g.x) * 4 + ((c & 15) >> 2)];
-    int q = bitfieldExtract(int(word), (c & 3) * 8, 8);
+    highp int row = (c >> 4) * GH + g.y;
+    highp int word = int(nout.w[(row * WSTRIDE + g.x) * 4 + ((c & 15) >> 2)]);
+    int q = bitfieldExtract(word, (c & 3) * 8, 8);
     mediump float Y = clamp(float(q - ZP) * SCALE, 0.0, 1.0);
     mediump vec2 cc = texture(cbcr, uv).rg - 0.5;
     mediump float cr = cc.x, cb = cc.y;

@@ -1578,6 +1578,23 @@ TV as on the panel:
   Paused, the screen is byte for byte as before. Offscreen, pass by pass: a
   3DS x3 fitted to a 1080p TV 8.4 -> 6.6 ms a frame at 900 MHz, x4 in place
   6.7 -> 5.8. Not run yet: a TV, `DARKOS_VK_ROTATE=270`, the cells models.
+  Then `precision mediump int` in `sr_frame.frag` and `sr_decode.frag` (the
+  index into the NPU's buffer kept highp): offscreen the frame pass 2.16 ->
+  1.91 ms, the decode 1.97 -> 1.85; Super Mario 3D Land in place 62% -> 61%,
+  with `:fill` 63% -> 62%, the paused screen byte for byte the same.
+
+  The GLES library (`npusr-gles/`) the same day: its compose shader was most
+  of its GPU cost (1.85 of 3.3 ms a frame offscreen, 64-bit driver). The
+  NPU's output is imported one byte a texel (`DRM_FORMAT_R8`; both libmali
+  take it, RGBA8 as before where a driver does not), the coordinates come as
+  varyings, the integers are mediump: the library's part of a frame 3.3 ->
+  2.35 ms on g29p1, 2.15 -> 1.6 on g13p0 (offscreen, 900 MHz). As ES starts
+  them, 60 fps: Mega Drive (Old Towers, 64-bit RetroArch) Mali 22.7% ->
+  18.6%, PS1 (Double Dragon, retroarch32) 22.7% -> 19.6% (with the builds made
+  as the image makes them). The picture: the same bytes on the 32-bit driver;
+  on the 64-bit one 1-2% of the pixels off by 1 (the colour's coordinate is
+  interpolated now). The lookup-table compose of 2026-11-24 (`_EXP` bit 8)
+  is gone: slower than the plain one.
 - **x4 networks.** The AI-SR session trained an x4 network and a new x3 one on
   true high-resolution targets (point-sampled inputs, as a game draws them; no
   teacher). The x3 one is in the image since 2026-11-25 (the owner's word; the

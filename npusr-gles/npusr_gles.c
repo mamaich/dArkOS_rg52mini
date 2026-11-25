@@ -61,6 +61,7 @@
 #define EGL_DMA_BUF_PLANE0_PITCH_EXT 0x3274
 #endif
 #define FOURCC_ABGR8888 0x34324241u   /* 'AB24': bytes R,G,B,A */
+#define FOURCC_R8 0x20203852u         /* 'R8  ': one byte a texel */
 
 #define EXPORT __attribute__((visibility("default")))
 #define SLOTS 3
@@ -268,8 +269,8 @@ typedef struct {
     int GW, GH, B, OW, OH, C1, in_ws, out_ws, over;
     Slot slot[SLOTS];
     GLuint tb, fbb;             /* the right neighbour of each block's centre (used only by the count) */
-    GLuint prog_prep, prog_cnt, prog_comp, lut, msk;
-    GLint u_comp_org;
+    GLuint prog_prep, prog_cnt, prog_comp;
+    int out_r8;                 /* the NPU output imported one byte a texel (else as RGBA8, four bytes a texel) */
     int busy, ready;            /* under G.m */
     unsigned long n_comp, n_menu;
 } Eng;
@@ -369,13 +370,8 @@ static void *worker(void *arg)
                 p_glBindFramebuffer(GL_FRAMEBUFFER, s->wfb);
                 p_glViewport(0, 0, e->OW, e->OH);
                 p_glUseProgram(e->prog_comp);
-                p_glUniform2i(e->u_comp_org, 0, 0);
                 p_glActiveTexture(GL_TEXTURE0); p_glBindTexture(GL_TEXTURE_2D, s->tout);
                 p_glActiveTexture(GL_TEXTURE1); p_glBindTexture(GL_TEXTURE_2D, s->ta);
-                if (cfg.exp & 8) {
-                    p_glActiveTexture(GL_TEXTURE2); p_glBindTexture(GL_TEXTURE_2D, e->lut);
-                    p_glActiveTexture(GL_TEXTURE3); p_glBindTexture(GL_TEXTURE_2D, e->msk);
-                }
                 p_glDrawArrays(GL_TRIANGLES, 0, 3);
             }
             s->cfence = p_eglCreateSyncKHR(G.dpy, EGL_SYNC_FENCE_KHR, NULL);
@@ -435,12 +431,15 @@ static const char *VS =
     "void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
     "  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }\n";
 
-static EGLImageKHR import(int fd, int w, int h, int pitch)
+static EGLImageKHR import(int fd, int w, int h, int pitch, unsigned fourcc, int quiet)
 {
-    EGLint a[] = { EGL_WIDTH, w, EGL_HEIGHT, h, EGL_LINUX_DRM_FOURCC_EXT, (EGLint)FOURCC_ABGR8888,
+    EGLint a[] = { EGL_WIDTH, w, EGL_HEIGHT, h, EGL_LINUX_DRM_FOURCC_EXT, (EGLint)fourcc,
                    EGL_DMA_BUF_PLANE0_FD_EXT, fd, EGL_DMA_BUF_PLANE0_OFFSET_EXT, 0, EGL_DMA_BUF_PLANE0_PITCH_EXT, pitch, EGL_NONE };
     EGLImageKHR im = p_eglCreateImageKHR(G.dpy, EGL_NO_CONTEXT, EGL_LINUX_DMA_BUF_EXT, NULL, a);
-    if (im == EGL_NO_IMAGE_KHR) LOG("EGLImage %dx%d pitch %d from fd %d: error 0x%x", w, h, pitch, fd, p_eglGetError());
+    if (im == EGL_NO_IMAGE_KHR) {
+        EGLint er = p_eglGetError();
+        if (!quiet) LOG("EGLImage %dx%d pitch %d from fd %d: error 0x%x", w, h, pitch, fd, er);
+    }
     return im;
 }
 
@@ -678,8 +677,18 @@ static int eng_setup(Eng *E)
         s->min = npu_mem(E->rc, isz);
         s->mout = npu_mem(E->rc, osz);
         CHK(s->min && s->mout);
-        s->iin = import(s->min->fd, E->in_ws, E->GH, E->in_ws * 4);
-        s->iout = import(s->mout->fd, E->out_ws * 4, E->GH * E->C1, E->out_ws * 16);
+        s->iin = import(s->min->fd, E->in_ws, E->GH, E->in_ws * 4, FOURCC_ABGR8888, 0);
+        /* the output: a texel a byte, so the compose fetches its byte with no unpacking; where the driver does not
+         * import R8 (DARKOS_NPU_SR_EXP bit 32, tests: not tried), four bytes a texel as before */
+        if (k == 0) {
+            E->out_r8 = 0;
+            if (!(cfg.exp & 32)) {
+                s->iout = import(s->mout->fd, E->out_ws * 16, E->GH * E->C1, E->out_ws * 16, FOURCC_R8, 1);
+                E->out_r8 = s->iout != EGL_NO_IMAGE_KHR;
+            }
+            if (!E->out_r8) s->iout = import(s->mout->fd, E->out_ws * 4, E->GH * E->C1, E->out_ws * 16, FOURCC_ABGR8888, 0);
+        } else if (E->out_r8) s->iout = import(s->mout->fd, E->out_ws * 16, E->GH * E->C1, E->out_ws * 16, FOURCC_R8, 0);
+        else s->iout = import(s->mout->fd, E->out_ws * 4, E->GH * E->C1, E->out_ws * 16, FOURCC_ABGR8888, 0);
         CHK(s->iin != EGL_NO_IMAGE_KHR && s->iout != EGL_NO_IMAGE_KHR);
         s->tin = tex_from_image(s->iin, GL_NEAREST);
         CHK((s->fbin = fbo_for(s->tin)) != 0);
@@ -730,81 +739,59 @@ static int eng_setup(Eng *E)
         "  barrier();\n"
         "  if (gl_LocalInvocationIndex == 0u && s > 0u) atomicAdd(cnt.n, s); }\n", E->W, E->H);
     CHK((E->prog_cnt = program(NULL, NULL, src)) != 0);
-    if (!(cfg.exp & 8)) {
-        /* compose: the upscaled luma (NC1HWC2 as RGBA8 texels: x = gx*4 + (c&15)/4, y = (c/16)*GH + gy, byte c&3)
-         * and the native colour (bilinear) */
-        snprintf(src, sizeof src,
-            "#version 310 es\n"
-            "precision highp float; precision highp int;\n"
-            "uniform highp sampler2D tout;\n"
-            "uniform mediump sampler2D ta;\n"
-            "uniform ivec2 org;\n"            /* the area's lower-left corner in the window (GL coordinates) */
-            "out vec4 o;\n"
-            "void main() {\n"
-            "  ivec2 f = ivec2(gl_FragCoord.xy) - org;\n"
-            "  ivec2 r = ivec2(f.x, %d - f.y);\n"   /* top-down in the upscaled frame */
-            "  ivec2 g = r / %d; ivec2 i = r - g * %d; int c = i.y * %d + i.x;\n"
+    /* compose: the upscaled luma from the NPU's output (NC1HWC2: channel c of a cell lives in the group c/16, each
+     * group GH rows of out_ws cells, 16 bytes a cell) and the native colour (bilinear). The coordinates come from the
+     * vertex shader as varyings over the viewport (the picture's area in the window, or the offscreen picture): no
+     * gl_FragCoord arithmetic in the pixel, and the colour is fetched by the varying itself. The output byte is a
+     * texel of its own (R8: x = gx*16 + (c&15), y = (c/16)*GH + gy) - or, imported as RGBA8, one of a texel's four
+     * (x = gx*4 + (c&15)/4, byte c&3). The integers are mediump (all under 16 bits: a frame up to 1024 wide). Measured
+     * offscreen, the Mali at 900 MHz, 960x720 in place: the library's cost a frame 3.3 -> 2.3 ms on the 64-bit driver
+     * (g29p1), 2.15 -> 1.6 ms on the 32-bit one (g13p0). */
+    char vsc[512];
+    snprintf(vsc, sizeof vsc,
+        "#version 310 es\n"
+        "out highp vec2 uvb;\n"          /* 0..1 over the viewport, bottom-up as GL has the window and ta */
+        "out highp vec2 rt;\n"           /* the upscaled frame's pixel, top-down */
+        "void main() { vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));\n"
+        "  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); uvb = p; rt = vec2(p.x, 1.0 - p.y) * vec2(%d.0, %d.0); }\n", E->OW, E->OH);
+    char pick[256];
+    if (E->out_r8)
+        snprintf(pick, sizeof pick,
+            "  float v = floor(texelFetch(tout, ivec2(g.x * 16 + (c & 15), (c >> 4) * %d + g.y), 0).r * 255.0 + 0.5);\n", E->GH);
+    else
+        snprintf(pick, sizeof pick,
             "  vec4 t = texelFetch(tout, ivec2(g.x * 4 + ((c & 15) >> 2), (c >> 4) * %d + g.y), 0);\n"
-            "  int b = int(t[c & 3] * 255.0 + 0.5);\n"
-            "  float Y = clamp((float((b ^ 128) - 128) - (%d.0)) * %.9g, 0.0, 1.0);\n"
-            "  mediump vec3 rgb = texture(ta, (vec2(f) + 0.5) / vec2(%d.0, %d.0)).rgb;\n"
-            "  mediump float yl = dot(rgb, vec3(0.299, 0.587, 0.114));\n"
-            "  mediump float cr = (rgb.r - yl) * 0.713, cb = (rgb.b - yl) * 0.564;\n"
-            "  o = vec4(clamp(vec3(Y + 1.403 * cr, Y - 0.714 * cr - 0.344 * cb, Y + 1.773 * cb), 0.0, 1.0), 1.0); }\n",
-            E->OH - 1, E->B, E->B, E->B, E->GH, E->nout.zp, E->nout.scale, E->OW, E->OH);
-    } else {
-        /* lighter: where each pixel of a BxB cell lives in the NC1HWC2 output comes from two BxB tables
-         * (the texture unit works beside the ALU), the byte is picked by a dot with a one-hot mask */
-        uint16_t lt[8 * 8 * 4];
-        uint8_t mt[8 * 8 * 4];
-        for (int dy = 0; dy < E->B; dy++)
-            for (int dx = 0; dx < E->B; dx++) {
-                int c = dy * E->B + dx, k = (dy * E->B + dx) * 4;
-                lt[k] = (uint16_t)((c & 15) >> 2); lt[k + 1] = (uint16_t)((c >> 4) * E->GH); lt[k + 2] = lt[k + 3] = 0;
-                for (int j = 0; j < 4; j++) mt[k + j] = (j == (c & 3)) ? 255 : 0;
-            }
-        E->lut = tex_new(GL_RGBA16UI, E->B, E->B, GL_NEAREST);
-        p_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, E->B, E->B, GL_RGBA_INTEGER, GL_UNSIGNED_SHORT, lt);
-        E->msk = tex_new(GL_RGBA8, E->B, E->B, GL_NEAREST);
-        p_glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, E->B, E->B, GL_RGBA, GL_UNSIGNED_BYTE, mt);
-        snprintf(src, sizeof src,
-            "#version 310 es\n"
-            "precision highp float; precision highp int;\n"
-            "uniform highp sampler2D tout;\n"
-            "uniform mediump sampler2D ta;\n"
-            "uniform highp usampler2D lut;\n"
-            "uniform mediump sampler2D msk;\n"
-            "uniform ivec2 org;\n"
-            "out vec4 o;\n"
-            "void main() {\n"
-            "  ivec2 f = ivec2(gl_FragCoord.xy) - org;\n"
-            "  ivec2 r = ivec2(f.x, %d - f.y);\n"
-            "  ivec2 g = r / %d; ivec2 i = r - g * %d;\n"
-            "  ivec2 L = ivec2(texelFetch(lut, i, 0).xy);\n"
-            "  float v = dot(texelFetch(tout, ivec2(g.x * 4 + L.x, L.y + g.y), 0), texelFetch(msk, i, 0));\n"
-            "  float Y = clamp((v * 255.0 - (v >= 0.5 ? 256.0 : 0.0) - (%d.0)) * %.9g, 0.0, 1.0);\n"
-            "  mediump vec3 rgb = texture(ta, (vec2(f) + 0.5) / vec2(%d.0, %d.0)).rgb;\n"
-            /* Y with the native colour's Cr/Cb, back to RGB = that colour moved by Y minus its own luma
-             * (1.403*0.713 and 1.773*0.564 are 1; G follows from the luma weights) */
-            "  o = vec4(clamp(rgb + (Y - dot(rgb, vec3(0.299, 0.587, 0.114))), 0.0, 1.0), 1.0); }\n",
-            E->OH - 1, E->B, E->B, E->nout.zp, E->nout.scale, E->OW, E->OH);
-    }
-    CHK((E->prog_comp = program(VS, src, NULL)) != 0);
-    E->u_comp_org = p_glGetUniformLocation(E->prog_comp, "org");
+            "  float v = floor(dot(t, vec4(equal(ivec4(c & 3), ivec4(0, 1, 2, 3)))) * 255.0 + 0.5);\n", E->GH);
+    snprintf(src, sizeof src,
+        "#version 310 es\n"
+        "precision highp float; precision mediump int;\n"   /* every integer here is under 16 bits */
+        "uniform highp sampler2D tout;\n"
+        "uniform mediump sampler2D ta;\n"
+        "in highp vec2 uvb;\n"
+        "in highp vec2 rt;\n"
+        "out vec4 o;\n"
+        "void main() {\n"
+        "  ivec2 r = ivec2(rt);\n"
+        "  ivec2 g = r / %d; ivec2 i = r - g * %d; int c = i.y * %d + i.x;\n"
+        "%s"
+        "  float Y = clamp((v - (v > 127.5 ? 256.0 : 0.0) - (%d.0)) * %.9g, 0.0, 1.0);\n"   /* the byte is an int8 */
+        "  mediump vec3 rgb = texture(ta, uvb).rgb;\n"
+        "  mediump float yl = dot(rgb, vec3(0.299, 0.587, 0.114));\n"
+        "  mediump float cr = (rgb.r - yl) * 0.713, cb = (rgb.b - yl) * 0.564;\n"
+        "  o = vec4(clamp(vec3(Y + 1.403 * cr, Y - 0.714 * cr - 0.344 * cb, Y + 1.773 * cb), 0.0, 1.0), 1.0); }\n",
+        E->B, E->B, E->B, pick, E->nout.zp, E->nout.scale);
+    CHK((E->prog_comp = program(vsc, src, NULL)) != 0);
     p_glUseProgram(E->prog_prep); p_glUniform1i(p_glGetUniformLocation(E->prog_prep, "ta"), 0);
     p_glUseProgram(E->prog_cnt); p_glUniform1i(p_glGetUniformLocation(E->prog_cnt, "ta"), 0);
     p_glUniform1i(p_glGetUniformLocation(E->prog_cnt, "tb"), 1);
     p_glUseProgram(E->prog_comp); p_glUniform1i(p_glGetUniformLocation(E->prog_comp, "tout"), 0);
     p_glUniform1i(p_glGetUniformLocation(E->prog_comp, "ta"), 1);
-    if (cfg.exp & 8) {
-        p_glUniform1i(p_glGetUniformLocation(E->prog_comp, "lut"), 2);
-        p_glUniform1i(p_glGetUniformLocation(E->prog_comp, "msk"), 3);
-    }
     p_glUseProgram(0);
     GLenum er = p_glGetError();
     if (er) { LOG("GL error 0x%x in setup", er); return 0; }
-    LOG("%dx%d ready: NPU grid %dx%d, %dx%d px a cell, upscaled %dx%d, in w_stride %d, out w_stride %d x %d groups, zp %d scale %g, %s",
-        E->W, E->H, E->GW, E->GH, E->B, E->B, E->OW, E->OH, E->in_ws, E->out_ws, E->C1, E->nout.zp, E->nout.scale, path);
+    LOG("%dx%d ready: NPU grid %dx%d, %dx%d px a cell, upscaled %dx%d, in w_stride %d, out w_stride %d x %d groups (%s), zp %d scale %g, %s",
+        E->W, E->H, E->GW, E->GH, E->B, E->B, E->OW, E->OH, E->in_ws, E->out_ws, E->C1, E->out_r8 ? "a byte a texel" : "RGBA texels",
+        E->nout.zp, E->nout.scale, path);
     return 1;
 }
 
@@ -1086,15 +1073,8 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
                 p_glBindFramebuffer(GL_FRAMEBUFFER, s->fbrgb);
                 p_glViewport(0, 0, E->OW, E->OH);
                 p_glUseProgram(E->prog_comp);
-                p_glUniform2i(E->u_comp_org, 0, 0);
-                p_glActiveTexture(GL_TEXTURE0);
-                p_glBindTexture(GL_TEXTURE_2D, s->tout);
-                p_glActiveTexture(GL_TEXTURE1);
-                p_glBindTexture(GL_TEXTURE_2D, s->ta);
-                if (cfg.exp & 8) {
-                    p_glActiveTexture(GL_TEXTURE2); p_glBindTexture(GL_TEXTURE_2D, E->lut);
-                    p_glActiveTexture(GL_TEXTURE3); p_glBindTexture(GL_TEXTURE_2D, E->msk);
-                }
+                p_glActiveTexture(GL_TEXTURE0); p_glBindTexture(GL_TEXTURE_2D, s->tout);
+                p_glActiveTexture(GL_TEXTURE1); p_glBindTexture(GL_TEXTURE_2D, s->ta);
                 p_glDrawArrays(GL_TRIANGLES, 0, 3);
             }
             p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1126,15 +1106,8 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
             } else {
                 p_glViewport(ox, gy0, aw, ah);
                 p_glUseProgram(E->prog_comp);
-                p_glUniform2i(E->u_comp_org, ox, gy0);
-                p_glActiveTexture(GL_TEXTURE0);
-                p_glBindTexture(GL_TEXTURE_2D, s->tout);
-                p_glActiveTexture(GL_TEXTURE1);
-                p_glBindTexture(GL_TEXTURE_2D, s->ta);
-                if (cfg.exp & 8) {
-                    p_glActiveTexture(GL_TEXTURE2); p_glBindTexture(GL_TEXTURE_2D, E->lut);
-                    p_glActiveTexture(GL_TEXTURE3); p_glBindTexture(GL_TEXTURE_2D, E->msk);
-                }
+                p_glActiveTexture(GL_TEXTURE0); p_glBindTexture(GL_TEXTURE_2D, s->tout);
+                p_glActiveTexture(GL_TEXTURE1); p_glBindTexture(GL_TEXTURE_2D, s->ta);
                 p_glDrawArrays(GL_TRIANGLES, 0, 3);
             }
             E->n_comp++;
