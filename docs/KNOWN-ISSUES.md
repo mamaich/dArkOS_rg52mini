@@ -1598,7 +1598,10 @@ TV as on the panel:
   The grabs on the TV: kmsgrab tears there as on the panel unless the game is
   paused (it is grabbed paused, on a saved state). Not tried on the TV:
   retroarch-next, PC Engine, Sega CD and 32X (the same code as Mega Drive), a
-  TV below 1080p for real (only the path, above). The first Mega Drive run
+  TV below 1080p for real (only the path, above). Back on the panel the same
+  day with the new x3 (no `:fit` there): Mega Drive 60 fps, Mali 17%; PS1
+  pcsx_rearmed 60, 23%; Azahar 60 once its shaders were built; the PSP fitted
+  through the decode pass (1271x720) 60, 57%. The first Mega Drive run
   after the cable was plugged in again (the console just rebooted) came out
   1280x720 on the TV, RetroArch's own choice; every run after it 1920x1080.
 
