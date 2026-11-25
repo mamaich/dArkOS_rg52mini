@@ -1,0 +1,25 @@
+#version 450
+#extension GL_KHR_shader_subgroup_arithmetic : require
+// sr_nin_s2d: the NPU's input for the space-to-depth models (NHWC int8, 4 channels on the half grid: channel
+// dy*2+dx = Y8-128 of the native pixel (2*gx+dx, 2*gy+dy)) from the native frame sr_nat drew. One invocation a
+// 2x2 cell: two gathers (the luma, the one-colour flags) instead of twelve fetches from the program's picture
+// and four image stores. The count of blocks not one colour as sr_prep.comp has it.
+layout(local_size_x = 16, local_size_y = 16) in;
+layout(set = 0, binding = 0) uniform sampler2D nat;
+layout(std430, set = 0, binding = 1) writeonly buffer Nin { uint v[]; } nin;
+layout(std430, set = 0, binding = 2) buffer Cnt { uint n; } cnt;
+layout(push_constant) uniform PC { int GW, GH, wstride; float iw, ih; } p;   // iw, ih: 1/W, 1/H
+
+void main()
+{
+    ivec2 g = ivec2(gl_GlobalInvocationID.xy);
+    if (g.x >= p.GW || g.y >= p.GH) return;
+    vec2 uv = (vec2(g) * 2.0 + 1.0) * vec2(p.iw, p.ih);   // the corner the cell's four texels share
+    vec4 y = textureGather(nat, uv, 3);                    // (0,1) (1,1) (1,0) (0,0)
+    vec4 f = textureGather(nat, uv, 2);
+    uvec4 q = uvec4(ivec4(round(y * 255.0)) - 128) & 0xFFu;
+    nin.v[g.y * p.wstride + g.x] = q.w | (q.z << 8) | (q.x << 16) | (q.y << 24);
+    uint nf = uint(4.5 - (f.x + f.y + f.z + f.w));
+    nf = subgroupAdd(nf);   // one atomic a subgroup (sr_prep.comp)
+    if (subgroupElect() && nf > 0u) atomicAdd(cnt.n, nf);
+}

@@ -24,12 +24,23 @@
  * from the NPU's output in each of its pixels (four luma fetches and their unpacking: PSP on a 1080p TV took
  * the Mali to 99%, 54 fps): sr_decode.comp builds the upscaled frame in RGBA once a new NPU output, in the
  * present's command buffer, and sr_resample.frag samples it once a pixel, bilinearly.
+ * The AI-SR session, 2026-11-25: the passes made cheaper, the picture the same (measured pass by pass offscreen on
+ * the console, the Mali at 900 MHz). The native frame's colour and luma are drawn by a fragment pass into a colour
+ * attachment (sr_nat) and the NPU's input is packed from it by two gathers a cell (sr_nin_s2d.comp), rather than
+ * fetched and stored a pixel at a time by a compute pass. The decode is a fragment pass (sr_decode.frag) into a
+ * colour attachment: neither image has STORAGE usage now, so the driver compresses them (AFBC) and writes them
+ * from the tile buffer. And the frame is drawn as a rectangle of its own (sr_frame.frag where it is its own size,
+ * sr_rect.frag sampling the decoded one), the bars around it by the plain rotate shader and the program's bars
+ * under a moved frame by sr_ring.frag: no pixel tests the rectangle's bounds, and the fetches take their
+ * coordinates straight from the varyings. The layer's passes a frame: 3DS x3 on the panel 4.8 -> 3.9 ms, PSP fit
+ * 8.3 -> 5.9 ms, 3DS x3 fitted to a 1080p TV 8.4 -> 6.6 ms.
  */
 #include <dlfcn.h>
 #include <time.h>
 #include <unistd.h>
 #include "rknn_api.h"
-#include "sr_spv.h"   /* sr_prep_spv[], sr_prep_s2d_spv[], sr_prep_cell_spv[], sr_rotate_frag_spv[], sr_decode_spv[], sr_resample_frag_spv[] */
+#include "sr_spv.h"   /* sr_prep_spv[], sr_prep_cell_spv[], sr_nat_vert_spv[], sr_nat_frag_spv[], sr_nin_s2d_spv[], sr_rotate_frag_spv[],
+                         sr_decode_frag_spv[], sr_frame_frag_spv[], sr_rect_frag_spv[], sr_ring_frag_spv[] */
 
 #define SR_SLOTS 3
 #define SRLOG(...) do { fprintf(stderr, "darkos_npusr: " __VA_ARGS__); fputc('\n', stderr); } while (0)
@@ -104,15 +115,16 @@ typedef struct {
     VkImage cbcr;
     VkDeviceMemory gcbcr;
     VkImageView vcbcr;
+    VkFramebuffer fb_cbcr;  /* sr_nat draws into it (the space-to-depth models) */
     VkFence fence;          /* this slot's prep has run (the worker waits for it) */
     int cbcr_init;          /* the image is in GENERAL already */
     VkBuffer bcnt;          /* how many blocks of this slot's frame were not one colour (prep counts them) */
     VkDeviceMemory gcnt;
     volatile uint32_t *mcnt;
-    VkImage rgb;            /* the upscaled frame in RGBA (sr_decode.comp), for an area of another size */
+    VkImage rgb;            /* the upscaled frame in RGBA (sr_decode.frag), for an area of another size */
     VkDeviceMemory grgb;
     VkImageView vrgb;
-    int rgb_init;           /* the image is in GENERAL already */
+    VkFramebuffer fb_rgb;
     unsigned gen, dec_gen;  /* this slot's NPU output (the worker counts them) and the one decoded into rgb */
 } SRSlot;
 
@@ -131,18 +143,22 @@ typedef struct SRDev {
     int cnt_host;           /* every slot's count readable by the CPU */
     SRSlot slot[SR_SLOTS];
     VkSampler nearest, linear;
-    VkDescriptorSetLayout prep_dsl, comp_dsl;
-    VkPipelineLayout prep_pl;
-    VkPipeline prep_pipe;
+    int nat;                /* the native frame is drawn by a fragment pass (sr_nat, sr_nin_s2d.comp: the space-to-depth
+                               models); else a compute pass fetches and stores it (sr_prep.comp, sr_prep_cell.comp) */
+    VkImageLayout cbcr_layout;   /* the layout the colour image is sampled in */
+    VkRenderPass rp_off;    /* an RGBA8 image written whole by a fragment pass and left for sampling */
+    VkDescriptorSetLayout prep_dsl, comp_dsl, tex_dsl, nin_dsl;
+    VkPipelineLayout prep_pl, nat_pl, nin_pl, comp_pl;
+    VkPipeline prep_pipe, nat_pipe, nin_pipe;
     VkDescriptorPool dpool;
-    VkDescriptorSet comp_ds[SR_SLOTS];
+    VkDescriptorSet comp_ds[SR_SLOTS], nin_ds[SR_SLOTS];
     /* the decode pass and its images, made when a swapchain first needs them (0 not yet, 1 made, -1 failed) */
     int rgb_on;
-    VkDescriptorSetLayout dec_dsl, rgb_dsl;
-    VkPipelineLayout dec_pl;
+    VkDescriptorSetLayout rgb_dsl;
+    VkPipelineLayout rgb_pl;
     VkPipeline dec_pipe;
     VkDescriptorPool rgb_pool;
-    VkDescriptorSet dec_ds[SR_SLOTS], rgb_ds[SR_SLOTS];
+    VkDescriptorSet rgb_ds[SR_SLOTS];
     unsigned gen_seq;
     pthread_t th;
     int th_started;
@@ -162,11 +178,16 @@ typedef struct SRSwap {
     int dx, dy, dw, dh;     /* where the upscaled frame goes */
     int over;               /* more blocks not one colour than this: the program's picture as it is (0: never) */
     int moved;              /* the upscaled frame is not where the program's is */
-    int resample;           /* the area is not the upscaled frame's size: sr_decode.comp + sr_resample.frag */
-    VkPipelineLayout pl;
-    VkPipeline pipe;
+    int resample;           /* the area is not the upscaled frame's size: sr_decode.frag + sr_rect.frag */
+    int old;                /* and no decode pass to be had: the whole picture by sr_rotate.frag, resampled in each pixel */
+    VkRect2D bars[4], ring[4];   /* on the display: around the frame's rectangle; the program's bars under a moved frame */
+    uint32_t nbars, nring;
+    VkPipelineLayout pl;    /* sr_rotate.frag's (old) */
+    VkPipeline pipe;        /* the frame: sr_frame.frag, sr_rect.frag, or the whole picture by sr_rotate.frag (old) */
+    VkPipeline bars_pipe, ring_pipe;
     VkDescriptorPool dp;
-    VkDescriptorSet prep_ds[MAX_IMAGES][SR_SLOTS];
+    VkDescriptorSet prep_ds[MAX_IMAGES][SR_SLOTS];   /* the compute prep's */
+    VkDescriptorSet nat_ds[MAX_IMAGES];              /* sr_nat's: the program's picture */
     VkCommandPool pool;
     VkCommandBuffer cb_prep[MAX_IMAGES], cb_pres[MAX_IMAGES];
 } SRSwap;
@@ -278,6 +299,8 @@ static void sr_device_free(Dev *d)
     for (int k = 0; k < SR_SLOTS; k++) {
         SRSlot *s = &sr->slot[k];
         if (s->fence) d->DestroyFence(dv, s->fence, NULL);
+        if (s->fb_cbcr) d->DestroyFramebuffer(dv, s->fb_cbcr, NULL);
+        if (s->fb_rgb) d->DestroyFramebuffer(dv, s->fb_rgb, NULL);
         if (s->vcbcr) d->DestroyImageView(dv, s->vcbcr, NULL);
         if (s->cbcr) d->DestroyImage(dv, s->cbcr, NULL);
         if (s->gcbcr) d->FreeMemory(dv, s->gcbcr, NULL);
@@ -294,15 +317,22 @@ static void sr_device_free(Dev *d)
         if (s->grgb) d->FreeMemory(dv, s->grgb, NULL);
     }
     if (sr->dec_pipe) d->DestroyPipeline(dv, sr->dec_pipe, NULL);
-    if (sr->dec_pl) d->DestroyPipelineLayout(dv, sr->dec_pl, NULL);
+    if (sr->rgb_pl) d->DestroyPipelineLayout(dv, sr->rgb_pl, NULL);
     if (sr->rgb_pool) d->DestroyDescriptorPool(dv, sr->rgb_pool, NULL);
-    if (sr->dec_dsl) d->DestroyDescriptorSetLayout(dv, sr->dec_dsl, NULL);
     if (sr->rgb_dsl) d->DestroyDescriptorSetLayout(dv, sr->rgb_dsl, NULL);
     if (sr->prep_pipe) d->DestroyPipeline(dv, sr->prep_pipe, NULL);
+    if (sr->nat_pipe) d->DestroyPipeline(dv, sr->nat_pipe, NULL);
+    if (sr->nin_pipe) d->DestroyPipeline(dv, sr->nin_pipe, NULL);
     if (sr->prep_pl) d->DestroyPipelineLayout(dv, sr->prep_pl, NULL);
+    if (sr->nat_pl) d->DestroyPipelineLayout(dv, sr->nat_pl, NULL);
+    if (sr->nin_pl) d->DestroyPipelineLayout(dv, sr->nin_pl, NULL);
+    if (sr->comp_pl) d->DestroyPipelineLayout(dv, sr->comp_pl, NULL);
     if (sr->dpool) d->DestroyDescriptorPool(dv, sr->dpool, NULL);
     if (sr->prep_dsl) d->DestroyDescriptorSetLayout(dv, sr->prep_dsl, NULL);
     if (sr->comp_dsl) d->DestroyDescriptorSetLayout(dv, sr->comp_dsl, NULL);
+    if (sr->tex_dsl) d->DestroyDescriptorSetLayout(dv, sr->tex_dsl, NULL);
+    if (sr->nin_dsl) d->DestroyDescriptorSetLayout(dv, sr->nin_dsl, NULL);
+    if (sr->rp_off) d->DestroyRenderPass(dv, sr->rp_off, NULL);
     if (sr->nearest) d->DestroySampler(dv, sr->nearest, NULL);
     if (sr->linear) d->DestroySampler(dv, sr->linear, NULL);
     if (sr->have_ctx) sr->r.destroy(sr->ctx);
@@ -340,6 +370,57 @@ static int sr_import(Dev *d, int fd, VkDeviceSize size, VkBuffer *buf, VkDeviceM
 
 #define SRCHK(x) do { if (!(x)) { SRLOG("%s failed (line %d)", #x, __LINE__); goto fail; } } while (0)
 #define SRVK(x) do { VkResult _r = (x); if (_r != VK_SUCCESS) { SRLOG("%s = %d", #x, _r); goto fail; } } while (0)
+
+/* A graphics pipeline for one of the layer's passes: a triangle over the viewport, one colour attachment, no
+ * blending; the scissor is the viewport, or dynamic (the bars, the ring: several rectangles a pass). */
+static VkResult sr_gfx_pipe(Dev *d, VkRenderPass rp, VkPipelineLayout pl, const uint32_t *vs, size_t vsz, const uint32_t *fs, size_t fsz,
+                            const VkSpecializationInfo *spec, VkViewport vp, int dyn_scissor, VkPipeline *out)
+{
+    VkDevice dv = d->device;
+    VkShaderModule mv, mf;
+    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = vsz, .pCode = vs };
+    VkResult r = d->CreateShaderModule(dv, &smi, NULL, &mv);
+    if (r != VK_SUCCESS) return r;
+    smi.codeSize = fsz; smi.pCode = fs;
+    r = d->CreateShaderModule(dv, &smi, NULL, &mf);
+    if (r != VK_SUCCESS) { d->DestroyShaderModule(dv, mv, NULL); return r; }
+    VkPipelineShaderStageCreateInfo st[2] = {
+        { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = mv, .pName = "main" },
+        { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = mf, .pName = "main",
+          .pSpecializationInfo = spec } };
+    VkPipelineVertexInputStateCreateInfo vi = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    VkPipelineInputAssemblyStateCreateInfo ia = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
+    VkRect2D sc = { { (int32_t)vp.x, (int32_t)vp.y }, { (uint32_t)vp.width, (uint32_t)vp.height } };
+    VkPipelineViewportStateCreateInfo vps = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1, .pViewports = &vp, .scissorCount = 1, .pScissors = &sc };
+    VkPipelineRasterizationStateCreateInfo rs = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .polygonMode = VK_POLYGON_MODE_FILL, .cullMode = VK_CULL_MODE_NONE, .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, .lineWidth = 1.0f };
+    VkPipelineMultisampleStateCreateInfo ms = { .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT };
+    VkPipelineColorBlendAttachmentState cba = { .colorWriteMask = 0xF };
+    VkPipelineColorBlendStateCreateInfo cbs = { .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .attachmentCount = 1, .pAttachments = &cba };
+    VkDynamicState dyn = VK_DYNAMIC_STATE_SCISSOR;
+    VkPipelineDynamicStateCreateInfo dsi = { .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = 1, .pDynamicStates = &dyn };
+    VkGraphicsPipelineCreateInfo gpi = { .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = 2, .pStages = st, .pVertexInputState = &vi, .pInputAssemblyState = &ia,
+        .pViewportState = &vps, .pRasterizationState = &rs, .pMultisampleState = &ms,
+        .pColorBlendState = &cbs, .pDynamicState = dyn_scissor ? &dsi : NULL, .layout = pl, .renderPass = rp, .subpass = 0 };
+    r = d->CreateGraphicsPipelines(dv, VK_NULL_HANDLE, 1, &gpi, NULL, out);
+    d->DestroyShaderModule(dv, mv, NULL);
+    d->DestroyShaderModule(dv, mf, NULL);
+    return r;
+}
+
+/* a rectangle of the program's (landscape) picture on the display, turned as rotate.vert turns it */
+static VkRect2D sr_map_rect(const Swap *s, int x, int y, int w, int h)
+{
+    if (s->rot == 0) return (VkRect2D){ { x, y }, { (uint32_t)w, (uint32_t)h } };
+    if (s->rot == 270) return (VkRect2D){ { y, (int32_t)s->real_ext.height - x - w }, { (uint32_t)h, (uint32_t)w } };
+    return (VkRect2D){ { (int32_t)s->real_ext.width - y - h, x }, { (uint32_t)h, (uint32_t)w } };
+}
 
 /* Everything that does not depend on the swapchain: the NPU, the slots, the compute pipeline, the worker thread. Once per device. */
 static SRDev *sr_device_get(Dev *d)
@@ -416,6 +497,27 @@ static SRDev *sr_device_get(Dev *d)
     sci.magFilter = sci.minFilter = VK_FILTER_LINEAR;
     SRVK(d->CreateSampler(dv, &sci, NULL, &sr->linear));
 
+    /* An RGBA8 image written whole by a fragment pass and left for sampling: the native frame's colour and luma
+     * (sr_nat) and the upscaled frame (sr_decode.frag). It waits for the passes that still sample the image. */
+    sr->nat = sr->kind == 1;
+    sr->cbcr_layout = sr->nat ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+    VkAttachmentDescription oat = { .format = VK_FORMAT_R8G8B8A8_UNORM, .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    VkAttachmentReference oref = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkSubpassDescription osub = { .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, .colorAttachmentCount = 1, .pColorAttachments = &oref };
+    VkSubpassDependency odep[2] = {
+        { VK_SUBPASS_EXTERNAL, 0,
+          VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0 },
+        { 0, VK_SUBPASS_EXTERNAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+          VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+          VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, 0 } };
+    VkRenderPassCreateInfo orp = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, .attachmentCount = 1, .pAttachments = &oat,
+        .subpassCount = 1, .pSubpasses = &osub, .dependencyCount = 2, .pDependencies = odep };
+    SRVK(d->CreateRenderPass(dv, &orp, NULL, &sr->rp_off));
+
     for (int k = 0; k < SR_SLOTS; k++) {
         SRSlot *s = &sr->slot[k];
         s->min = sr->r.create_mem(sr->ctx, isz);
@@ -426,7 +528,9 @@ static SRDev *sr_device_get(Dev *d)
         VkImageCreateInfo ii = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
             .format = VK_FORMAT_R8G8B8A8_UNORM, .extent = { (uint32_t)g_sr.W, (uint32_t)g_sr.H, 1 }, .mipLevels = 1,
             .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
+            /* drawn into by sr_nat, or stored into by the compute prep: with STORAGE usage the driver does not compress it */
+            .usage = (sr->nat ? VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT : VK_IMAGE_USAGE_STORAGE_BIT) | VK_IMAGE_USAGE_SAMPLED_BIT,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
         SRVK(d->CreateImage(dv, &ii, NULL, &s->cbcr));
         VkMemoryRequirements mr;
         d->GetImageMemoryRequirements(dv, s->cbcr, &mr);
@@ -438,6 +542,11 @@ static SRDev *sr_device_get(Dev *d)
             .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_UNORM,
             .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
         SRVK(d->CreateImageView(dv, &vci, NULL, &s->vcbcr));
+        if (sr->nat) {
+            VkFramebufferCreateInfo fbi = { .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .renderPass = sr->rp_off,
+                .attachmentCount = 1, .pAttachments = &s->vcbcr, .width = (uint32_t)g_sr.W, .height = (uint32_t)g_sr.H, .layers = 1 };
+            SRVK(d->CreateFramebuffer(dv, &fbi, NULL, &s->fb_cbcr));
+        }
         VkFenceCreateInfo fi = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .flags = VK_FENCE_CREATE_SIGNALED_BIT };
         SRVK(d->CreateFence(dv, &fi, NULL, &s->fence));
         VkBufferCreateInfo nbi = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, .size = 16,
@@ -462,59 +571,110 @@ static SRDev *sr_device_get(Dev *d)
     for (int k = 0; k < SR_SLOTS; k++) if (!sr->slot[k].mcnt) sr->cnt_host = 0;
     if (!sr->cnt_host) SRLOG("the count of blocks not one colour is not readable by the CPU: a menu will be upscaled too");
 
-    /* prep: set0 = the program's picture, the slot's NPU input, the slot's colour, the slot's count of blocks not one colour */
-    VkDescriptorSetLayoutBinding pb[4] = {
-        { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, &sr->nearest },
-        { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
-        { 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
-        { 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL } };
-    VkDescriptorSetLayoutCreateInfo dli = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, .bindingCount = 4, .pBindings = pb };
-    SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->prep_dsl));
-    VkPushConstantRange ppc = { VK_SHADER_STAGE_COMPUTE_BIT, 0, 7 * sizeof(int32_t) };
-    VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 1, .pSetLayouts = &sr->prep_dsl, .pushConstantRangeCount = 1, .pPushConstantRanges = &ppc };
-    SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->prep_pl));
-    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = sr->kind == 2 ? sizeof(sr_prep_cell_spv) : sr->kind == 1 ? sizeof(sr_prep_s2d_spv) : sizeof(sr_prep_spv),
-        .pCode = sr->kind == 2 ? sr_prep_cell_spv : sr->kind == 1 ? sr_prep_s2d_spv : sr_prep_spv };
+    VkDescriptorSetLayoutCreateInfo dli = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+    VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1, .pushConstantRangeCount = 1 };
     VkShaderModule cs;
-    SRVK(d->CreateShaderModule(dv, &smi, NULL, &cs));
     VkComputePipelineCreateInfo cpi = { .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-        .stage = { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = cs, .pName = "main" },
-        .layout = sr->prep_pl };
-    VkResult pr = d->CreateComputePipelines(dv, VK_NULL_HANDLE, 1, &cpi, NULL, &sr->prep_pipe);
+        .stage = { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .pName = "main" } };
+    VkResult pr;
+    if (sr->nat) {
+        /* the native frame by a fragment pass (sr_nat): set0 = the program's picture */
+        VkDescriptorSetLayoutBinding tb = { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &sr->nearest };
+        dli.bindingCount = 1; dli.pBindings = &tb;
+        SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->tex_dsl));
+        VkPushConstantRange npc = { VK_SHADER_STAGE_VERTEX_BIT, 0, 7 * sizeof(int32_t) };
+        pli.pSetLayouts = &sr->tex_dsl; pli.pPushConstantRanges = &npc;
+        SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->nat_pl));
+        int32_t step = g_sr.A;   /* sr_nat.frag's S: the step the program shows the native frame at */
+        VkSpecializationMapEntry sse = { 0, 0, sizeof step };
+        VkSpecializationInfo ssi = { 1, &sse, sizeof step, &step };
+        VkViewport nvp = { 0, 0, (float)g_sr.W, (float)g_sr.H, 0, 1 };
+        SRVK(sr_gfx_pipe(d, sr->rp_off, sr->nat_pl, sr_nat_vert_spv, sizeof(sr_nat_vert_spv), sr_nat_frag_spv, sizeof(sr_nat_frag_spv),
+                         &ssi, nvp, 0, &sr->nat_pipe));
+        /* the NPU's input from it (sr_nin_s2d.comp): set0 = the slot's native frame, its NPU input, its count of blocks not one colour */
+        VkDescriptorSetLayoutBinding nb[3] = {
+            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, &sr->nearest },
+            { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+            { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL } };
+        dli.bindingCount = 3; dli.pBindings = nb;
+        SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->nin_dsl));
+        VkPushConstantRange cpc = { VK_SHADER_STAGE_COMPUTE_BIT, 0, 5 * 4 };
+        pli.pSetLayouts = &sr->nin_dsl; pli.pPushConstantRanges = &cpc;
+        SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->nin_pl));
+        VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = sizeof(sr_nin_s2d_spv), .pCode = sr_nin_s2d_spv };
+        SRVK(d->CreateShaderModule(dv, &smi, NULL, &cs));
+        cpi.stage.module = cs; cpi.layout = sr->nin_pl;
+        pr = d->CreateComputePipelines(dv, VK_NULL_HANDLE, 1, &cpi, NULL, &sr->nin_pipe);
+    } else {
+        /* prep: set0 = the program's picture, the slot's NPU input, the slot's colour, the slot's count of blocks not one colour */
+        VkDescriptorSetLayoutBinding pb[4] = {
+            { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, &sr->nearest },
+            { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+            { 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+            { 3, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL } };
+        dli.bindingCount = 4; dli.pBindings = pb;
+        SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->prep_dsl));
+        VkPushConstantRange ppc = { VK_SHADER_STAGE_COMPUTE_BIT, 0, 7 * sizeof(int32_t) };
+        pli.pSetLayouts = &sr->prep_dsl; pli.pPushConstantRanges = &ppc;
+        SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->prep_pl));
+        VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = sr->kind == 2 ? sizeof(sr_prep_cell_spv) : sizeof(sr_prep_spv),
+            .pCode = sr->kind == 2 ? sr_prep_cell_spv : sr_prep_spv };
+        SRVK(d->CreateShaderModule(dv, &smi, NULL, &cs));
+        cpi.stage.module = cs; cpi.layout = sr->prep_pl;
+        pr = d->CreateComputePipelines(dv, VK_NULL_HANDLE, 1, &cpi, NULL, &sr->prep_pipe);
+    }
     d->DestroyShaderModule(dv, cs, NULL);
     SRVK(pr);
 
-    /* compose (in the rotate fragment shader): set1 = the slot's NPU output and colour */
+    /* the frame's passes (sr_frame.frag, sr_decode.frag; sr_rotate.frag's set1): set0 = the slot's NPU output and colour */
     VkDescriptorSetLayoutBinding cb[2] = {
         { 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL },
         { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &sr->linear } };
     dli.bindingCount = 2; dli.pBindings = cb;
     SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->comp_dsl));
-    VkDescriptorPoolSize ps[2] = { { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SR_SLOTS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SR_SLOTS } };
-    VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = SR_SLOTS, .poolSizeCount = 2, .pPoolSizes = ps };
+    VkPushConstantRange rpc = { VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int32_t) };   /* rotate.vert's rot */
+    pli.pSetLayouts = &sr->comp_dsl; pli.pPushConstantRanges = &rpc;
+    SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->comp_pl));
+    VkDescriptorPoolSize ps[2] = { { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * SR_SLOTS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * SR_SLOTS } };
+    VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = 2 * SR_SLOTS, .poolSizeCount = 2, .pPoolSizes = ps };
     SRVK(d->CreateDescriptorPool(dv, &dpi, NULL, &sr->dpool));
     for (int k = 0; k < SR_SLOTS; k++) {
         VkDescriptorSetAllocateInfo dai = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             .descriptorPool = sr->dpool, .descriptorSetCount = 1, .pSetLayouts = &sr->comp_dsl };
         SRVK(d->AllocateDescriptorSets(dv, &dai, &sr->comp_ds[k]));
         VkDescriptorBufferInfo bi = { sr->slot[k].bout, 0, VK_WHOLE_SIZE };
-        VkDescriptorImageInfo ci = { sr->linear, sr->slot[k].vcbcr, VK_IMAGE_LAYOUT_GENERAL };
+        VkDescriptorImageInfo ci = { sr->linear, sr->slot[k].vcbcr, sr->cbcr_layout };
         VkWriteDescriptorSet w[2] = {
             { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->comp_ds[k], .dstBinding = 0, .descriptorCount = 1,
               .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &bi },
             { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->comp_ds[k], .dstBinding = 1, .descriptorCount = 1,
               .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ci } };
         d->UpdateDescriptorSets(dv, 2, w, 0, NULL);
+        if (sr->nat) {
+            dai.pSetLayouts = &sr->nin_dsl;
+            SRVK(d->AllocateDescriptorSets(dv, &dai, &sr->nin_ds[k]));
+            VkDescriptorImageInfo ni = { sr->nearest, sr->slot[k].vcbcr, sr->cbcr_layout };
+            VkDescriptorBufferInfo ib = { sr->slot[k].bin, 0, VK_WHOLE_SIZE }, nc = { sr->slot[k].bcnt, 0, VK_WHOLE_SIZE };
+            VkWriteDescriptorSet nw[3] = {
+                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->nin_ds[k], .dstBinding = 0, .descriptorCount = 1,
+                  .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ni },
+                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->nin_ds[k], .dstBinding = 1, .descriptorCount = 1,
+                  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &ib },
+                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->nin_ds[k], .dstBinding = 2, .descriptorCount = 1,
+                  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &nc } };
+            d->UpdateDescriptorSets(dv, 3, nw, 0, NULL);
+        }
     }
     SRCHK(pthread_create(&sr->th, NULL, sr_worker, sr) == 0);
     sr->th_started = 1;
     sr_exit_track(sr, 1);   /* librknnrt is loaded by now: its destructors come after this atexit() */
     sr->t_last = sr_now_ms();
-    SRLOG("ready: %s model, NPU grid %dx%d, %dx%d px a cell, upscaled %dx%d, in w_stride %u, out %u channel groups, zp %d scale %g, %d slots",
+    SRLOG("ready: %s model, NPU grid %dx%d, %dx%d px a cell, upscaled %dx%d, in w_stride %u, out %u channel groups, zp %d scale %g, %d slots, "
+          "native frame by a %s pass",
           sr->kind == 2 ? "cells" : sr->kind == 1 ? "space-to-depth" : "row5", sr->GW, sr->GH, sr->B, sr->B, sr->OW, sr->OH,
-          sr->nin.w_stride, sr->nout.dims[1], sr->nout.zp, sr->nout.scale, SR_SLOTS);
+          sr->nin.w_stride, sr->nout.dims[1], sr->nout.zp, sr->nout.scale, SR_SLOTS, sr->nat ? "fragment" : "compute");
     return sr;
 fail:
     SRLOG("NPU SR unavailable for this device");
@@ -528,9 +688,9 @@ fail:
     return NULL;
 }
 
-/* The decode pass (sr_decode.comp) and each slot's RGBA image of the upscaled frame, for an area of another size.
+/* The decode pass (sr_decode.frag) and each slot's RGBA image of the upscaled frame, for an area of another size.
  * Once per device, when a swapchain first needs them: an area the frame's size (Azahar on the panel) does without
- * their memory (OW x OH x 4 bytes a slot). 0: not made (that swapchain resamples in sr_rotate.frag, as before). */
+ * their memory. 0: not made (that swapchain resamples in sr_rotate.frag, as at first). */
 static int sr_rgb_init(SRDev *sr)
 {
     if (sr->rgb_on) return sr->rgb_on > 0;
@@ -542,7 +702,7 @@ static int sr_rgb_init(SRDev *sr)
         VkImageCreateInfo ii = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
             .format = VK_FORMAT_R8G8B8A8_UNORM, .extent = { (uint32_t)sr->OW, (uint32_t)sr->OH, 1 }, .mipLevels = 1,
             .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
         SRVK(d->CreateImage(dv, &ii, NULL, &s->rgb));
         VkMemoryRequirements mr;
         d->GetImageMemoryRequirements(dv, s->rgb, &mr);
@@ -554,62 +714,41 @@ static int sr_rgb_init(SRDev *sr)
             .viewType = VK_IMAGE_VIEW_TYPE_2D, .format = VK_FORMAT_R8G8B8A8_UNORM,
             .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
         SRVK(d->CreateImageView(dv, &vci, NULL, &s->vrgb));
+        VkFramebufferCreateInfo fbi = { .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .renderPass = sr->rp_off,
+            .attachmentCount = 1, .pAttachments = &s->vrgb, .width = (uint32_t)sr->OW, .height = (uint32_t)sr->OH, .layers = 1 };
+        SRVK(d->CreateFramebuffer(dv, &fbi, NULL, &s->fb_rgb));
     }
-    /* decode: set0 = the slot's NPU output, its colour, its RGBA image; sr_resample.frag: set1 = the RGBA image */
-    VkDescriptorSetLayoutBinding db[3] = {
-        { 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
-        { 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, &sr->linear },
-        { 2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL } };
-    VkDescriptorSetLayoutCreateInfo dli = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, .bindingCount = 3, .pBindings = db };
-    SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->dec_dsl));
+    /* sr_rect.frag: set0 = the slot's RGBA image; sr_decode.frag draws it from the frame's set (comp_ds) */
     VkDescriptorSetLayoutBinding rb = { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, &sr->linear };
-    dli.bindingCount = 1; dli.pBindings = &rb;
+    VkDescriptorSetLayoutCreateInfo dli = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, .bindingCount = 1, .pBindings = &rb };
     SRVK(d->CreateDescriptorSetLayout(dv, &dli, NULL, &sr->rgb_dsl));
-    VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1, .pSetLayouts = &sr->dec_dsl };
-    SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->dec_pl));
-    struct { int32_t B, GH, wstride, zp; float scale; int32_t OW, OH; } spc = {
-        sr->B, sr->GH, (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale, sr->OW, sr->OH };
-    _Static_assert(sizeof spc == 7 * 4, "sr_decode.comp's constants are seven 4-byte values");
-    VkSpecializationMapEntry sme[7];
-    for (uint32_t k = 0; k < 7; k++) sme[k] = (VkSpecializationMapEntry){ k, k * 4, 4 };
-    VkSpecializationInfo spi = { 7, sme, sizeof spc, &spc };
-    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(sr_decode_spv), .pCode = sr_decode_spv };
-    VkShaderModule cs;
-    SRVK(d->CreateShaderModule(dv, &smi, NULL, &cs));
-    VkComputePipelineCreateInfo cpi = { .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-        .stage = { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = cs,
-                   .pName = "main", .pSpecializationInfo = &spi },
-        .layout = sr->dec_pl };
-    VkResult pr = d->CreateComputePipelines(dv, VK_NULL_HANDLE, 1, &cpi, NULL, &sr->dec_pipe);
-    d->DestroyShaderModule(dv, cs, NULL);
-    SRVK(pr);
-    VkDescriptorPoolSize ps[3] = { { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, SR_SLOTS }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 * SR_SLOTS },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, SR_SLOTS } };
-    VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = 2 * SR_SLOTS, .poolSizeCount = 3, .pPoolSizes = ps };
+    VkPushConstantRange rpc = { VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(int32_t) };   /* rotate.vert's rot */
+    VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, .setLayoutCount = 1, .pSetLayouts = &sr->rgb_dsl,
+        .pushConstantRangeCount = 1, .pPushConstantRanges = &rpc };
+    SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &sr->rgb_pl));
+    struct { int32_t B, GH, wstride, zp; float scale; } spc = {
+        sr->B, sr->GH, (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale };
+    _Static_assert(sizeof spc == 5 * 4, "sr_decode.frag's constants are five 4-byte values");
+    VkSpecializationMapEntry sme[5];
+    for (uint32_t k = 0; k < 5; k++) sme[k] = (VkSpecializationMapEntry){ k, k * 4, 4 };
+    VkSpecializationInfo spi = { 5, sme, sizeof spc, &spc };
+    VkViewport dvp = { 0, 0, (float)sr->OW, (float)sr->OH, 0, 1 };
+    SRVK(sr_gfx_pipe(d, sr->rp_off, sr->comp_pl, rotate_vert_spv, sizeof(rotate_vert_spv), sr_decode_frag_spv, sizeof(sr_decode_frag_spv),
+                     &spi, dvp, 0, &sr->dec_pipe));
+    VkDescriptorPoolSize ps = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SR_SLOTS };
+    VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = SR_SLOTS, .poolSizeCount = 1, .pPoolSizes = &ps };
     SRVK(d->CreateDescriptorPool(dv, &dpi, NULL, &sr->rgb_pool));
     for (int k = 0; k < SR_SLOTS; k++) {
         VkDescriptorSetAllocateInfo dai = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = sr->rgb_pool, .descriptorSetCount = 1, .pSetLayouts = &sr->dec_dsl };
-        SRVK(d->AllocateDescriptorSets(dv, &dai, &sr->dec_ds[k]));
-        dai.pSetLayouts = &sr->rgb_dsl;
+            .descriptorPool = sr->rgb_pool, .descriptorSetCount = 1, .pSetLayouts = &sr->rgb_dsl };
         SRVK(d->AllocateDescriptorSets(dv, &dai, &sr->rgb_ds[k]));
-        VkDescriptorBufferInfo bi = { sr->slot[k].bout, 0, VK_WHOLE_SIZE };
-        VkDescriptorImageInfo ci = { sr->linear, sr->slot[k].vcbcr, VK_IMAGE_LAYOUT_GENERAL };
-        VkDescriptorImageInfo oi = { VK_NULL_HANDLE, sr->slot[k].vrgb, VK_IMAGE_LAYOUT_GENERAL };
-        VkDescriptorImageInfo ri = { sr->linear, sr->slot[k].vrgb, VK_IMAGE_LAYOUT_GENERAL };
-        VkWriteDescriptorSet w[4] = {
-            { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->dec_ds[k], .dstBinding = 0, .descriptorCount = 1,
-              .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &bi },
-            { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->dec_ds[k], .dstBinding = 1, .descriptorCount = 1,
-              .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ci },
-            { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->dec_ds[k], .dstBinding = 2, .descriptorCount = 1,
-              .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .pImageInfo = &oi },
-            { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->rgb_ds[k], .dstBinding = 0, .descriptorCount = 1,
-              .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ri } };
-        d->UpdateDescriptorSets(dv, 4, w, 0, NULL);
+        VkDescriptorImageInfo ri = { sr->linear, sr->slot[k].vrgb, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+        VkWriteDescriptorSet w = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = sr->rgb_ds[k], .dstBinding = 0, .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ri };
+        d->UpdateDescriptorSets(dv, 1, &w, 0, NULL);
     }
     sr->rgb_on = 1;
-    SRLOG("decode pass: the upscaled %dx%d frame in RGBA once a new NPU output, sampled once a pixel", sr->OW, sr->OH);
+    SRLOG("decode pass: the upscaled %dx%d frame in RGBA once a new NPU output (a fragment pass), sampled once a pixel", sr->OW, sr->OH);
     return 1;
 fail:
     SRLOG("decode pass unavailable: the area is resampled in each pixel");
@@ -629,6 +768,8 @@ static void sr_swap_free(Swap *s)
     }
     if (x->pool) d->DestroyCommandPool(dv, x->pool, NULL);
     if (x->pipe) d->DestroyPipeline(dv, x->pipe, NULL);
+    if (x->bars_pipe) d->DestroyPipeline(dv, x->bars_pipe, NULL);
+    if (x->ring_pipe) d->DestroyPipeline(dv, x->ring_pipe, NULL);
     if (x->pl) d->DestroyPipelineLayout(dv, x->pl, NULL);
     if (x->dp) d->DestroyDescriptorPool(dv, x->dp, NULL);
     free(x);
@@ -676,75 +817,100 @@ static void sr_swap_build(Swap *s, VkViewport vp, int scaled)
     x->resample = (x->dw != sr->OW || x->dh != sr->OH) && sr_rgb_init(sr);
     VkDevice dv = d->device;
 
-    VkDescriptorSetLayout sets[2] = { s->dsl, x->resample ? sr->rgb_dsl : sr->comp_dsl };
-    VkPushConstantRange pc = { VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SRPush) };
-    VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 2, .pSetLayouts = sets, .pushConstantRangeCount = 1, .pPushConstantRanges = &pc };
-    SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &x->pl));
-    VkShaderModule vs = VK_NULL_HANDLE, fs = VK_NULL_HANDLE;
-    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, .codeSize = sizeof(rotate_vert_spv), .pCode = rotate_vert_spv };
-    SRVK(d->CreateShaderModule(dv, &smi, NULL, &vs));
-    if (x->resample) { smi.codeSize = sizeof(sr_resample_frag_spv); smi.pCode = sr_resample_frag_spv; }
-    else { smi.codeSize = sizeof(sr_rotate_frag_spv); smi.pCode = sr_rotate_frag_spv; }
-    if (d->CreateShaderModule(dv, &smi, NULL, &fs) != VK_SUCCESS) { d->DestroyShaderModule(dv, vs, NULL); goto fail; }
-    /* sr_rotate.frag's specialization constants: the model's and the rectangle's values, fixed for the pipeline
-     * (as constants the divisions by B become multiplies and the branches that do not apply go) */
+    /* on the display: the frame's rectangle, the bars around it, and under a moved frame the program's own bars */
+    x->old = (x->dw != sr->OW || x->dh != sr->OH) && !x->resample;
+    VkRect2D rect = sr_map_rect(s, x->dx, x->dy, x->dw, x->dh);
+    {
+        const int b[4][4] = { { 0, 0, x->dx, AH }, { x->dx + x->dw, 0, AW - x->dx - x->dw, AH },
+                              { x->dx, 0, x->dw, x->dy }, { x->dx, x->dy + x->dh, x->dw, AH - x->dy - x->dh } };
+        for (int k = 0; k < 4; k++)
+            if (b[k][2] > 0 && b[k][3] > 0) x->bars[x->nbars++] = sr_map_rect(s, b[k][0], b[k][1], b[k][2], b[k][3]);
+        /* inside the rectangle, outside the program's native frame */
+        const int fx = x->ox, fy = x->oy, fw = g_sr.W * g_sr.A, fh = g_sr.H * g_sr.A;
+        const int x0 = fx > x->dx ? fx : x->dx, x1 = fx + fw < x->dx + x->dw ? fx + fw : x->dx + x->dw;
+        const int r[4][4] = { { x->dx, x->dy, fx - x->dx, x->dh }, { fx + fw, x->dy, x->dx + x->dw - fx - fw, x->dh },
+                              { x0, x->dy, x1 - x0, fy - x->dy }, { x0, fy + fh, x1 - x0, x->dy + x->dh - fy - fh } };
+        for (int k = 0; x->moved && k < 4; k++)
+            if (r[k][2] > 0 && r[k][3] > 0) x->ring[x->nring++] = sr_map_rect(s, r[k][0], r[k][1], r[k][2], r[k][3]);
+    }
+    VkViewport rvp = { (float)rect.offset.x, (float)rect.offset.y, (float)rect.extent.width, (float)rect.extent.height, 0, 1 };
+    /* the model's and the rectangle's values, fixed for the pipeline (as constants the divisions by B become
+     * multiplies and the branches that do not apply go): sr_frame.frag takes the first seven, sr_rotate.frag all */
     struct { int32_t B, GH, wstride, zp; float scale; int32_t OW, OH; VkBool32 direct, moved; } spc = {
         sr->B, sr->GH, (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale,
         sr->OW, sr->OH, x->dw == sr->OW && x->dh == sr->OH, (VkBool32)x->moved };
-    _Static_assert(sizeof spc == 9 * 4, "sr_rotate.frag's constants are nine 4-byte values");
+    _Static_assert(sizeof spc == 9 * 4, "the frame shaders' constants are nine 4-byte values");
     VkSpecializationMapEntry sme[9];
     for (uint32_t k = 0; k < 9; k++) sme[k] = (VkSpecializationMapEntry){ k, k * 4, 4 };
-    VkSpecializationInfo spi = { 9, sme, sizeof spc, &spc };
-    VkPipelineShaderStageCreateInfo st[2] = {
-        { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = vs, .pName = "main" },
-        { .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = fs, .pName = "main",
-          .pSpecializationInfo = x->resample ? NULL : &spi } };
-    VkPipelineVertexInputStateCreateInfo vi = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    VkPipelineInputAssemblyStateCreateInfo ia = { .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
-    VkRect2D sc = { { (int32_t)vp.x, (int32_t)vp.y }, { (uint32_t)vp.width, (uint32_t)vp.height } };
-    VkPipelineViewportStateCreateInfo vps = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount = 1, .pViewports = &vp, .scissorCount = 1, .pScissors = &sc };
-    VkPipelineRasterizationStateCreateInfo rs = { .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        .polygonMode = VK_POLYGON_MODE_FILL, .cullMode = VK_CULL_MODE_NONE, .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, .lineWidth = 1.0f };
-    VkPipelineMultisampleStateCreateInfo ms = { .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT };
-    VkPipelineColorBlendAttachmentState cba = { .colorWriteMask = 0xF };
-    VkPipelineColorBlendStateCreateInfo cbs = { .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .attachmentCount = 1, .pAttachments = &cba };
-    VkGraphicsPipelineCreateInfo gpi = { .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .stageCount = 2, .pStages = st, .pVertexInputState = &vi, .pInputAssemblyState = &ia,
-        .pViewportState = &vps, .pRasterizationState = &rs, .pMultisampleState = &ms,
-        .pColorBlendState = &cbs, .layout = x->pl, .renderPass = s->rp, .subpass = 0 };
-    VkResult pr = d->CreateGraphicsPipelines(dv, VK_NULL_HANDLE, 1, &gpi, NULL, &x->pipe);
-    d->DestroyShaderModule(dv, vs, NULL);
-    d->DestroyShaderModule(dv, fs, NULL);
-    SRVK(pr);
+    if (x->old) {
+        /* the whole picture by sr_rotate.frag: set0 = the program's picture, set1 = the slot's NPU output and colour */
+        VkDescriptorSetLayout sets[2] = { s->dsl, sr->comp_dsl };
+        VkPushConstantRange pc = { VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SRPush) };
+        VkPipelineLayoutCreateInfo pli = { .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+            .setLayoutCount = 2, .pSetLayouts = sets, .pushConstantRangeCount = 1, .pPushConstantRanges = &pc };
+        SRVK(d->CreatePipelineLayout(dv, &pli, NULL, &x->pl));
+        VkSpecializationInfo spi = { 9, sme, sizeof spc, &spc };
+        SRVK(sr_gfx_pipe(d, s->rp, x->pl, rotate_vert_spv, sizeof(rotate_vert_spv), sr_rotate_frag_spv, sizeof(sr_rotate_frag_spv),
+                         &spi, vp, 0, &x->pipe));
+    } else {
+        /* the bars around the frame: the plain rotate shader, scissored to them */
+        if (x->nbars)
+            SRVK(sr_gfx_pipe(d, s->rp, s->pl, rotate_vert_spv, sizeof(rotate_vert_spv), rotate_frag_spv, sizeof(rotate_frag_spv),
+                             NULL, vp, 1, &x->bars_pipe));
+        /* the frame, a rectangle of its own: the decoded image sampled, or built in each pixel where it is its own size */
+        if (x->resample)
+            SRVK(sr_gfx_pipe(d, s->rp, sr->rgb_pl, rotate_vert_spv, sizeof(rotate_vert_spv), sr_rect_frag_spv, sizeof(sr_rect_frag_spv),
+                             NULL, rvp, 0, &x->pipe));
+        else {
+            VkSpecializationInfo spi = { 7, sme, sizeof spc, &spc };
+            SRVK(sr_gfx_pipe(d, s->rp, sr->comp_pl, rotate_vert_spv, sizeof(rotate_vert_spv), sr_frame_frag_spv, sizeof(sr_frame_frag_spv),
+                             &spi, rvp, 0, &x->pipe));
+        }
+        /* the program's bars under a moved frame: what is not black there, over the frame */
+        if (x->nring)
+            SRVK(sr_gfx_pipe(d, s->rp, s->pl, rotate_vert_spv, sizeof(rotate_vert_spv), sr_ring_frag_spv, sizeof(sr_ring_frag_spv),
+                             NULL, vp, 1, &x->ring_pipe));
+    }
 
-    VkDescriptorPoolSize ps[3] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, s->n * SR_SLOTS },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 * s->n * SR_SLOTS }, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, s->n * SR_SLOTS } };
-    VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets = s->n * SR_SLOTS, .poolSizeCount = 3, .pPoolSizes = ps };
-    SRVK(d->CreateDescriptorPool(dv, &dpi, NULL, &x->dp));
-    for (uint32_t k = 0; k < s->n; k++) {
-        for (int j = 0; j < SR_SLOTS; j++) {
+    if (sr->nat) {
+        /* sr_nat's set for each of the program's images */
+        VkDescriptorPoolSize ps = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, s->n };
+        VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, .maxSets = s->n, .poolSizeCount = 1, .pPoolSizes = &ps };
+        SRVK(d->CreateDescriptorPool(dv, &dpi, NULL, &x->dp));
+        for (uint32_t k = 0; k < s->n; k++) {
             VkDescriptorSetAllocateInfo dai = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-                .descriptorPool = x->dp, .descriptorSetCount = 1, .pSetLayouts = &sr->prep_dsl };
-            SRVK(d->AllocateDescriptorSets(dv, &dai, &x->prep_ds[k][j]));
+                .descriptorPool = x->dp, .descriptorSetCount = 1, .pSetLayouts = &sr->tex_dsl };
+            SRVK(d->AllocateDescriptorSets(dv, &dai, &x->nat_ds[k]));
             VkDescriptorImageInfo ai = { sr->nearest, s->app_view[k], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
-            VkDescriptorBufferInfo bi = { sr->slot[j].bin, 0, VK_WHOLE_SIZE }, ni = { sr->slot[j].bcnt, 0, VK_WHOLE_SIZE };
-            VkDescriptorImageInfo ci = { VK_NULL_HANDLE, sr->slot[j].vcbcr, VK_IMAGE_LAYOUT_GENERAL };
-            VkWriteDescriptorSet w[4] = {
-                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 0, .descriptorCount = 1,
-                  .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ai },
-                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 1, .descriptorCount = 1,
-                  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &bi },
-                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 2, .descriptorCount = 1,
-                  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .pImageInfo = &ci },
-                { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 3, .descriptorCount = 1,
-                  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &ni } };
-            d->UpdateDescriptorSets(dv, 4, w, 0, NULL);
+            VkWriteDescriptorSet w = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->nat_ds[k], .dstBinding = 0, .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ai };
+            d->UpdateDescriptorSets(dv, 1, &w, 0, NULL);
+        }
+    } else {
+        VkDescriptorPoolSize ps[3] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, s->n * SR_SLOTS },
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 2 * s->n * SR_SLOTS }, { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, s->n * SR_SLOTS } };
+        VkDescriptorPoolCreateInfo dpi = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = s->n * SR_SLOTS, .poolSizeCount = 3, .pPoolSizes = ps };
+        SRVK(d->CreateDescriptorPool(dv, &dpi, NULL, &x->dp));
+        for (uint32_t k = 0; k < s->n; k++) {
+            for (int j = 0; j < SR_SLOTS; j++) {
+                VkDescriptorSetAllocateInfo dai = { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                    .descriptorPool = x->dp, .descriptorSetCount = 1, .pSetLayouts = &sr->prep_dsl };
+                SRVK(d->AllocateDescriptorSets(dv, &dai, &x->prep_ds[k][j]));
+                VkDescriptorImageInfo ai = { sr->nearest, s->app_view[k], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+                VkDescriptorBufferInfo bi = { sr->slot[j].bin, 0, VK_WHOLE_SIZE }, ni = { sr->slot[j].bcnt, 0, VK_WHOLE_SIZE };
+                VkDescriptorImageInfo ci = { VK_NULL_HANDLE, sr->slot[j].vcbcr, VK_IMAGE_LAYOUT_GENERAL };
+                VkWriteDescriptorSet w[4] = {
+                    { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 0, .descriptorCount = 1,
+                      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .pImageInfo = &ai },
+                    { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 1, .descriptorCount = 1,
+                      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &bi },
+                    { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 2, .descriptorCount = 1,
+                      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .pImageInfo = &ci },
+                    { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = x->prep_ds[k][j], .dstBinding = 3, .descriptorCount = 1,
+                      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .pBufferInfo = &ni } };
+                d->UpdateDescriptorSets(dv, 4, w, 0, NULL);
+            }
         }
     }
     VkCommandPoolCreateInfo cpi = { .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -759,7 +925,7 @@ static void sr_swap_build(Swap *s, VkViewport vp, int scaled)
     s->srs = x;
     SRLOG("swapchain %dx%d: SR region %dx%d at (%d,%d), shown %dx%d at (%d,%d)%s, as drawn over %d blocks not one colour",
           AW, AH, g_sr.W * g_sr.A, g_sr.H * g_sr.A, x->ox, x->oy, x->dw, x->dh, x->dx, x->dy,
-          x->resample ? " (decoded once, resampled)" : x->dw != sr->OW || x->dh != sr->OH ? " (resampled in each pixel)" : "", x->over);
+          x->resample ? " (decoded once, resampled)" : x->old ? " (resampled in each pixel)" : "", x->over);
     return;
 fail:
     s->srs = x;
@@ -818,22 +984,44 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
         d->BeginCommandBuffer(cb, &bi);
         d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             0, 0, NULL, 0, NULL, 1, &ib);
-        VkImageMemoryBarrier cbb = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-            .oldLayout = sr->slot[w].cbcr_init ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = sr->slot[w].cbcr, .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
-        d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &cbb);
-        sr->slot[w].cbcr_init = 1;
+        if (sr->nat) {
+            /* the native frame (colour, one-colour flags, luma) by a fragment pass into the slot's image */
+            VkRenderPassBeginInfo nbi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, .renderPass = sr->rp_off,
+                .framebuffer = sr->slot[w].fb_cbcr, .renderArea = { { 0, 0 }, { (uint32_t)g_sr.W, (uint32_t)g_sr.H } } };
+            d->CmdBeginRenderPass(cb, &nbi, VK_SUBPASS_CONTENTS_INLINE);
+            d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, sr->nat_pipe);
+            d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, sr->nat_pl, 0, 1, &x->nat_ds[idx], 0, NULL);
+            int32_t np[7] = { x->ox, x->oy, g_sr.W, g_sr.H, g_sr.A, (int32_t)s->app_ext.width, (int32_t)s->app_ext.height };
+            d->CmdPushConstants(cb, sr->nat_pl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof np, np);
+            d->CmdDraw(cb, 3, 1, 0, 0);
+            d->CmdEndRenderPass(cb);
+        } else {
+            VkImageMemoryBarrier cbb = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .srcAccessMask = VK_ACCESS_SHADER_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+                .oldLayout = sr->slot[w].cbcr_init ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = sr->slot[w].cbcr, .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+            d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &cbb);
+            sr->slot[w].cbcr_init = 1;
+        }
         d->CmdFillBuffer(cb, sr->slot[w].bcnt, 0, 16, 0);   /* the count of blocks not one colour, from 0 */
         VkMemoryBarrier fb = { .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER, .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT };
         d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &fb, 0, NULL, 0, NULL);
-        d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->prep_pipe);
-        d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->prep_pl, 0, 1, &x->prep_ds[idx][w], 0, NULL);
-        /* the prep shaders' S is the step in the program's picture, K the cell (sr_prep_cell.comp) */
-        int32_t pp[7] = { x->ox, x->oy, g_sr.W, g_sr.H, g_sr.A, (int32_t)(sr->nin.w_stride ? sr->nin.w_stride : (uint32_t)sr->GW), sr->K };
-        d->CmdPushConstants(cb, sr->prep_pl, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof pp, pp);
+        const int32_t in_stride = (int32_t)(sr->nin.w_stride ? sr->nin.w_stride : (uint32_t)sr->GW);
+        if (sr->nat) {
+            /* the NPU's input from the native frame, a 2x2 cell an invocation */
+            d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->nin_pipe);
+            d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->nin_pl, 0, 1, &sr->nin_ds[w], 0, NULL);
+            struct { int32_t GW, GH, wstride; float iw, ih; } np = { sr->GW, sr->GH, in_stride, 1.0f / (float)g_sr.W, 1.0f / (float)g_sr.H };
+            d->CmdPushConstants(cb, sr->nin_pl, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof np, &np);
+        } else {
+            d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->prep_pipe);
+            d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->prep_pl, 0, 1, &x->prep_ds[idx][w], 0, NULL);
+            /* the prep shaders' S is the step in the program's picture, K the cell (sr_prep_cell.comp) */
+            int32_t pp[7] = { x->ox, x->oy, g_sr.W, g_sr.H, g_sr.A, in_stride, sr->K };
+            d->CmdPushConstants(cb, sr->prep_pl, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof pp, pp);
+        }
         d->CmdDispatch(cb, (uint32_t)(sr->GW + 15) / 16, (uint32_t)(sr->GH + 15) / 16, 1);   /* row5: a pixel, s2d: a 2x2 cell */
         VkMemoryBarrier mb = { .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER, .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_MEMORY_READ_BIT };
@@ -868,43 +1056,67 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
      * badly either way). Decided here once a frame rather than in each of the panel's pixels. */
     long nflat = ready >= 0 && sr->cnt_host ? (long)sr->slot[ready].mcnt[0] : -1;
     int use_sr = ready >= 0 && !(nflat >= 0 && x->over > 0 && nflat > x->over);
+    int32_t rot = s->rot;
     if (use_sr && x->resample && sr->slot[ready].dec_gen != rgen) {
-        /* a new NPU output: the upscaled frame into the slot's RGBA image, once (outside the render pass) */
+        /* a new NPU output: the upscaled frame into the slot's RGBA image, once (a pass of its own) */
         SRSlot *sl = &sr->slot[ready];
-        VkImageMemoryBarrier rb = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = VK_ACCESS_SHADER_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
-            .oldLayout = sl->rgb_init ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = sl->rgb, .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
-        d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &rb);
-        d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->dec_pipe);
-        d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, sr->dec_pl, 0, 1, &sr->dec_ds[ready], 0, NULL);
-        d->CmdDispatch(cb, (uint32_t)(sr->OW + 15) / 16, (uint32_t)(sr->OH + 15) / 16, 1);
-        rb.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT; rb.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        rb.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-        d->CmdPipelineBarrier(cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &rb);
-        sl->rgb_init = 1;
+        VkRenderPassBeginInfo dbi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, .renderPass = sr->rp_off,
+            .framebuffer = sl->fb_rgb, .renderArea = { { 0, 0 }, { (uint32_t)sr->OW, (uint32_t)sr->OH } } };
+        d->CmdBeginRenderPass(cb, &dbi, VK_SUBPASS_CONTENTS_INLINE);
+        d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, sr->dec_pipe);
+        d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, sr->comp_pl, 0, 1, &sr->comp_ds[ready], 0, NULL);
+        int32_t rot0 = 0;   /* rotate.vert: uv 0..1 over the image, not turned */
+        d->CmdPushConstants(cb, sr->comp_pl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof rot0, &rot0);
+        d->CmdDraw(cb, 3, 1, 0, 0);
+        d->CmdEndRenderPass(cb);
         sl->dec_gen = rgen;
         sr->n_dec++;
     }
     VkRenderPassBeginInfo rbi = { .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, .renderPass = s->rp, .framebuffer = s->fb[idx],
         .renderArea = { { 0, 0 }, s->real_ext } };
     d->CmdBeginRenderPass(cb, &rbi, VK_SUBPASS_CONTENTS_INLINE);
-    if (use_sr) {
+    if (use_sr && x->old) {
         d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->pipe);
-        VkDescriptorSet ds2[2] = { s->ds[idx], x->resample ? sr->rgb_ds[ready] : sr->comp_ds[ready] };
+        VkDescriptorSet ds2[2] = { s->ds[idx], sr->comp_ds[ready] };
         d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->pl, 0, 2, ds2, 0, NULL);
         SRPush p = { s->rot, (int32_t)s->app_ext.width, (int32_t)s->app_ext.height, x->ox, x->oy, g_sr.W, g_sr.H, g_sr.S,
                      (int32_t)(sr->nout.w_stride ? sr->nout.w_stride : (uint32_t)sr->GW), sr->nout.zp, sr->nout.scale, sr->B, sr->GH,
                      g_sr.A, x->dx, x->dy, x->dw, x->dh, sr->OW, sr->OH, x->moved };
         d->CmdPushConstants(cb, x->pl, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof p, &p);
+        d->CmdDraw(cb, 3, 1, 0, 0);
+    } else if (use_sr) {
+        /* the bars around the frame as the program drew them */
+        if (x->nbars) {
+            d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->bars_pipe);
+            d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pl, 0, 1, &s->ds[idx], 0, NULL);
+            d->CmdPushConstants(cb, s->pl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof rot, &rot);
+            for (uint32_t k = 0; k < x->nbars; k++) {
+                d->CmdSetScissor(cb, 0, 1, &x->bars[k]);
+                d->CmdDraw(cb, 3, 1, 0, 0);
+            }
+        }
+        /* the frame: a rectangle of its own */
+        VkPipelineLayout fpl = x->resample ? sr->rgb_pl : sr->comp_pl;
+        d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->pipe);
+        d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, fpl, 0, 1, x->resample ? &sr->rgb_ds[ready] : &sr->comp_ds[ready], 0, NULL);
+        d->CmdPushConstants(cb, fpl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof rot, &rot);
+        d->CmdDraw(cb, 3, 1, 0, 0);
+        /* moved, it covers the program's bars: what is not black there is drawn over it */
+        if (x->nring) {
+            d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, x->ring_pipe);
+            d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pl, 0, 1, &s->ds[idx], 0, NULL);
+            d->CmdPushConstants(cb, s->pl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof rot, &rot);
+            for (uint32_t k = 0; k < x->nring; k++) {
+                d->CmdSetScissor(cb, 0, 1, &x->ring[k]);
+                d->CmdDraw(cb, 3, 1, 0, 0);
+            }
+        }
     } else {
         d->CmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pipe);
         d->CmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, s->pl, 0, 1, &s->ds[idx], 0, NULL);
-        int32_t rot = s->rot;
         d->CmdPushConstants(cb, s->pl, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof rot, &rot);
+        d->CmdDraw(cb, 3, 1, 0, 0);
     }
-    d->CmdDraw(cb, 3, 1, 0, 0);
     d->CmdEndRenderPass(cb);
     ib.srcAccessMask = VK_ACCESS_SHADER_READ_BIT; ib.dstAccessMask = 0;
     ib.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; ib.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;

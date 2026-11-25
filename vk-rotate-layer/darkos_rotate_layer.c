@@ -167,7 +167,7 @@ typedef struct Dev {
     /* npusr */
     DF(CreateBuffer) DF(DestroyBuffer) DF(GetBufferMemoryRequirements) DF(BindBufferMemory)
     DF(CreateComputePipelines) DF(CmdDispatch) DF(ResetCommandBuffer) DF(GetMemoryFdPropertiesKHR)
-    DF(MapMemory) DF(CmdFillBuffer)
+    DF(MapMemory) DF(CmdFillBuffer) DF(CmdSetScissor)
 #undef DF
     struct SRDev *sr;
 } Dev;
@@ -852,7 +852,7 @@ static VKAPI_ATTR VkResult VKAPI_CALL L_CreateDevice(VkPhysicalDevice pd, const 
     DF(WaitForFences) DF(ResetFences) DF(DeviceWaitIdle)
     DF(CreateBuffer) DF(DestroyBuffer) DF(GetBufferMemoryRequirements) DF(BindBufferMemory)
     DF(CreateComputePipelines) DF(CmdDispatch) DF(ResetCommandBuffer) DF(GetMemoryFdPropertiesKHR)
-    DF(MapMemory) DF(CmdFillBuffer)
+    DF(MapMemory) DF(CmdFillBuffer) DF(CmdSetScissor)
 #undef DF
     pthread_mutex_lock(&g_lock);
     d->next = g_devs; g_devs = d;

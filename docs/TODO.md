@@ -36,12 +36,17 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   (npusr/NOTICE, item 5); the same day the picture fills the TV (`:fit`, any
   TV size; KNOWN-ISSUES, "The whole screen"), so its x4 for Azahar stays in
   the sources only. Open: Azahar filling the TV runs hot (85%, 78 C, the
-  Mali's clock down to 700 MHz) - a decode pass that draws (AFBC) instead of
-  storing, or an x4.5 network (400x240 to 1800x1080, no resample; the AI-SR
-  session looks at the layer's GPU cost from 2026-11-25); a TV below 1080p for
-  real. On the panel (HDMI out, the same day, the new x3): Mega Drive 60 fps
-  (Mali 17%), PS1 pcsx_rearmed 60 (23%), Azahar 60 once its shaders were
-  built, the PSP fitted through the decode pass 60 (57%, 1271x720).
+  Mali's clock down to 700 MHz). The same day the AI-SR session made the
+  layer's passes cheaper (KNOWN-ISSUES, "Cheaper passes"; the decode draws
+  now): on the panel the PSP fitted 57-58% -> 40%, offscreen the 3DS fitted
+  to a 1080p TV 8.4 -> 6.6 ms a frame. To run on the TV when the cable is in,
+  with `DARKOS_VK_ROTATE=270` and the cells models (neither run yet). Further:
+  an x4.5 network (400x240 to 1800x1080, no resample), or a 1280x720 output
+  the display scales (the AI-SR session's idea, the owner's call); a TV below
+  1080p for real. On the panel (HDMI out, the same day, the new x3): Mega
+  Drive 60 fps (Mali 17%), PS1 pcsx_rearmed 60 (23%), Azahar 60 once its
+  shaders were built, the PSP fitted through the decode pass 60 (57%,
+  1271x720; 40% with the cheaper passes).
   On 2026-11-25 ~07:20 MSK the console, left on the TV, was found with a black
   panel after the HDMI cable was pulled: not on the network, the power key lit
   the LED, a long press switched it off. The journal is not kept across boots,

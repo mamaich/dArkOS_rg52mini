@@ -1110,8 +1110,8 @@ drawn.
   `~/.config/darkos-npusr/restore.json` and puts them back after the
   emulator; a record left over from a power-off in a game is put back at the
   next launch of either launcher.
-- *The layer*: VK_LAYER_DARKOS_rotate (`vk-rotate-layer/npusr.inc.c`, with
-  `sr_prep.comp` and `sr_rotate.frag`) does the work only when
+- *The layer*: VK_LAYER_DARKOS_rotate (`vk-rotate-layer/npusr.inc.c` and its
+  `sr_*` shaders) does the work only when
   `DARKOS_NPU_SR` is set. At each present a compute pass takes every S-th
   pixel of the area from the program's frame and writes the NPU's input (the
   luma, in the NPU's own NC1HWC2 int8 layout) and the colour into one of
@@ -1156,8 +1156,9 @@ drawn.
   output (2S)^2 channels; the models in the image) and "cells" (KxK native
   pixels in NC1HWC2, K*K <= 16, for a scale that is not whole, as 8/3 from
   3x3 cells: for a PSP model from 480x270 straight to 1280x720 the AI-SR
-  session is training), with a prep shader each (`sr_prep.comp`,
-  `sr_prep_s2d.comp`, `sr_prep_cell.comp`) and one rotate shader. At 600 MHz
+  session is training), with a prep pass each (`sr_prep.comp`; `sr_nat.vert`
+  and `sr_nat.frag` with `sr_nin_s2d.comp`, "Cheaper passes" under "On a TV";
+  `sr_prep_cell.comp`). At 600 MHz
   (the AI-SR session's srbench) ESPCN x3 takes 13.1 ms on the NPU, ESPCN x2
   18.0; space-to-depth at 32 channels 6.3 ms for x3 with 5 blocks and 0.8 ms
   more a block (the 3DS's has 7: 8.3 ms in the game; the same on the PSP's
@@ -1543,18 +1544,40 @@ TV as on the panel:
   to 53.9 fps at 87%, the x3 one 59.0-59.1 fps at 85% - so
   `espcn_x4_400x240.rknn` stays in the sources and is not installed. Azahar
   filling the TV runs hot: 77-78 C after a minute and a half, the Mali's clock
-  down to 700-900 MHz; a decode pass that draws instead of storing (AFBC) or
-  a network that gives 1800x1080 itself (x4.5, no resample) would make it
-  cheaper.
+  down to 700-900 MHz. The decode pass draws instead of storing since the
+  same day ("Cheaper passes", below; not measured on the TV yet); a network
+  that gives 1800x1080 itself (x4.5, no resample) would make it cheaper still.
 - **The resample, once.** For an area of another size than the upscaled
   frame (the PSP's fit and fill, the 3DS's x3 picture on the TV's x4) the layer
   built each pixel from four luma fetches of the NPU's output and their
   unpacking: on the TV the PSP (1440x816 into 1906x1080) ran at 54 fps with the
-  Mali at 99%, Azahar 54.8 fps at 88%. Now `sr_decode.comp` writes the
+  Mali at 99%, Azahar 54.8 fps at 88%. Then a decode pass wrote the
   upscaled frame in RGBA once a new NPU output (in the present's command
-  buffer, before the pass) and `sr_resample.frag` samples it once a pixel,
-  bilinearly: the PSP 60 fps at 77%, Azahar 59.1 fps at 83%. The panel's PSP
+  buffer, before the pass; `sr_decode.comp`, now `sr_decode.frag`) and a pass
+  sampled it once a pixel, bilinearly (`sr_resample.frag`, now
+  `sr_rect.frag`): the PSP 60 fps at 77%, Azahar 59.1 fps at 83%. The panel's PSP
   with fit or fill (x3 brought down to 1271x720) takes the same path now.
+- **Cheaper passes.** The same day the AI-SR session made the layer's GPU work
+  smaller, the picture the same (`vk-rotate-layer/npusr.inc.c`'s header):
+  - the native frame of a space-to-depth model (all those in the image) is
+    drawn by a fragment pass into a colour attachment (`sr_nat.vert`,
+    `sr_nat.frag`) and the NPU's input packed from it by two gathers a cell
+    (`sr_nin_s2d.comp`), instead of 12 fetches and 4 image stores a cell; the
+    NPU's input is byte for byte the same;
+  - the decode is a fragment pass (`sr_decode.frag`): no image has STORAGE
+    usage now, so libmali compresses them (AFBC);
+  - the frame is a rectangle of its own: `sr_frame.frag` where it is its own
+    size, `sr_rect.frag` sampling the decoded frame, the bars around it by the
+    plain rotate shader under a scissor, the program's bars under a moved
+    frame by `sr_ring.frag`; `sr_rotate.frag` only when the decode pass
+    cannot be made.
+
+  On the panel, 60 fps in every run: Super Mario 3D Land x3 in place, Mali
+  67% -> 62% (900 MHz), with `:fill` 71% -> 63%; the PSP's Daxter fitted, as
+  ES starts it, 58% -> 40% (1000 MHz); the old ESPCN row5 model 75% -> 70%.
+  Paused, the screen is byte for byte as before. Offscreen, pass by pass: a
+  3DS x3 fitted to a 1080p TV 8.4 -> 6.6 ms a frame at 900 MHz, x4 in place
+  6.7 -> 5.8. Not run yet: a TV, `DARKOS_VK_ROTATE=270`, the cells models.
 - **x4 networks.** The AI-SR session trained an x4 network and a new x3 one on
   true high-resolution targets (point-sampled inputs, as a game draws them; no
   teacher). The x3 one is in the image since 2026-11-25 (the owner's word; the
