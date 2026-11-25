@@ -591,8 +591,11 @@ In master for 1.13, not released yet (VERSION says 1.13):
   32X, SNES, NES, PC Engine and Neo Geo x3 in RetroArch, with square pixels
   (a little wider than 4:3). The kernel powers the NPU now, as a module loaded
   only for such a game (KNOWN-ISSUES.md, "NPU UPSCALE", where a table says
-  which emulators and frames). On a TV over HDMI too, the picture filling the
-  screen's height (KNOWN-ISSUES.md, "On a TV").
+  which emulators and frames). On a TV over HDMI too, the picture as large as
+  the screen allows in the frame's shape (KNOWN-ISSUES.md, "On a TV"). The
+  Vulkan layer's part of it costs the GPU less since 2026-11-25 (the AI-SR
+  session; the PSP fitted on the panel: Mali 58% -> 40%; KNOWN-ISSUES.md,
+  "Cheaper passes").
 - RetroArch's slang shaders come with the image (libretro's slang-shaders in
   `~/.config/retroarch/shaders/shaders_slang`, about 84 MB; the owner,
   2026-11-24/25): its Vulkan driver reads only these — Azahar's 3DS, or a core
