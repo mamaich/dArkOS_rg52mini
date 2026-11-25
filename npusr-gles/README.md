@@ -50,6 +50,14 @@ DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so
   and stretched over the viewport with one bilinear `glBlitFramebuffer`. Mega Drive on the TV: 60 fps,
   Mali 27% (nearest x4: 7%). The panel never sees it (x4 does not fit 720 lines). An x4 model
   (`x4:auto`) works too, but on the TV it gave the same picture at the same Mali, so it is not used.
+- `:fit` (`x3:auto:fit`; the owner, 2026-11-25: on a TV the picture should fill the screen, not sit in
+  RetroArch's integer x4 with black bars all round): the S times picture is stretched, bilinear, over the
+  largest rectangle of the frame's shape in the window, centred - 1440x1080 for 320x240 on 1080p, 1234x1080
+  for 256x224 - wherever that is not the S times area itself; RetroArch's bars (cleared each frame) are drawn
+  over. It works on any TV size: 1360x768 or 1600x900 (RetroArch's integer x3 there) are stretched from x3,
+  a 720p TV is the panel's size (240 lines x3 in place, 224 lines stretched to 720). `darkos-npusr gles`
+  prints the spec on its second line, `:fit` with HDMI connected; the launchers pass it on. Mega Drive on
+  1080p: 60 fps, Mali 17%; PS1 (pcsx_rearmed): 60 fps, 50% (42% with the bars).
 - No model for a size (an interlaced 640x480 or 512x240 mode, enhanced resolution left on): one line
   `darkos_npusr_gles: WxH: no model <path>`, that size is not tried again, its frames shown untouched
   (~0.3 ms of CPU a frame). No NPU (no rknpu node, no librknnrt, init failed): `NPU SR unavailable, off`,

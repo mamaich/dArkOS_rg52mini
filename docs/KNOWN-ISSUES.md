@@ -1194,11 +1194,12 @@ drawn.
   `/usr/share/doc/darkos-npusr/NOTICE`); the models in
   `/usr/share/darkos/npusr/`, INT8, named `espcn_x<S>_<W>x<H>.rknn` for the
   layer and `x3_<W>x<H>.rknn` for libnpusr_gles.so: `espcn_x3_400x240.rknn`
-  (the 3DS), `espcn_x4_400x240.rknn` (the 3DS on a 1080p TV),
-  `espcn_x3_480x272.rknn` (the PSP), `espcn_x2_480x272.rknn` (the PSP with
-  integer scale) and seven `x3_<W>x<H>.rknn` (PS1 and the 16-bit consoles).
-  Since 2026-11-25 (the owner's word) every x3 model and the x4 are networks
-  the AI-SR session trained with no teacher on true high-resolution targets:
+  (the 3DS), `espcn_x3_480x272.rknn` (the PSP), `espcn_x2_480x272.rknn` (the
+  PSP with integer scale) and seven `x3_<W>x<H>.rknn` (PS1 and the 16-bit
+  consoles); `espcn_x4_400x240.rknn` (the 3DS on a 1080p TV) is in
+  `npusr/models/` only ("The whole screen", below). Since 2026-11-25 (the
+  owner's word) every x3 model and the x4 are networks the AI-SR session
+  trained with no teacher on true high-resolution targets:
   the input a point sample of a larger picture (as a game draws it, no
   anti-aliasing), the target that picture averaged down; the pictures are
   drawn shapes and text, 224 screenshots of free games (each file's game,
@@ -1522,6 +1523,29 @@ TV as on the panel:
   `DARKOS_NPU_SR` is set (the layer's notes, item 5), and the helper gives the
   step the program shows the frame at there: the 3DS's top screen x4
   (1600x960), the PSP x3 (1440x816), fit or fill as on the panel.
+- **The whole screen** (the owner, the same morning: the picture sat in
+  RetroArch's x4 with black bars all round; without the upscale his RetroArch
+  fills the height, integer scale off). With HDMI connected the helper adds
+  `:fit`: `darkos-npusr gles` prints `x3:auto:fit` on a second line (the three
+  launchers pass it to the library), the 3DS gets `x3:400x240:a4:fit`. The
+  library then stretches the x3 picture over the largest rectangle of the
+  frame's shape in the window wherever that is not the x3 area itself (1440x1080
+  for 320x240, 1543x1080 for 320x224), the layer fits the 3DS's frame to
+  1800x1080 through its decode pass; the PSP was fitted already (the owner's
+  PPSSPP has integer scale off). Any TV size: on 1366x768 or 1600x900
+  RetroArch's integer scale gives x3 and the x3 picture is stretched from
+  there (tried on the 1080p TV with RetroArch's custom viewport at x3:
+  1543x1080, 60 fps, Mali 13%; RetroArch would not switch the TV's mode); a
+  720p TV is the panel's size: 240 lines x3 in place, 224 lines stretched to
+  720. RetroArch's notifications in the bars are drawn over; its menu (more
+  than 1% of blocks not one colour) is shown as it draws it, with the bars.
+  For the 3DS the x3 network: fitted, the x4 one (1600x960 decoded) took Azahar
+  to 53.9 fps at 87%, the x3 one 59.0-59.1 fps at 85% - so
+  `espcn_x4_400x240.rknn` stays in the sources and is not installed. Azahar
+  filling the TV runs hot: 77-78 C after a minute and a half, the Mali's clock
+  down to 700-900 MHz; a decode pass that draws instead of storing (AFBC) or
+  a network that gives 1800x1080 itself (x4.5, no resample) would make it
+  cheaper.
 - **The resample, once.** For an area of another size than the upscaled
   frame (the PSP's fit and fill, the 3DS's x3 picture on the TV's x4) the layer
   built each pixel from four luma fetches of the NPU's output and their
@@ -1533,14 +1557,15 @@ TV as on the panel:
   with fit or fill (x3 brought down to 1271x720) takes the same path now.
 - **x4 networks.** The AI-SR session trained an x4 network and a new x3 one on
   true high-resolution targets (point-sampled inputs, as a game draws them; no
-  teacher). Both are in the image since 2026-11-25 (the owner's word; the
-  models paragraph above). On the TV from one saved state,
+  teacher). The x3 one is in the image since 2026-11-25 (the owner's word; the
+  models paragraph above), the x4 one only in the sources (the whole screen,
+  above). Before the picture filled the TV, from one saved state,
   the gl cores' x4 gave the picture of x3 stretched (a touch crisper) at the
   same Mali and 1.4 ms more of the NPU, so those keep x3 stretched (no more
   model files). Azahar with x4 in place (one fetch a pixel, no resample) ran at
   59.0 fps with the Mali at 68% and 74 C, against 83% and 77 C for x3
-  resampled. So the helper takes `espcn_x4_400x240.rknn` on the TV where the
-  image has it, and x3 resampled where not.
+  resampled; so the helper took `espcn_x4_400x240.rknn` on the TV for a few
+  hours, until the picture filled the screen.
 
   | TV, 1920x1080 | frame on the TV | fps | NPU | Mali (nearest) |
   |---|---|---|---|---|
@@ -1558,6 +1583,12 @@ TV as on the panel:
   | PSP, Daxter, x3, fit (the old pass) | 480x272 as 1906x1080 | 54.3 | 11.1 ms | 99% |
   | the same, the decode pass | 480x272 as 1906x1080 | 60 | 11.6 ms | 77% (layer off: 30%) |
   | the same, an x4 network (480x272 to 1920x1088, into the fit rectangle) | 480x272 as 1906x1080 | 60 | 14.5 ms | 94%, 81 C |
+  | **The whole screen** (`:fit`, the models of 2026-11-25): | | | | |
+  | Mega Drive, Zombies Ate My Neighbors, x3 stretched | 320x224 as 1543x1080 | 59.7 | 5.3 ms | 32% |
+  | the same, RetroArch's custom viewport at x3 (a 768- or 900-line TV's path) | 320x224 as 1543x1080 | 59.9 | 6.3 ms | 13% |
+  | PS1, Double Dragon, pcsx_rearmed (retroarch32) | 320x240 as 1440x1080 | 59.8 | 7.1 ms | 50% |
+  | 3DS, Castlevania: Mirror of Fate, x3 fitted (as installed) | 400x240 as 1800x1080 | 59.0-59.1 | 9.1 ms | 85%, 77-78 C |
+  | the same, the x4 network fitted | 400x240 as 1800x1080 | 53.9 | 11.5 ms | 87%, 75 C |
 
   SwanStation lost a frame or two a second on the TV (60 without the
   upscale; on the panel 60 with it): not looked into yet. Azahar on the TV
@@ -1566,7 +1597,10 @@ TV as on the panel:
 
   The grabs on the TV: kmsgrab tears there as on the panel unless the game is
   paused (it is grabbed paused, on a saved state). Not tried on the TV:
-  retroarch-next, PC Engine, Sega CD and 32X (the same code as Mega Drive).
+  retroarch-next, PC Engine, Sega CD and 32X (the same code as Mega Drive), a
+  TV below 1080p for real (only the path, above). The first Mega Drive run
+  after the cable was plugged in again (the console just rebooted) came out
+  1280x720 on the TV, RetroArch's own choice; every run after it 1920x1080.
 
 **Revision A.** No revision A unit was tried. What can be checked without
 one: the vendor's firmware for revision A (v10: the RK915 Wi-Fi, no HUSB311)

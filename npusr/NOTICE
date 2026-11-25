@@ -53,12 +53,14 @@ draws with GLES, in libnpusr_gles.so (dArkOS's own, npusr-gles/ in the dArkOS so
    until 2026-11-25; it is not installed.)
    sha256 d2cf6854545702c7331b3747527170047894feba658a6bf1c06a49488fa88bbc  espcn_x2_480x272.rknn
 
-5. The x3 and x4 models, made for dArkOS by its AI-SR session (2026-11-25), in
+5. The x3 models, made for dArkOS by its AI-SR session (2026-11-25), in
    /usr/share/darkos/npusr/: espcn_x3_400x240.rknn (the 3DS), espcn_x3_480x272.rknn (the PSP)
    and x3_<W>x<H>.rknn (PS1 and the 16-bit consoles: 256, 320 and 368 by 240 and by 224, and
-   304x224 for Neo Geo) - one x3 network made into a model for each frame size - and
-   espcn_x4_400x240.rknn (the 3DS on a 1920x1080 TV), an x4 network. The file names are those
-   the layer and libnpusr_gles.so look for; the networks are not ESPCN.
+   304x224 for Neo Geo) - one x3 network made into a model for each frame size. Made with them
+   and kept in npusr/models/ in the dArkOS sources, not installed: espcn_x4_400x240.rknn, an x4
+   network for the 3DS on a 1920x1080 TV (with the picture filling the TV's height the x3 one
+   does it for less). The file names are those the layer and libnpusr_gles.so look for; the
+   networks are not ESPCN.
    Space-to-depth networks: 4 luma channels of a 2x2 cell in, a 3x3 convolution 4 -> 32
    channels, 7 (x3) or 9 (x4) of 32 -> 32 with ReLU, one 32 -> (2S)^2, clipped to [0,1].
    Their weights started from a bicubic interpolation written into the network - no other

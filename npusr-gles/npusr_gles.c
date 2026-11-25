@@ -11,6 +11,11 @@
  *                                dArkOS, 2026-11-24: a viewport that is k > S times a 224- or 240-line frame (a TV at
  *                                1920x1080: RetroArch's integer scale gives x4) is taken too, and the S times picture
  *                                is stretched over it, bilinear
+ *   DARKOS_NPU_SR=x3:auto:fit    (or x3:320x240:fit) dArkOS, 2026-11-25, on a TV: the picture fills the screen - the
+ *                                S times picture stretched, bilinear, over the largest rectangle of the frame's shape
+ *                                in the window wherever that is bigger than the area the program drew the frame in
+ *                                (1080p: 1440x1080 for 320x240, not RetroArch's x4 1280x960 with black bars all round;
+ *                                1366x768, 1600x900: over its x3). Where they are the same size it stays in place
  *   DARKOS_NPU_SR_MODEL=...      the .rknn model; {S}, {W}, {H} in it (or printf %d, %d, %d) are the scale and size
  *                                (default /usr/share/darkos/npusr/espcn_x%d_%dx%d.rknn)
  *   DARKOS_NPU_SR_LIB=...        librknnrt.so (default: found by dlopen)
@@ -177,7 +182,7 @@ static int load_syms(void)
 
 /* ------------------------------------------------------------------ configuration */
 static struct {
-    int on, S, W, H, autosize, stats, dump_at, exp, async;   /* async: DARKOS_NPU_SR_COMPOSE=async */   /* exp (tests): 1 no invalidate, 2 no compose, 4 no count, 8 table compose, 16 no NPU jobs */
+    int on, S, W, H, autosize, fit, stats, dump_at, exp, async;   /* async: DARKOS_NPU_SR_COMPOSE=async */   /* exp (tests): 1 no invalidate, 2 no compose, 4 no count, 8 table compose, 16 no NPU jobs */
     char model[512], lib[512], dump[512];
 } cfg;
 
@@ -187,8 +192,13 @@ static void read_cfg(void)
     if (!e || !*e || *e == '0') return;
     int S = 0, W = 0, H = 0, n = 0;
     if (sscanf(e, "x%d:%n", &S, &n) != 1 || n == 0 || S < 2 || S > 4) goto bad;
-    if (!strcmp(e + n, "auto")) cfg.autosize = 1;
-    else if (sscanf(e + n, "%dx%d", &W, &H) != 2 || W < 16 || H < 16 || W > 1024 || H > 1024 || (W & 1) || (H & 1)) goto bad;
+    const char *t = e + n;
+    int k = 0;
+    if (!strncmp(t, "auto", 4)) { cfg.autosize = 1; t += 4; }
+    else if (sscanf(t, "%dx%d%n", &W, &H, &k) != 2 || W < 16 || H < 16 || W > 1024 || H > 1024 || (W & 1) || (H & 1)) goto bad;
+    else t += k;
+    if (!strcmp(t, ":fit")) cfg.fit = 1;   /* a TV: the picture over the largest rectangle of its shape */
+    else if (*t) goto bad;
     cfg.S = S; cfg.W = W; cfg.H = H;
     const char *m = getenv("DARKOS_NPU_SR_MODEL");
     snprintf(cfg.model, sizeof cfg.model, "%s", (m && *m) ? m : "/usr/share/darkos/npusr/espcn_x%d_%dx%d.rknn");
@@ -206,11 +216,11 @@ static void read_cfg(void)
     const char *x = getenv("DARKOS_NPU_SR_EXP");
     cfg.exp = (x && *x) ? atoi(x) : 0;
     cfg.on = 1;
-    if (cfg.autosize) LOG("on: x%d, the size from the viewport, models %s", S, cfg.model);
-    else LOG("on: x%d, %dx%d, model %s", S, W, H, cfg.model);
+    if (cfg.autosize) LOG("on: x%d, the size from the viewport%s, models %s", S, cfg.fit ? ", fit" : "", cfg.model);
+    else LOG("on: x%d, %dx%d%s, model %s", S, W, H, cfg.fit ? ", fit" : "", cfg.model);
     return;
 bad:
-    LOG("DARKOS_NPU_SR=\"%s\" not understood (expected e.g. x3:320x240 or x3:auto), off", e);
+    LOG("DARKOS_NPU_SR=\"%s\" not understood (expected e.g. x3:320x240 or x3:auto[:fit]), off", e);
 }
 
 /* ------------------------------------------------------------------ the NPU, one engine a native size */
@@ -972,6 +982,20 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
     }
     int aw = W * S, ah = H * S;
     if (fx < 0 || fy < 0 || fx + fw2 > fw || fy + fh2 > fh) { G.n_geom++; return; }
+    /* where the picture goes: the area the program drew the frame in; with ":fit" (a TV) the largest rectangle of
+     * the frame's shape in the window, centred, the S times picture stretched to it wherever that is not the area
+     * (the owner, 2026-11-25: no black bars around the picture on a TV; RetroArch's bars, cleared each frame, are
+     * drawn over). The panel's 1280x720 and a 720p TV: 240 lines are x3 in place, 224 lines stretched to 720 */
+    int tx = fx, ty = fy, tw = fw2, th = fh2;
+    if (cfg.fit) {
+        if ((long)fw * ah >= (long)fh * aw) { th = fh; tw = (int)(((long)fh * aw * 2 / ah + 1) / 2); }
+        else { tw = fw; th = (int)(((long)fw * ah * 2 / aw + 1) / 2); }
+        if (tw > fw) tw = fw;
+        if (th > fh) th = fh;
+        tx = (fw - tw) / 2; ty = (fh - th) / 2;
+        if (tw != aw || th != ah) stretch = 1;
+        else { tx = ox; ty = gy0; tw = aw; th = ah; }
+    }
     double t0 = now_ms();
     Eng *E = NULL;
     int ready = -1;
@@ -1051,8 +1075,8 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
         { double t1 = now_ms(); G.ph[2] += t1 - tp; tp = t1; }
         if ((int)s->count > E->over) E->n_menu++;
         else if (!(cfg.exp & 2) && stretch) {
-            /* a frame enlarged kk > S times: the S times picture into an offscreen texture (the worker's own, when
-             * it composes), then stretched over the whole area, bilinear (x3 -> x4: 1.33 times) */
+            /* a frame enlarged kk > S times, or fitted (a TV): the S times picture into an offscreen texture (the
+             * worker's own, when it composes), then stretched over tx, ty, tw x th, bilinear */
             if (!s->fbrgb) {
                 s->trgb = tex_new(GL_RGBA8, E->OW, E->OH, GL_NEAREST);
                 s->fbrgb = fbo_for(s->trgb);
@@ -1074,9 +1098,9 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
                 p_glDrawArrays(GL_TRIANGLES, 0, 3);
             }
             p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            if (!(cfg.exp & 1)) { static const GLenum col = GL_COLOR; p_glInvalidateSubFramebuffer(GL_DRAW_FRAMEBUFFER, 1, &col, fx, fy, fw2, fh2); }
+            if (!(cfg.exp & 1)) { static const GLenum col = GL_COLOR; p_glInvalidateSubFramebuffer(GL_DRAW_FRAMEBUFFER, 1, &col, tx, ty, tw, th); }
             p_glBindFramebuffer(GL_READ_FRAMEBUFFER, s->fbrgb);
-            p_glBlitFramebuffer(0, 0, E->OW, E->OH, fx, fy, fx + fw2, fy + fh2, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            p_glBlitFramebuffer(0, 0, E->OW, E->OH, tx, ty, tx + tw, ty + th, GL_COLOR_BUFFER_BIT, GL_LINEAR);
             p_glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
             E->n_comp++;
         }

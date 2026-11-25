@@ -10,8 +10,8 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       screen alone at its native resolution, Vulkan) and the settings in the core's overrides that
       would undo it; prints a config for RetroArch's --appendconfig (Vulkan, integer scale, no
       smoothing, shader or overlay), and on a second line what the launcher sets DARKOS_NPU_SR to:
-      x3:400x240 on the panel; on a 1080p TV (integer scale: x4, 1600x960) x4:400x240 with the x4
-      model, else x3:400x240:a4 (the x3 picture resampled to it).
+      x3:400x240 on the panel; on a TV :fit too - the layer fits the upscaled frame to the screen's
+      height (1800x1080 on 1080p, resampled), with :a4 where integer scale gives x4 (1600x960).
   darkos-npusr ppsspp <PPSSPP's PSP/SYSTEM dir>
       PSP on PPSSPP: brings the NPU up; prints a config for PPSSPP's --appendconfig (Vulkan, 1x,
       nearest, integer scale, centred: 960x544, 1440x816 on a 1080p TV) and on a second line what
@@ -29,9 +29,9 @@ DARKOS_NPU_UPSCALE=on, and its launcher asks this for the rest:
       PAR 1:1: integer scale then gives exactly x3 - 320x224 is 960x672, not 897x672 at 4:3);
       prints a config for --appendconfig (gl, integer scale, no smoothing, shader or overlay). The
       launcher then preloads libnpusr_gles.so (npusr-gles/; armhf or aarch64, as RetroArch is) with
-      DARKOS_NPU_SR=x3:auto: the frame's size from the viewport, a model for each size there is one
-      (256, 320 and 368 wide by 224 and 240; any other frame is shown as drawn). On a 1080p TV
-      integer scale gives x4: the x3 picture is stretched over it, bilinear.
+      DARKOS_NPU_SR as the second line says: x3:auto - the frame's size from the viewport, a model
+      for each size there is one (256, 320 and 368 wide by 224 and 240; any other frame is shown as
+      drawn) -, on a TV x3:auto:fit: the x3 picture stretched, bilinear, to the screen's height.
   darkos-npusr restore
       puts back every key the last run changed, in the files it changed - or that the emulator
       writes the appended settings into. The launchers run it after the emulator, and before one
@@ -180,8 +180,7 @@ def int_scale(w, h):
 def npu_up(scale, w, h, models=None, lib_dirs=("/usr/lib/aarch64-linux-gnu", "/usr/lib", "/usr/local/lib")):
     """The NPU ready for the model of x<scale> from <w>x<h> (or for any of the models the glob <models>
     names); False (and why on stderr) if not. On a TV too since 2026-11-25: the rotate layer takes the
-    swapchain of a landscape display when DARKOS_NPU_SR is set, and libnpusr_gles.so stretches its x3
-    picture over RetroArch's x4."""
+    swapchain of a landscape display when DARKOS_NPU_SR is set, and both fit the picture to the TV's height."""
     pattern = models or f"{MODELS}/espcn_x{scale}_{w}x{h}.rknn"
     if not glob.glob(pattern):
         log(f"no model {pattern}")
@@ -403,13 +402,12 @@ def cmd_retroarch(cfgdir, game):
         f.write("".join(ra_line(k, v) + "\n" for k, v in RA_APPEND))
     print(app)
     # the layer's DARKOS_NPU_SR: RetroArch's integer scale shows the 400x240 top screen x3 on the panel, x4 on
-    # a 1080p TV - there the x4 model where there is one (its frame is the picture's size: Mali 68%, 59 fps on
-    # 2026-11-25), else the x3 model's picture resampled to it (":a4", the layer's decode pass: 83%, hotter)
+    # a 1080p TV (":a4": the step the layer reads the frame at); on a TV the layer fits the upscaled frame to
+    # the screen's height (":fit", 1800x1080 on 1080p, resampled in its decode pass: the owner, 2026-11-25, did
+    # not want RetroArch's picture with black bars all round). The x3 model there: fitted, the x4 one
+    # (espcn_x4_400x240.rknn, 1600x960 decoded) took Azahar to 54 fps, Mali 87%; the x3 one 59 fps, 85%
     a = int_scale(400, 240)
-    if a == 4 and os.path.isfile(f"{MODELS}/espcn_x4_400x240.rknn"):
-        print("x4:400x240")
-    else:
-        print("x3:400x240" + (f":a{a}" if a != 3 else ""))
+    print("x3:400x240" + (f":a{a}" if a != 3 else "") + (":fit" if hdmi_connected() else ""))
     return 0
 
 
@@ -452,6 +450,8 @@ def cmd_gles(cfgdir, core, game):
     with open(app, "w") as f:
         f.write("".join(ra_line(k, v) + "\n" for k, v in append))
     print(app)
+    # libnpusr_gles.so's DARKOS_NPU_SR: on a TV the picture fills the screen's height (the owner, 2026-11-25)
+    print("x3:auto" + (":fit" if hdmi_connected() else ""))
     return 0
 
 

@@ -92,9 +92,13 @@ else
       for a in "$@"; do case "$a" in */cores/*_libretro.so) npucore=${a##*/}; npucore=${npucore%_libretro.so} ;; esac; done
       case "$npucore" in
         ?*)
-          if npu=$("$npusr" gles "/home/ark/.config/${emulator}" "$npucore" "${@: -1}"); then
+          # two lines: the --appendconfig file and the library's DARKOS_NPU_SR (":fit" on a TV)
+          if npuout=$("$npusr" gles "/home/ark/.config/${emulator}" "$npucore" "${@: -1}"); then
+            npu=${npuout%%$'\n'*}
+            npusr_sr=${npuout#*$'\n'}
+            [ "$npusr_sr" = "$npuout" ] && npusr_sr=x3:auto
             npuenv=("LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libnpusr_gles.so${LD_PRELOAD:+:$LD_PRELOAD}"
-                    "DARKOS_NPU_SR=x3:auto"
+                    "DARKOS_NPU_SR=$npusr_sr"
                     "DARKOS_NPU_SR_MODEL=/usr/share/darkos/npusr/x3_{W}x{H}.rknn"
                     "DARKOS_NPU_SR_LIB=/usr/lib/arm-linux-gnueabihf/librknnrt.so")
           else

@@ -31,11 +31,20 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   card), Sega CD and the CD PC Engines in a game.
   On a TV over HDMI too since 2026-11-25 (the owner asked; KNOWN-ISSUES, "On
   a TV"): the gl cores' x3 stretched to RetroArch's x4, the layer on a
-  landscape display, its resample as a decode pass. The x4 network for
-  Azahar on the TV and the AI-SR session's better x3 (all sizes) in master
-  since 2026-11-25 with their licence notes (npusr/NOTICE, item 5). Open: the
-  panel's PSP with fit or fill, now through the decode pass, and the new x3
-  on the panel, to be checked on the panel.
+  landscape display, its resample as a decode pass. The AI-SR session's
+  better x3 (all sizes) in master since 2026-11-25 with its licence notes
+  (npusr/NOTICE, item 5); the same day the picture fills the TV (`:fit`, any
+  TV size; KNOWN-ISSUES, "The whole screen"), so its x4 for Azahar stays in
+  the sources only. Open: Azahar filling the TV runs hot (85%, 78 C, the
+  Mali's clock down to 700 MHz) - a decode pass that draws (AFBC) instead of
+  storing, or an x4.5 network (400x240 to 1800x1080, no resample); a TV below
+  1080p for real; the panel's PSP with fit or fill through the decode pass and
+  the new x3 on the panel, to be checked on the panel.
+  On 2026-11-25 ~07:20 MSK the console, left on the TV, was found with a black
+  panel after the HDMI cable was pulled: not on the network, the power key lit
+  the LED, a long press switched it off. The journal is not kept across boots,
+  so the cause is not known (asleep when the cable went? hdmi-hotplug.sh
+  switching back to the panel?). Try it again on purpose.
 
 * **RetroArch's slang shaders in the image** (the owner, 2026-11-24: so that
   no one has to fetch them for Vulkan). The change to `build_retroarch.sh` is
