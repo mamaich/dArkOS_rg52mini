@@ -25,6 +25,7 @@
     {"name": "retroarch-cores rg503 (prebuilt cores)", "mode": "commit", "repo": "christianhaitian/retroarch-cores", "branch": "rg503", "pin": {"file": "build_retroarch.sh", "regex": "^RETROARCH_CORES_COMMIT=([0-9a-f]+)"}, "note": "the zips of the cores the image does not build; every changed core is a new binary: try it on the console before moving the pin (parallel_n64 f56f7a2 of 2026-11-14 draws no 3D)"},
     {"name": "retroarch-assets", "mode": "follow", "repo": "libretro/retroarch-assets"},
     {"name": "glsl-shaders", "mode": "follow", "repo": "libretro/glsl-shaders"},
+    {"name": "slang-shaders", "mode": "follow", "repo": "libretro/slang-shaders"},
     {"name": "EasyRPG Player", "mode": "tag", "repo": "EasyRPG/Player", "pin": {"file": "rk3562_core_builds/scripts/easyrpg.sh", "regex": "^tag=\"([^\"]+)\""}, "tag_regex": "^\\d+\\.\\d+(\\.\\d+)*$"},
     {"name": "liblcf (EasyRPG)", "mode": "follow", "repo": "EasyRPG/liblcf"},
     {"name": "mupen64plus_next (core)", "mode": "follow", "repo": "libretro/mupen64plus-libretro-nx", "branch": "develop", "cache": {"file": "Arkbuild_package_cache/rk3562/mupen64plus-nx-a53.commit", "regex": "^([0-9a-f]{40})"}},

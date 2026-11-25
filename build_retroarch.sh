@@ -562,4 +562,14 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 	sudo mv Arkbuild/home/ark/.config/retroarch32/shaders/shaders_glsl/Sharp-Shimmerless/shaders_glsl/* Arkbuild/home/ark/.config/retroarch32/shaders/shaders_glsl/Sharp-Shimmerless/
 	sudo rm -rf Arkbuild/home/ark/.config/retroarch32/shaders/shaders_glsl/Sharp-Shimmerless/shaders_glsl/
 fi
+# dArkOS RG52 Mini: RetroArch's slang shaders as well (the owner, 2026-11-24: so that no one has to fetch
+# them): its Vulkan driver reads only these (Azahar runs on Vulkan; gl reads the GLSL ones). One copy, in
+# the 64-bit RetroArch's shader dir, which retroarch-next's cfg names too; retroarch32 has no Vulkan.
+# About 84 MB; the GLSL clones' .git (24 MB each, nothing reads it) goes.
+if [ "$CHIPSET" == "rk3562" ]; then
+  sudo rm -rf Arkbuild/home/ark/.config/retroarch/shaders/shaders_slang
+  sudo git clone --depth=1 https://github.com/libretro/slang-shaders.git Arkbuild/home/ark/.config/retroarch/shaders/shaders_slang/
+  sudo rm -rf Arkbuild/home/ark/.config/retroarch/shaders/shaders_slang/{.git,configure,Makefile}
+  sudo rm -rf Arkbuild/home/ark/.config/retroarch/shaders/shaders_glsl/.git Arkbuild/home/ark/.config/retroarch32/shaders/shaders_glsl/.git
+fi
 call_chroot "chown -R ark:ark /home/ark/.config/"

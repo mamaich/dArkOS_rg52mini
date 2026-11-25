@@ -55,8 +55,9 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   crashed RetroArch at the start with SwanStation and with Azahar; the owner
   chose to fix that first: retroarch-patch-0027 in master, checked on the
   console (KNOWN-ISSUES.md, "RetroArch's shaders on the Mali-G52"). They run
-  now, but at 2.6-25 fps where nearest keeps 60. Shipping the pack itself:
-  waiting for the owner's word. Also open: the GLSL
+  now, but at 2.6-25 fps where nearest keeps 60. The pack itself in master
+  since 2026-11-25 (the owner: fix and ship); to be checked in the next test
+  image (the menu lists them, a preset loads). Also open: the GLSL
   `xbr-lv2` and `xbr-lv2-3d` do not compile on Mali (their `delta`,
   `delta_l` and `delta_u` made `const` would do: `XBR_SCALE` is a `#define`).
 

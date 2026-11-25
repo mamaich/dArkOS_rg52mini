@@ -591,7 +591,17 @@ In master for 1.13, not released yet (VERSION says 1.13):
   32X, SNES, NES, PC Engine and Neo Geo x3 in RetroArch, with square pixels
   (a little wider than 4:3). The kernel powers the NPU now, as a module loaded
   only for such a game (KNOWN-ISSUES.md, "NPU UPSCALE", where a table says
-  which emulators and frames).
+  which emulators and frames). On a TV over HDMI too, the picture filling the
+  screen's height (KNOWN-ISSUES.md, "On a TV").
+- RetroArch's slang shaders come with the image (libretro's slang-shaders in
+  `~/.config/retroarch/shaders/shaders_slang`, about 84 MB; the owner,
+  2026-11-24/25): its Vulkan driver reads only these — Azahar's 3DS, or a core
+  of the 64-bit RetroArchs set to Vulkan — so no one has to fetch them with
+  the Online Updater. The presets whose passes are sized from the source
+  (xBR-lv3, ScaleFX, ArtCNN) no longer crash RetroArch (patch 0027); on this
+  GPU they are slow (KNOWN-ISSUES.md, "RetroArch's shaders on the Mali-G52").
+  The GLSL ones, for `gl`, were there already; their clones' `.git` (24 MB in
+  each RetroArch) is left out.
 
 See TODO.md, "For 1.13", for what else is planned.
 

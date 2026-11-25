@@ -1659,9 +1659,9 @@ Found while comparing NPU UPSCALE with RetroArch's shaders (above).
   edge and network shaders stay far from 60 fps at 960x720 on this GPU,
   for any system (the cost follows the output's size): see "NPU UPSCALE".
   The owner asked for the slang shaders in the image (so that no one has
-  to fetch them): the change to `build_retroarch.sh` is written (one copy,
-  84 MB, for both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB each,
-  left out), not in master — docs/TODO.md.
+  to fetch them): `build_retroarch.sh` puts them in since 2026-11-25 (one
+  copy, 84 MB, for both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB
+  each, left out).
 
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
 
