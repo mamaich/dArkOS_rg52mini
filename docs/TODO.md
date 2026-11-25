@@ -53,6 +53,13 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   the LED, a long press switched it off. The journal is not kept across boots,
   so the cause is not known (asleep when the cable went? hdmi-hotplug.sh
   switching back to the panel?). Try it again on purpose.
+  On 2026-11-25 ~23:55 MSK (the AI-SR session) a cable put in while the
+  console was in deep suspend was not seen after the wake: HDMI-A-1 stayed
+  "disconnected", and dmesg after "PM: suspend exit" had no HDMI line. No
+  hotplug re-probe on resume; a reboot brought the TV up. The pulled cable
+  above may be the same thing the other way round. To look at: a re-probe
+  from the wake hook (the connector's `status` file takes `detect`), then
+  hdmi-hotplug.sh as for a real hotplug. It needs someone at the cable.
   Once in 30 stops on 2026-11-25 (the AI-SR session's runs) RetroArch with
   Azahar, paused, under the layer before cf25a84, did not end on SIGTERM:
   systemd killed it after 90 s; ES came back, no NPU timeout, nothing left
