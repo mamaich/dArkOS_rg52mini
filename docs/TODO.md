@@ -60,6 +60,15 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   above may be the same thing the other way round. To look at: a re-probe
   from the wake hook (the connector's `status` file takes `detect`), then
   hdmi-hotplug.sh as for a real hotplug. It needs someone at the cable.
+  On 2026-11-26 the cable stayed in through 22 deep suspends (sleep tests,
+  ES's menu on the TV): the connector went on saying "connected", as nothing
+  probed it. When ES was then stopped (a test starting a game), the hotplug
+  event that came as the CRTC went off probed it "disconnected",
+  hdmi-hotplug.sh moved the picture to the panel, and `detect` on the status
+  file found nothing either; a reboot brought the TV back. So after a deep
+  suspend the TV is not found at all, cable in or not, until a reboot (the
+  rk628 bridge's hot-plug detection after the wake?); a re-probe from the
+  wake hook alone would not help.
   Once in 30 stops on 2026-11-25 (the AI-SR session's runs) RetroArch with
   Azahar, paused, under the layer before cf25a84, did not end on SIGTERM:
   systemd killed it after 90 s; ES came back, no NPU timeout, nothing left
@@ -2653,7 +2662,10 @@ Notes:
     and the kernel's freeze (its filesystem sync) is lost: `pause.sh` takes
     it for the press that woke the system, and the device sleeps until the
     next one. A press during `pre` sets the RTC alarm a second on, which
-    can fire inside that same sync and be lost as well.
+    can fire inside that same sync and be lost as well. Fixed on 2026-11-26:
+    it was lost more than half the time on the panel, and the alarm is "+3"
+    now (KNOWN-ISSUES, "A press on the way down could leave the device
+    asleep").
   - Fixed: the power LEDs (gpio 96/97) stayed off after the first sleep after
     boot. The hook exported them and wrote "out" as the direction, which
     drives a pin low, before it saved their state. It reads them first now and

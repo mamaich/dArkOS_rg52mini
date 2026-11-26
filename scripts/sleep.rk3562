@@ -99,11 +99,18 @@ case $1 in
     echo 0 > $RTC_ALARM 2>/dev/null
     echo $t > $RTC_ALARM 2>/dev/null
 
-    # The power key was pressed on the way down: wake a second after.
+    # The power key was pressed on the way down: wake right after. The alarm
+    # three of the RTC's seconds on, so two seconds ahead at least: one that
+    # goes off before the kernel takes interrupts only as wake events (its
+    # noirq phase) is handled while still awake and lost, and the system
+    # sleeps on with no alarm at all, the power-off one above replaced. From
+    # here to that phase takes about 0.55 s with the panel lit (0.42 s of it
+    # the devices' suspend) and 0.2 s with the picture on a TV; "+1", the
+    # RTC's next second, lost more than half of such wakes (KNOWN-ISSUES).
     echo "asleep $(date +%s%3N)" > $PHASE
     if [ -e $WAKE ]; then
       echo 0 > $RTC_ALARM 2>/dev/null
-      echo +1 > $RTC_ALARM 2>/dev/null
+      echo +3 > $RTC_ALARM 2>/dev/null
     fi
     exit 0
     ;;

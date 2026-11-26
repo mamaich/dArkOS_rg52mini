@@ -3410,6 +3410,24 @@ A report on 1.0: the battery ran flat "in sleep". Measured on revision B on
   screen goes dark by itself after 15 s, a short press shows it again, a long
   press boots, and with the cable out U-Boot powers the device off; a short
   press then boots as usual. All four seen on the device on 2026-10-19.
+* **A press on the way down could leave the device asleep.** A press of the
+  power key while the sleep hook's `pre` runs asks to come back (`pause.sh`
+  sets the wake file), and `pre` set the RTC alarm to "+1": the RTC's next
+  second, 0-1 s on. An alarm that goes off before the kernel's noirq phase,
+  from which an interrupt counts as a wake event, is handled while the system
+  is still awake and lost; the system then sleeps on with no alarm at all, its
+  two-hour power-off alarm replaced. From the end of `pre` to that phase takes
+  about 0.55 s with the panel lit (0.42 s of it the devices' suspend; the same
+  in a 3DS game) and 0.2 s with the picture on a TV (2026-11-26, about 40
+  suspends timed against the RTC's second boundary), so "+1" lost more than
+  half of such wakes on the panel. Seen in a sleep test on the night of
+  2026-11-25, on a TV: the device did not come back; four hours later a cable
+  wake (most likely the power over USB-C gone for a moment) found it on
+  battery past its two hours, it powered off as it should, and U-Boot's charge
+  screen came up with the power. From 1.13 the alarm is "+3", two seconds on
+  at least: such a press brings the device back 2-3 s after it sleeps.
+  Checked on the device: 15 suspends, 10 in ES's menu and 5 in a 3DS game,
+  each woken by the alarm with 1.5 s to spare.
 * **What deep sleep still draws** is unexplained. Not the radios (wlan and bt
   soft-blocked: the same 42 mA), not the `rockchip-suspend` node (disabled in
   the vendor DT as well; enabled with the vendor's `sleep-mode-config` 0x5e2,
