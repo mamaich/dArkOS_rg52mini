@@ -983,28 +983,30 @@ sudo mkdir -p ${fat32_mountpoint}/ps2/memcards
 sudo cp shutdownimages/bye.gif ${fat32_mountpoint}/shutdownimages/
 sudo mkdir -p ${fat32_mountpoint}/ps2/savestates
 
-# Add latest version of PortMaster install to roms/tools folder. runport.sh installs PortMaster
-# from it, without the network, when the first port starts on a card that has none.
-# The release's Install.PortMaster.sh was not rebuilt for its PortMaster: that of 2026.11.02-0433
-# still installs 2026.06.23-0015, which knows no runtime newer than itself and cannot read the
-# port.json of newer ports. The release's PortMaster.zip, checked against its .md5, goes into the
-# installer instead (scripts/rk3562/pm-installer-update.py; the installer's own check passes).
-for (( ; ; ))
+# PortMaster's installer in roms/tools: runport.sh installs PortMaster from it, without the
+# network, when the first port starts on a card that has none. PortMaster has stable, beta and
+# alpha channels, and its version.json names each one's version. The release GitHub calls
+# "latest" is a beta one, so the image takes the stable release's own Install.PortMaster.sh and
+# checks that it installs that version (scripts/rk3562/pm-installer-version.py). Images 1.9 to
+# 1.12 put the latest release's PortMaster.zip into the installer and so shipped the beta channel
+# (docs/KNOWN-ISSUES.md, "PortMaster: images 1.9 to 1.12 installed the beta channel").
+for try in $(seq 1 30)
 do
- PMver=$(curl --silent -qI https://github.com/PortsMaster/PortMaster-GUI/releases/latest | awk -F '/' '/^location/ {print  substr($NF, 1, length($NF)-1)}')
- rm -f Install.PortMaster.sh PortMaster.zip PortMaster.zip.md5
- wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/Install.PortMaster.sh &&
-  wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/PortMaster.zip &&
-  wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/PortMaster.zip.md5 &&
-  [ "$(md5sum PortMaster.zip | cut -c1-32)" = "$(cut -c1-32 PortMaster.zip.md5)" ]
+ rm -f Install.PortMaster.sh pm-version.json
+ wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/latest/download/version.json -O pm-version.json &&
+  PMver=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["stable"]["version"])' pm-version.json) &&
+  wget -t 3 -T 60 --no-check-certificate https://github.com/PortsMaster/PortMaster-GUI/releases/download/${PMver}/Install.PortMaster.sh
  if [ $? == 0 ]; then
   break
  fi
+ rm -f Install.PortMaster.sh
  sleep 10
 done
-python3 scripts/rk3562/pm-installer-update.py Install.PortMaster.sh PortMaster.zip
+rm -f pm-version.json
+PMhas=$([ -f Install.PortMaster.sh ] && python3 scripts/rk3562/pm-installer-version.py Install.PortMaster.sh)
+echo "PortMaster installer: installs ${PMhas:-nothing}, the stable channel is ${PMver:-unknown}"
+[ -n "${PMhas}" ] && [ "${PMhas}" = "${PMver}" ]
 verify_action
-rm -f PortMaster.zip PortMaster.zip.md5
 sudo mv -f Install.PortMaster.sh ${fat32_mountpoint}/tools/Install.PortMaster.sh
 chmod 777 ${fat32_mountpoint}/tools/Install.PortMaster.sh
 

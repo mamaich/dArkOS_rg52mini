@@ -1008,6 +1008,46 @@ A user's own GameSettings still win. On the owner's console since
 If another game hangs the same way (a FIFO line in the journal of its
 launch), the same two lines for its id fix it.
 
+## PortMaster: images 1.9 to 1.12 installed the beta channel (2026-11-26) — fixed for 1.13
+
+Users noticed it, and the owner passed it on: the PortMaster that a card made
+from 1.9 to 1.12 installs is a beta.
+
+* **Why.** PortMaster has three release channels: stable, beta and alpha.
+  Each of its releases carries `version.json`, which names each channel's
+  version. On 2026-11-26 stable is 2026.06.23-0015, and beta and alpha are
+  2026.11.17-0700.
+  - The release GitHub calls "latest" is the newest beta: its notes say
+    "(beta)", and its `PortMaster.zip` has `PORTMASTER_RELEASE_CHANNEL =
+    'beta'` in `pugwash`.
+  - Its `Install.PortMaster.sh` is the stable release's byte for byte and
+    installs the stable version, on purpose.
+  - In 1.9 (9a79ace) we took that installer for one nobody had rebuilt, and
+    put the latest release's `PortMaster.zip` into it ("PortMaster: the latest
+    version, and ports copied by hand").
+  - A PortMaster installed that way stays on the beta channel. It writes
+    `"release_channel": "beta"` into its `config/config.json` and offers each
+    new beta, often several a week.
+* **The reasons we had did not hold.** 2026.06.23 reads port.json version 4,
+  as the beta does, and all 1518 ports in PortMaster's list (PortMaster-New's
+  `ports.json`, 2026-11-26) are version 2 or 4. "Unknown runtime" came from
+  PortMaster's empty cache, not from its version. NFSU's port.json version 8
+  is unreadable to both.
+* **Now.** The build reads `version.json` and downloads the stable release's
+  `Install.PortMaster.sh`. It stops unless that installer installs the stable
+  version: `scripts/rk3562/pm-installer-version.py` checks that the installer
+  is whole and prints the version inside. The 1.13 image installs
+  2026.06.23-0015, as images up to 1.8 did.
+* **A card that has the beta keeps it.** PortMaster lives on the ROMs
+  partition, which an update does not touch. To go back to stable, with Wi-Fi
+  on:
+  1. Open PortMaster and go to Options → "Release Channel: beta" (in Russian,
+     Настройки → «Канал выпуска: beta»). Press A and confirm.
+  2. PortMaster restarts and offers to downgrade to the stable version. Say
+     yes.
+
+  The same item switches back to the beta.
+
 ## DSperate: the 3D at 2x by default — for 1.13
 
 DSperate 3.5.0 draws the 3D layer on the GPU at 1, 2 or 4 times the DS's
@@ -4762,6 +4802,10 @@ ES is unchanged (TODO.md).
   against its .md5) into it with `scripts/rk3562/pm-installer-update.py`. The
   installer's own check (`bash Install.PortMaster.sh --check`) passes, and it
   installs 2026.11.02-0433.
+  **Wrong, and undone for 1.13:** the installer is the stable channel's on
+  purpose, and the latest release's PortMaster.zip is a beta, so 1.9 to 1.12
+  installed the beta ("PortMaster: images 1.9 to 1.12 installed the beta
+  channel").
 * **PortMaster 2026.11 on the console** (2026-11-09, installed with that
   installer the way `runport.sh` does it):
   - Our additions to `mod_dArkOS.txt` (E2BIG guard, gl4es fix, Vulkan driver

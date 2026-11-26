@@ -371,6 +371,9 @@ New in 1.9 (build 11122026, 2026-11-12):
   keeps its PortMaster, which lives on the ROMs partition that an update does
   not touch: PortMaster offers its own update when started with Wi-Fi
   (KNOWN-ISSUES.md, "PortMaster: the latest version, and ports copied by hand").
+  This was a mistake, undone for 1.13. The installer is the stable channel's
+  on purpose, and the latest release's PortMaster.zip is a beta, so 1.9 to 1.12
+  installed the beta channel.
 
 - Ports with PortMaster 2026.11: PortMaster started from Ports runs as ark
   (A/B and X/Y were swapped in its menus), a port that exports the controller
@@ -609,6 +612,12 @@ In master for 1.13, not released yet (VERSION says 1.13):
 - Emulators updated: DSperate 4.0.2 (DS: saves written safely, DSi sound
   and cameras, a tenth less CPU in Diddy Kong Racing DS), armGBA 2.0, the PS2
   game patches (TODO.md, "Upstream updates for 1.13").
+- PortMaster: the image installs the stable channel again (2026.06.23-0015).
+  Images 1.9 to 1.12 installed the beta. A card that has the beta keeps it,
+  since an update does not touch the ROMs partition. To go back to stable,
+  with Wi-Fi on: PortMaster → Options → "Release Channel: beta", press A and
+  confirm; PortMaster restarts and offers the downgrade (KNOWN-ISSUES.md,
+  "PortMaster: images 1.9 to 1.12 installed the beta channel").
 
 See TODO.md, "For 1.13", for what else is planned.
 
