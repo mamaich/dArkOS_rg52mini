@@ -1038,11 +1038,30 @@ from 1.9 to 1.12 installs is a beta.
   version: `scripts/rk3562/pm-installer-version.py` checks that the installer
   is whole and prints the version inside. The 1.13 image installs
   2026.06.23-0015, as images up to 1.8 did.
+* **Its window.** 2026.06 has no entry for this device and drew a 640x480
+  window with black bars on the 16:9 screen ("PortMaster's window had black
+  bars on the sides"). 1.11 had dropped our `pugwash` patch for that, because
+  the image's 2026.11 finds the size itself. `portmaster-e2big.sh` patches
+  `pugwash` again and leaves a 2026.11 one, only a launcher, alone. Its
+  path unit watches `pugwash` again. The built-in pad hiding in `get_controls`
+  also leaves PortMaster's own menu alone when 2026.06's `PortMaster.sh`
+  calls it.
+* **Checked on the console** (2026-11-26). The owner's beta was set aside,
+  and the card's own installer (the stable one, the same file the build now
+  takes) put 2026.06.23-0015 in when the first port started, without the
+  network, as `runport.sh` does it.
+  - GTA III, Doom 3, Mina the Hollower and OpenEnroth started.
+  - PortMaster started with the network. It kept to the stable channel, with
+    no update offered, and wrote `"release_channel": "stable"`.
+  - With the patch, the disclaimer, the main menu and Options filled
+    1280x720, and Options showed "Release Channel: stable".
+  - The owner's beta was then put back.
 * **A card that has the beta keeps it.** PortMaster lives on the ROMs
   partition, which an update does not touch. To go back to stable, with Wi-Fi
   on:
-  1. Open PortMaster and go to Options → "Release Channel: beta" (in Russian,
-     Настройки → «Канал выпуска: beta»). Press A and confirm.
+  1. Open PortMaster and go to Options, then to the System group at the end
+     of the list, and pick "Release Channel: beta" (in Russian, Настройки →
+     Система → «Канал выпуска: beta»). Press A and confirm.
   2. PortMaster restarts and offers to downgrade to the stable version. Say
      yes.
 
