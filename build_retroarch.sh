@@ -5,9 +5,13 @@
 # commit of that branch, not at its head (2026-11-15). The head got a new aarch64 parallel_n64 on
 # 2026-11-14 that draws no 3D on the RG52 Mini, and the 1.10 build of the next morning took it
 # unasked (KNOWN-ISSUES.md, "A prebuilt core nobody asked for"). 996dfd5 (2026-10-31) is the head
-# 1.6 to 1.9 were built from. Moving it: tools/upstream/check.py lists what the branch has since;
-# try each changed core on the console first.
-RETROARCH_CORES_COMMIT=996dfd5681a49cf006a3619471c71b25c27ebb93
+# 1.6 to 1.12 were built from. Moving it: tools/upstream/check.py lists what the branch has since;
+# try each changed core on the console first. e7d06c0 (2026-11-26, for 1.13): pcsx_rearmed and
+# pcsx_rearmed_rumble 0f544ce, tried on the console. Two stay at 996dfd5's builds (OLD_CORES_REF
+# below): parallel_n64, and yabasanshiro, whose build of 8a5b78e has ARMv8.1 atomics (LSE) that
+# the RG52 Mini's Cortex-A53 lacks: "Illegal instruction" at once (rg503 is a Cortex-A55).
+RETROARCH_CORES_COMMIT=e7d06c0e8e745f2c38b9ae88ad01e4202a692632
+OLD_CORES_REF=996dfd5681a49cf006a3619471c71b25c27ebb93
 # For rk3562, use local submodule (bmdhacks fork with rotation patch)
 if [ "$CHIPSET" == "rk3562" ]; then
   RETROARCH_TAG=$(grep -oP '(?<=tag=").*?(?=")' rk3562_core_builds/scripts/retroarch.sh)
@@ -187,6 +191,11 @@ while read RETROARCH_CORE; do
     # "J2ME"). Taken alone: the branch's head also has a parallel_n64 with no 3D.
     if [ "$CORE_REPO" != "master" ] && [ "$RETROARCH_CORE" == "freej2me-plus" ]; then
       CORE_REF="91b095ca6f60255b0d975f104378fea3e5bb7693"
+    fi
+    # parallel_n64: rg503's build of 2026-11-14 (f56f7a2) and later draw no 3D here; yabasanshiro's
+    # of 2026-11-26 (8a5b78e) needs a Cortex-A55. The builds before.
+    if [ "$CORE_REPO" != "master" ] && { [ "$RETROARCH_CORE" == "parallel_n64" ] || [ "$RETROARCH_CORE" == "yabasanshiro" ]; }; then
+      CORE_REF="${OLD_CORES_REF}"
     fi
     get_core https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REF"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip Arkbuild/home/ark/.config/retroarch/cores/
     if [ $? -eq 0 ]; then

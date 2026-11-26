@@ -321,6 +321,61 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
+## Upstream updates for 1.13, second round (2026-11-26/27, the owner: all of them, the deferred too)
+
+The owner's answer of 2026-11-26: every upstream update into 1.13, the heavy
+ones still measured on the console and taken if nothing gets slower. Then
+"OpenBOR и openMSX тогда не обновляем" (OpenBOR's 2022 pin is for 3.x paks,
+openMSX 20+ wants OpenGL 2.1). Builds in the test chroot one at a time
+(`~/rg52/sess19/oe/queue113b.sh`, caches dropped meanwhile; GitHub's HTTP/2
+kept breaking big clones that day: `http.version HTTP/1.1`), A/B on the test
+card (1.13 test build 20261126070706). Commits: rk3566_core_builds 7ccad31,
+this repository's `build_retroarch.sh`.
+
+Taken:
+- **armGBA a250366** (main after v2.0): 60 fps, the same CPU.
+- **armN64 2c1889c** (licence headers only).
+- **GameTank 6ac0c0a** (audio pop fixes): `gametank-patch-002` rewritten for
+  the line that now includes `src/compat.h`. Built; no GameTank ROM on the
+  test card, so not run.
+- **retroarch-next 25a1ee8**: six systems (GBA, SNES, Mega Drive, FBNeo,
+  PS1, GBC) at 60 fps, the same CPU, no crash, core options unchanged.
+- **RetroArch prebuilt cores e7d06c0** (rg503): pcsx_rearmed 0f544ce, 60 fps.
+  parallel_n64 and yabasanshiro stay at 996dfd5's builds (`OLD_CORES_REF`):
+  yabasanshiro's 8a5b78e has 21 LSE atomics (ARMv8.1, "Illegal instruction"
+  on the A53; rg503 is a Cortex-A55). Check every new rg503 core for LSE
+  (`aarch64-linux-gnu-objdump -d`, ldadd/cas/swp) before taking it.
+- **SDL2 2.32.11** (release-2.32.x 2e5b9a8): `sdl2.sh` `extension="3200.11"`
+  (else build_sdl2.sh's libSDL2.so link dangles), patch 0009 dropped
+  (upstream 21ac66c8b). 22 runs as at 2.32.10, no crash.
+- **Azahar 2127.0.1**: the series rebased with git (each patch a commit on
+  2126.2, `git rebase --onto`), 000's 37 conflicts resolved by hand: 2127's
+  MSAA beside GammaOS's render pass slots and deferred clears, its min/max
+  blend emulation inside GammaOS's ResolveBlend, its framebuffer address
+  checks beside GammaOS's GPU worker, its PositionOutput before GammaOS's
+  vertex depth. 010 and 021-026 dropped (in 2127). New 035: 000's code on
+  2127's API where the merge showed no conflict (it failed to compile). The
+  2126.2 profile. Warm (the second run: 2127 changes the shader cache's key,
+  so every game compiles its shaders once more): Castlevania 59.1 fps against
+  59.1-59.3, Luigi's Mansion 59.9 against 59.7, Super Mario 3D Land and Sonic
+  Generations 60 with both. 3D Land's main thread took 37-38% against 34%,
+  its GPU thread 14% against 11%; the other three the same. A profile trained
+  on 2127 may win that back (to do; the core crashes on exit, so the profile
+  has to be written before RetroArch quits).
+
+Not taken:
+- **Dolphin 44a1e00** (21 commits after b2c2c21: JitArm64 fctiwx NaN, SDL
+  hotplug, SPSCQueue): built with b2c2c21's profile, the Soulcalibur II demo
+  (SyncGPU) 26.98 fps against 27.84 over four runs each, Galaxy 2 26.40
+  against 26.55. A profile of its own might change that.
+- **ARMSX2 2.9.7** (d4fe08fae, 339 commits; 0001 upstream): trained (Jak, God
+  of War, Burnout 3) and merged with the 2.9.5 profile as before; three rounds
+  against 2.9.5's build: Jak 28.8-29.2 vsync/s against 34.95-35.2 (the GS
+  thread 92% against 82%), God of War at full speed with both. 2.9.7's
+  hardware renderer queues draws as rows for the Vulkan driver's run entry
+  (`gs-draw-rows`); here the GS thread pays for it.
+- **OpenBOR, openMSX**: the owner.
+
 ## Upstream updates for 1.13 (2026-11-25, the owner: the light ones and armN64)
 
 The check of 2026-11-25 (`report-20261125-1550.txt`). Each built in the test
