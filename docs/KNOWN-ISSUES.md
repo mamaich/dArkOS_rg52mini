@@ -1067,6 +1067,24 @@ from 1.9 to 1.12 installs is a beta.
 
   The same item switches back to the beta.
 
+## DSperate 4.0.2: the picture on its side (2026-11-26) — fixed for 1.13
+
+The owner saw it on the second 1.13 test build: the two DS screens side by
+side but turned on their side, in a strip in the middle of the panel.
+
+* **The cause.** DSperate's KMS sink turns the picture itself where SDL
+  reports the panel turned. 3.5.0 turned it by `DS_ROTATE` in place of SDL's
+  turn, and `nds.sh` set `DS_ROTATE=90` (KNOWN-ISSUES of 1.12: 270 was upside
+  down). 4.0 takes SDL's own turn and adds `DS_ROTATE` to it. Its log said
+  "SDL reports the 720x1280 panel as 1280x720 (its turn 90); scanning out at
+  the panel's size, picture turned 180 here".
+* **The fix.** `nds.sh` no longer sets `DS_ROTATE`. The log then says
+  "picture turned 90", and the screens fill the panel the right way up, as
+  DraStic shows them (seen by the owner and on the webcam). On a TV nothing
+  turns, as before.
+* The A/B of 4.0.2 (2026-11-25) compared frame rates only. Its screen grab
+  already showed the turned picture.
+
 ## DSperate: the 3D at 2x by default — for 1.13
 
 DSperate 3.5.0 draws the 3D layer on the GPU at 1, 2 or 4 times the DS's

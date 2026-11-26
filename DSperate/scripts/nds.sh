@@ -140,13 +140,12 @@ elif [[ "$1" == "dsperate" ]]; then
     sed -i "/^\[video\]/a gpu3d_scale = 2" /${directory}/nds/dsperate/dsperate.ini
   fi
 
-  # Since 3.5.0 DSperate turns the picture itself where SDL reports the panel turned (its
-  # KMS sink), by 270 unless told otherwise: the RG52 Mini's panel is mounted the other way,
-  # and the picture came out upside down. On a TV the mode is landscape and nothing turns.
-  if [[ -e "/dev/input/by-path/platform-play_joystick-event-joystick" ]] && \
-     [[ "$(cat /sys/class/drm/card0-HDMI-A-1/status 2>/dev/null)" != "connected" ]]; then
-    export DS_ROTATE=90
-  fi
+  # DSperate turns the picture itself where SDL reports the panel turned (its KMS sink).
+  # 3.5.0 turned it by DS_ROTATE in place of SDL's turn (270 by default, upside down on the
+  # RG52 Mini), and this script set DS_ROTATE=90. 4.0 takes SDL's own turn (90 here, "SDL
+  # reports the 720x1280 panel as 1280x720 (its turn 90)") and adds DS_ROTATE to it: with 90
+  # set, the picture came out turned 180, on its side in a strip of the screen (dArkOS 1.13
+  # test builds). So no DS_ROTATE: SDL's turn alone is right. On a TV nothing turns.
 
   SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig" /opt/DSperate/dsperate "$game" --bios9 /${directory}/bios/nds_bios9.bin --bios7 /${directory}/bios/nds_bios7.bin --firmware /${directory}/bios/nds_firmware.bin
 
