@@ -616,7 +616,8 @@ In master for 1.13, not released yet (VERSION says 1.13):
   Images 1.9 to 1.12 installed the beta. A card that has the beta keeps it,
   since an update does not touch the ROMs partition. To go back to stable,
   with Wi-Fi on: PortMaster → Options → System → "Release Channel: beta",
-  press A and confirm; PortMaster restarts and offers the downgrade. Its
+  press A and confirm twice (the channel, then the downgrade); PortMaster
+  downloads the stable version and restarts. Its
   window fills the screen again through our `pugwash` patch, which 2026.06
   needs (KNOWN-ISSUES.md, "PortMaster: images 1.9 to 1.12 installed the beta
   channel").

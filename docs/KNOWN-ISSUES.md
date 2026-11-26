@@ -1056,14 +1056,22 @@ from 1.9 to 1.12 installs is a beta.
   - With the patch, the disclaimer, the main menu and Options filled
     1280x720, and Options showed "Release Channel: stable".
   - The owner's beta was then put back.
+  - The way back below, tried the same night on a copy of the owner's beta
+    (2026.11.17-0700, with the network; the original set aside and put back
+    after): two questions, then "PortMaster installed successfully", and it
+    started again as 2026.06.23-0015 with `"release_channel": "stable"`. The
+    beta's theme is not in 2026.06, so PortMaster came back with its plain
+    default look. On that test image (20261126070706, built before the patch
+    came back) the window was 4:3; once the repository's
+    `portmaster-e2big.sh` had run, it filled 1280x720.
 * **A card that has the beta keeps it.** PortMaster lives on the ROMs
   partition, which an update does not touch. To go back to stable, with Wi-Fi
   on:
-  1. Open PortMaster and go to Options, then to the System group at the end
-     of the list, and pick "Release Channel: beta" (in Russian, Настройки →
-     Система → «Канал выпуска: beta»). Press A and confirm.
-  2. PortMaster restarts and offers to downgrade to the stable version. Say
-     yes.
+  1. Open PortMaster and go to Options. Near the end of the list, in the
+     System group, pick "Release Channel: beta" (in Russian, Настройки →
+     Система → «Канал выпуска: beta») and press A.
+  2. Confirm twice: the change of channel, then the downgrade to the stable
+     version. PortMaster downloads it, says it is installed, and restarts.
 
   The same item switches back to the beta.
 
