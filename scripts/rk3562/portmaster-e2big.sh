@@ -30,8 +30,14 @@
 # (the TV's mode), so a cache made on one told PortMaster and the ports the other's size: its
 # window drew 1920x1080 on the panel after one start on the TV. Dropped at boot and by
 # hdmi-hotplug.sh at each switch, so the next start probes the output in use.
-# (Up to 1.10 this also patched pugwash, PortMaster's GUI, for the screen's size; since 2026.11
-# PortMaster finds the size itself and that code is gone.)
+#
+# And it gives PortMaster's window the whole screen in the stable channel's 2026.06, which images
+# up to 1.8 and from 1.13 install: PortMaster has no entry for this device, so its GUI (pugwash)
+# took the default 640x480, a 4:3 window with black bars on each side of the 16:9 screen. pugwash
+# already asks SDL for the screen's size, but uses it only for a device it calls "default"; the
+# patch below uses it for any device its table lacks. 2026.11 (the beta that 1.9 to 1.12
+# installed) finds the size itself, and its pugwash is only a launcher, left alone. (1.11 and
+# 1.12 had dropped this patch, as their image's PortMaster did not need it.)
 #
 # And get_controls hides the console's own controls from a port's SDL when a pad is in
 # (darkos-portpads, ES's EMULATOR SETTINGS > HIDE BUILT-IN GAMEPAD of the Ports, es-0010):
@@ -85,8 +91,9 @@ NEW = OLD + '''  # dArkOS RG52 Mini: built-in pad hidden from the port's SDL (ad
   # pad in, they are left out (SDL_GAMECONTROLLER_IGNORE_DEVICES), as ES's HIDE BUILT-IN GAMEPAD
   # of the Ports says (DARKOS_HIDE_PAD: auto when unset, yes, no). Not for PortMaster's own menu.
   # gptokeyb runs through sudo, which drops the variable: Select + Start still ends the port.
+  # (PortMaster's menu calls get_controls from pm_launch.txt in 2026.11, from PortMaster.sh in 2026.06.)
   case "${BASH_SOURCE[*]}" in
-    *pm_launch.txt*) ;;
+    *pm_launch.txt*|*/PortMaster.sh*) ;;
     *)
       if [ -x /usr/local/bin/darkos-portpads ]; then
         _darkos_ignore="$(/usr/local/bin/darkos-portpads "${DARKOS_HIDE_PAD:-auto}")"
@@ -103,6 +110,37 @@ p = sys.argv[1]
 s = open(p, encoding="utf-8", newline="").read()
 if MARK in s:
     sys.exit(0)
+if s.count(OLD) != 1:
+    sys.exit(2)
+# in place: the file keeps its owner, mode and ACL
+open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD, NEW))
+print("patched")
+PY
+}
+
+# pugwash (PortMaster 2026.06, the stable channel): a device PortMaster's HW_INFO lacks gets the
+# screen's own size, as "default" does. Prints what it did; exit 2 when the code it patches is not
+# there in a pugwash that has it otherwise, exit 3 for a pugwash that is only a launcher (2026.11,
+# which finds the size itself); either way it leaves the file alone.
+pugwash_screen_size() {
+  python3 - "$1" <<'PY'
+import sys
+MARK = "# dArkOS RG52 Mini: screen size"
+OLD = """        if capabilities['device'] == 'default':
+            capabilities = harbourmaster.device_info(override_resolution=(self.display_width, self.display_height))
+"""
+NEW = OLD + """        elif capabilities['device'] not in harbourmaster.HW_INFO:
+            # dArkOS RG52 Mini: screen size (added by /usr/local/bin/portmaster-e2big.sh)
+            # PortMaster has no entry for this device, so it got the default 640x480: a 4:3
+            # window with black bars on the 16:9 screen. The screen's size, as for "default".
+            capabilities = harbourmaster.device_info(override_resolution=(self.display_width, self.display_height))
+"""
+p = sys.argv[1]
+s = open(p, encoding="utf-8", newline="").read()
+if MARK in s:
+    sys.exit(0)
+if "override_resolution" not in s:
+    sys.exit(3)
 if s.count(OLD) != 1:
     sys.exit(2)
 # in place: the file keeps its owner, mode and ACL
@@ -188,6 +226,12 @@ LIBGL
     r=$(control_hidepad "$ct"); rc=$?
     [ "$r" = patched ] && logger -t portmaster-e2big "built-in pad hiding added to get_controls in $ct"
     [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, no built-in pad hiding"
+  fi
+  pw="$dir/pugwash"
+  if [ -f "$pw" ]; then
+    r=$(pugwash_screen_size "$pw"); rc=$?
+    [ "$r" = patched ] && logger -t portmaster-e2big "screen size added to $pw"
+    [ $rc = 2 ] && logger -t portmaster-e2big "$pw: code for the screen size not found, left as it is"
   fi
   grep -qF "$MARK" "$f" && continue
   cat >> "$f" <<'GUARD'
