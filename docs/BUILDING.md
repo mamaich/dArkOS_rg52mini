@@ -391,6 +391,15 @@ now ends with an audit (`scripts/audit-components.sh`) that lists directories
 with no ELF in them, every step that gave up, and every package that would not
 install. Read it.
 
+The prebuilt RetroArch cores were such a loss until 2026-11-26: wget's `-t 65`
+does not cover every failure, and one broken TLS handshake ("Unable to
+establish SSL connection") left `mame2003_plus` out of a 1.13 build, with only
+"was not added!" in the log and nothing in the audit. `get_core` in
+`build_retroarch.sh` now tries each core four times, a minute apart, and stops
+the build if it still has not come. The whole log is `build.log` in the tree;
+a copy taken from the journal of a `systemd-run` unit can have gaps, since
+journald rotates and drops old files when the WSL clock jumps back.
+
 **A defconfig is a request, not a result.** Appending `CONFIG_FOO=y` to
 `rg52mini_defconfig` does nothing at all if `FOO`'s dependencies are unmet —
 kconfig drops it without a word. That is how `CONFIG_LOGO` stayed out of three

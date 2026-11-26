@@ -148,6 +148,22 @@ if [ "$CHIPSET" == "rk3562" ] && [ "$UNIT" == "rg52mini" ]; then
   sudo chmod 777 Arkbuild/opt/retroarch-next/bin/retroarch
   call_chroot "chown -R ark:ark /opt/retroarch-next"
 fi
+# Fetches one prebuilt core's zip and unpacks it into a cores folder; a core that
+# still does not come stops the build. wget gives up at once on some failures (a
+# TLS handshake that breaks, a host that does not resolve) whatever -t says: on
+# 2026-11-26 "Unable to establish SSL connection" lost mame2003_plus, and the
+# 1.13 rebuild went on and made an image without it. Four tries a minute apart.
+# get_core <url> <cores folder>
+function get_core() {
+  local zip=/dev/shm/$(basename "$1") try
+  for try in 1 2 3 4; do
+    wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate "$1" -O "$zip" &&
+      sudo unzip -o "$zip" -d "$2" && { rm -f "$zip"; return 0; }
+    rm -f "$zip"
+    [ $try -lt 4 ] && { echo "core download failed (try $try of 4), again in 60 s"; sleep 60; }
+  done
+  return 1
+}
 # Add cores requested from retroarch_cores
 if [ "$CHIPSET" == "rk3326" ]; then
   CORE_REPO="master"
@@ -172,13 +188,12 @@ while read RETROARCH_CORE; do
     if [ "$CORE_REPO" != "master" ] && [ "$RETROARCH_CORE" == "freej2me-plus" ]; then
       CORE_REF="91b095ca6f60255b0d975f104378fea3e5bb7693"
     fi
-    wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REF"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
+    get_core https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REF"/"$ARCH"/"$RETROARCH_CORE"_libretro.so.zip Arkbuild/home/ark/.config/retroarch/cores/
     if [ $? -eq 0 ]; then
-      sudo unzip -o /dev/shm/"$RETROARCH_CORE"_libretro.so.zip -d Arkbuild/home/ark/.config/retroarch/cores/
-      rm -f /dev/shm/"$RETROARCH_CORE"_libretro.so.zip
       printf "\n  ${RETROARCH_CORE} libretro has now been added!\n"
     else
       printf "\n  ${RETROARCH_CORE} libretro was not added!\n"
+      false; verify_action
     fi
     sudo wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/libretro/libretro-core-info/raw/refs/heads/master/"$RETROARCH_CORE"_libretro.info -O Arkbuild/home/ark/.config/retroarch/cores/"$RETROARCH_CORE"_libretro.info
     if [ $? -ne 0 ]; then
@@ -522,13 +537,12 @@ if [[ "${BUILD_ARMHF}" == "y" ]]; then
 	while read RETROARCH_CORE32; do
 	  if [[ ! "$RETROARCH_CORE32" =~ ^# ]]; then
 		echo -e "Adding ${RETROARCH_CORE32} libretro core\n"
-		wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REPO"/"$ARCH"/"$RETROARCH_CORE32"_libretro.so.zip -O /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip
+		get_core https://github.com/christianhaitian/retroarch-cores/raw/"$CORE_REPO"/"$ARCH"/"$RETROARCH_CORE32"_libretro.so.zip Arkbuild/home/ark/.config/retroarch32/cores/
 		if [ $? -eq 0 ]; then
-		  sudo unzip -o /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip -d Arkbuild/home/ark/.config/retroarch32/cores/
-		  rm -f /dev/shm/"$RETROARCH_CORE32"_libretro.so.zip
 		  printf "\n  ${RETROARCH_CORE32} libretro has now been added!\n"
 		else
 		  printf "\n  ${RETROARCH_CORE32} libretro was not added!\n"
+		  false; verify_action
 		fi
 		sudo wget --retry-connrefused --retry-on-http-error=429 --waitretry=20 -t 65 -T 30 --no-check-certificate https://github.com/libretro/libretro-core-info/raw/refs/heads/master/"$RETROARCH_CORE32"_libretro.info -O Arkbuild/home/ark/.config/retroarch32/cores/"$RETROARCH_CORE32"_libretro.info
 		if [ $? -ne 0 ]; then
