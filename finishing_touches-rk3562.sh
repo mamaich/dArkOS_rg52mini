@@ -618,7 +618,13 @@ sudo cp scripts/"Enable Quick Mode".sh Arkbuild/opt/system/Advanced/
 if [ -f "scripts/${CHIPSET}/Fix Audio.sh" ]; then
   sudo cp scripts/${CHIPSET}/"Fix Audio".sh Arkbuild/opt/system/Advanced/
 fi
-sudo cp scripts/"Switch to SD2 for Roms.sh" Arkbuild/opt/system/Advanced/
+# "Switch to SD2 for Roms" is for devices with a second card slot. The RG52 Mini has
+# one (mmcblk0 is the eMMC, mmcblk1 the card): the script finds no mmcblk2, and by then
+# it has unmounted /opt/system/Tools, so PortMaster and the tools are gone from the
+# menu until a reboot. Not in its Options since 1.13; an update deletes the old copy.
+if [ "$UNIT" != "rg52mini" ]; then
+  sudo cp scripts/"Switch to SD2 for Roms.sh" Arkbuild/opt/system/Advanced/
+fi
 sudo chroot Arkbuild/ bash -c "chown -R ark:ark /opt"
 sudo chmod -R 777 Arkbuild/opt/system/
 

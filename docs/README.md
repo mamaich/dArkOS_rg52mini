@@ -620,6 +620,11 @@ In master for 1.13, not released yet (VERSION says 1.13):
   window fills the screen again through our `pugwash` patch, which 2026.06
   needs (KNOWN-ISSUES.md, "PortMaster: images 1.9 to 1.12 installed the beta
   channel").
+- Options → Advanced no longer has "Switch to SD2 for Roms": the RG52 Mini
+  has one card slot. The script looked for a second card (mmcblk2), found
+  none, and left PortMaster and the other tools out of the menu until a
+  reboot, as it unmounts their folder first. The update deletes the old
+  copy.
 
 See TODO.md, "For 1.13", for what else is planned.
 
