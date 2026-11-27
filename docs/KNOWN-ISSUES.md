@@ -3823,7 +3823,8 @@ dual-boot card GammaOS's `n3ds` is an alias of it. Encrypted dumps do not run.
   3DS mode: RetroArch quits.
 - **Stopped by SIGTERM** (`systemctl stop`, as the test scripts end a game),
   about one stop in two ends in dynarmic's "Unhandled SIGSEGV at pc ...", with
-  1.7's retroarch as with 1.8's (2026-11-08; the core is the same file). Not
+  1.7's retroarch as with 1.8's (2026-11-08; the core is the same file), and
+  with 1.13's 2127.0.1 (both stops of its smoke, 2026-11-27). Not
   seen while playing; a quit from RetroArch's menu was not tried for it. The
   stack (an LD_PRELOAD reporter, 2026-11-09): `exit()` -> `Core::System::~System`
   -> `~KernelSystem` -> `~ThreadManager` -> `Kernel::Thread::Stop` ->

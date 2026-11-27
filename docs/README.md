@@ -612,7 +612,8 @@ New in 1.13 (build 11272026, 2026-11-27):
   The GLSL ones, for `gl`, were there already; their clones' `.git` (24 MB in
   each RetroArch) is left out.
 - Emulators updated: DSperate 4.0.2 (DS: saves written safely, DSi sound
-  and cameras, a tenth less CPU in Diddy Kong Racing DS), armGBA 2.0, the PS2
+  and cameras, a tenth less CPU in Diddy Kong Racing DS; its 3D at 2x by
+  default, KNOWN-ISSUES.md, "DSperate: the 3D at 2x by default"), armGBA 2.0, the PS2
   game patches (TODO.md, "Upstream updates for 1.13"); Azahar 2127.0.1 with
   GammaOS's changes carried over and a profile trained on it (each game
   compiles its shaders once more on its first run), RetroArch's next branch,
