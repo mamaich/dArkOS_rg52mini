@@ -2,7 +2,15 @@
 
 A working list, not a roadmap. Ordered by what a build would answer soonest.
 
-## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day)
+## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day; released 2026-11-27)
+
+**Released as 1.13 on 2026-11-27**: build 20261127135106, from 1d3f6b2 (tag
+v1.13), rk3566_core_builds 9190410, with both rounds of upstream updates
+(below). Two test builds came first (20261125202936 and 20261126070706, not
+released). What was checked on the release build: docs/README.md, "Checked
+for 1.13". Still open from this list: the card check in Tools and the
+PortMaster chmod fallback; the CRT shader and Galaxy 2 EFB items are findings,
+not work.
 
 * **NPU UPSCALE for the 3DS, the PSP, PS1 and the 16-bit consoles** (the owner, 2026-11-23: into 1.13,
   both systems, off by default). **In master** and checked on the owner's
@@ -197,9 +205,9 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
   crt-geom 17.50 / 17.50 (-65%; its curvature and the multi-tap sampling per
   screen pixel, which suit the NPU badly). So the light presets cost nothing and
   the heavy ones are not NPU work: not pursued; a tip for the notes instead
-  (crt-pi / crt-lottes-fast on heavy systems). The Vulkan driver has no CRT
-  shaders here at all (only shaders_glsl), so 3DS (Azahar on Vulkan) cannot use
-  RetroArch's. Scripts: `~/rg52/sess19/oe/crt/`.
+  (crt-pi / crt-lottes-fast on heavy systems). Until 1.13 the Vulkan driver had no CRT
+  shaders here at all (only shaders_glsl), so 3DS (Azahar on Vulkan) could not
+  use RetroArch's; 1.13 ships the slang ones (above). Scripts: `~/rg52/sess19/oe/crt/`.
 
 * **Super Mario Galaxy 2: EFB access from the CPU costs 20-25%, and the
   star pointer needs it.** From the owner's savestate: 24.0 -> 30.0 fps with
@@ -321,7 +329,7 @@ it. Confirmed on the device.
   holds 60 (Mario 3D Land, 1x): not taken (the owner, 2026-11-09), kept on
   rk3566_core_builds' branch `parked/azahar-gles` (KNOWN-ISSUES.md).
 
-## Upstream updates for 1.13, second round (2026-11-26/27, the owner: all of them, the deferred too)
+## Upstream updates for 1.13, second round (2026-11-26/27, the owner: all of them, the deferred too; released 2026-11-27)
 
 The owner's answer of 2026-11-26: every upstream update into 1.13, the heavy
 ones still measured on the console and taken if nothing gets slower. Then
@@ -388,7 +396,7 @@ Not taken:
   (`gs-draw-rows`); here the GS thread pays for it.
 - **OpenBOR, openMSX**: the owner.
 
-## Upstream updates for 1.13 (2026-11-25, the owner: the light ones and armN64)
+## Upstream updates for 1.13 (2026-11-25, the owner: the light ones and armN64; released 2026-11-27)
 
 The check of 2026-11-25 (`report-20261125-1550.txt`). Each built in the test
 chroot (`cb.sh`) and tried on the owner's dual-boot card (1.12 with the hand

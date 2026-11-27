@@ -56,7 +56,7 @@ followed.
 
 ## State of the port
 
-The current release is 1.12 (build 11222026, 2026-11-22); from 1.1 on, a card
+The current release is 1.13 (build 11272026, 2026-11-27); from 1.1 on, a card
 updates over the air (OTA.md). The first release of this fork was build
 09162026, published 2026-09-19.
 What was checked on hardware in those first weeks:
@@ -573,12 +573,14 @@ Underground and OpenEnroth. The charger fix was tried before the build on the
 test kernels (KNOWN-ISSUES.md, "Some chargers stopped charging"). The package
 from 1.10 was made the same way from the published images and not installed.
 
-In master for 1.13, not released yet (VERSION says 1.13):
+New in 1.13 (build 11272026, 2026-11-27):
 
 - Dolphin is built with clang and a profile for its profile-guided
   optimisation, trained on Super Mario Galaxy 2, Metroid Prime and the ND
   Demo: Galaxy 2 +4 to +8% against the gcc build of 1.12, a game outside the
   training (the Soulcalibur II demo) level to +2% (TODO.md, "For 1.13").
+  Its upstream stays at b2c2c21: 44a1e00 was slower, with a profile of its
+  own too (TODO.md, "second round").
 - Wii games take input: an emulated Wiimote with a Nunchuk on the built-in
   pad by default (the right stick the pointer). Wii games run from /roms/gc,
   under GameCube in ES.
@@ -630,8 +632,42 @@ In master for 1.13, not released yet (VERSION says 1.13):
   none, and left PortMaster and the other tools out of the menu until a
   reboot, as it unmounts their folder first. The update deletes the old
   copy.
+- Sleep: a press of the power key while the console goes to sleep brings it
+  back again; the sleep hook's wake alarm was "+1" and could go off before
+  the kernel counted it, leaving the console asleep with no alarm
+  (KNOWN-ISSUES.md, "A press on the way down could leave the device asleep").
 
-See TODO.md, "For 1.13", for what else is planned.
+Checked for 1.13: the release build (20261127135106, from 1d3f6b2,
+rk3566_core_builds 9190410) on the owner's dual-boot card, by OTA from the
+last 1.13 test build (20261126070706), which had come over 1.12 by way of the
+first test build (its package 1.12 -> 1.13, made the same way: 5878 files,
+no failed unit): 184 files written, no failed unit after the reboot, "Switch
+to SD2 for Roms" gone. Nothing was on the console by hand. In the image,
+before: Azahar's `.text` the same as the core measured with the new profile,
+armGBA and armN64 as built in the test chroot, pcsx_rearmed and yabasanshiro
+the prebuilt files expected (e7d06c0's and 996dfd5's), SDL 2.32.11 (2e5b9a860), retroarch-next at 25a1ee8, libnpusr_gles, the layer
+and the models as in the test builds, nds.sh, darkos-ota, Update.sh, the
+RetroArch launchers and portmaster-e2big as in the repository, malisx2 as in
+1.12, PortMaster's installer the stable channel's 2026.06.23-0015, 52 MiB free
+on `/boot`. Then each as ES starts it, on the panel, with sound and the right
+picture, within a frame of the test build of 2026-11-26: ARMSX2 (God of War
+38.1, Jak 17.4), Dolphin (the ND Demo 50.5), DraStic and DSperate, Azahar
+(59.3; 60.1 with NPU UPSCALE), PPSSPP (also with NPU UPSCALE), N64 on three
+cores (parallel_n64, armN64, and mupen64plus_next, which the build takes from
+its branch's head: AeroGauge 60, Zelda's title 58), Dreamcast, Atomiswave,
+Saturn standalone and on retrorun, Zeebo, GBA (armGBA too, and on
+retroarch-next), SNES, Mega Drive (also with NPU UPSCALE), PS1 on pcsx_rearmed
+(also with NPU UPSCALE), SwanStation with NPU UPSCALE, PS1 on retroarch-next,
+Sega CD, J2ME, and the ports Doom 3 and Mina the Hollower. same_cdi, also
+from its branch's head, was not run (no CD-i game or BIOS on the card); its
+libraries resolve. NPU UPSCALE on a TV and the sleep fix were checked on the
+test builds and not again. GammaOS
+booted from the card with 1.13's dtb on `/boot` (2026-11-26). The release
+packages from 1.12 and 1.11 were made the same way from the published images
+and not installed.
+
+In master for 1.14, not released yet (VERSION says 1.14): nothing yet; see
+TODO.md.
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

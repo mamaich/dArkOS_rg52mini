@@ -831,7 +831,7 @@ service runs it with `--boot`) and `hdmi-hotplug.sh` at each switch
 console: both caches dropped, the probe again, as root and as ark, 1280x720.
 The switch with a cable in was not tried; it is the same call.
 
-## Fix Audio with HDMI in left the sound on the speaker (2026-11-19) — fixed for 1.12
+## Fix Audio with HDMI in left the sound on the speaker (2026-11-19) — fixed in 1.12
 
 Found by the owner: Options > Advanced > Fix Audio, run with a TV on HDMI,
 moved the sound to the console's speaker. The script killed EmulationStation
@@ -861,7 +861,7 @@ back to `alsactl init`. That leaves the speaker's DAC at its -20 dB, which
 is what matters (a loud speaker on a nearly empty battery resets the
 console: "Smaller things").
 
-## The Options tools on a TV: on their side, or no picture (2026-11-19) — fixed for 1.12
+## The Options tools on a TV: on their side, or no picture (2026-11-19) — fixed in 1.12
 
 Found by the owner: the text tools under Options (Wifi, Bluetooth and the
 rest: `dialog` on tty1) on a TV. The text console draws in a buffer the
@@ -921,7 +921,7 @@ one fills it. A start on the panel with no cable was not tried on this
 kernel: it gives the state checked after a switch to the panel, but its boot
 logo was not seen.
 
-## Some chargers stopped charging a second after the plug (2026-11-21) — fixed for 1.12
+## Some chargers stopped charging a second after the plug (2026-11-21) — fixed in 1.12
 
 Seen by the owner on revision B with 1.11 and a TV's charger: plugged in, the
 console showed charging for a moment, then "Discharging" with the charger in
@@ -984,7 +984,7 @@ its own eyes: no charging until the hub is plugged in again (1.11 does the
 same). The 1.12 notes say so, as they say to plug a charger into a console
 that is awake.
 
-## Dolphin: Soulcalibur II hung (2026-11-22) — fixed for 1.13
+## Dolphin: Soulcalibur II hung (2026-11-22) — fixed in 1.13
 
 Seen by the owner on 1.12 with the Soulcalibur II demo (USA, DRSEAF), and
 "hangs at different moments". The journal of the ES launch, 22 s in:
@@ -1008,7 +1008,7 @@ A user's own GameSettings still win. On the owner's console since
 If another game hangs the same way (a FIFO line in the journal of its
 launch), the same two lines for its id fix it.
 
-## PortMaster: images 1.9 to 1.12 installed the beta channel (2026-11-26) — fixed for 1.13
+## PortMaster: images 1.9 to 1.12 installed the beta channel (2026-11-26) — fixed in 1.13
 
 Users noticed it, and the owner passed it on: the PortMaster that a card made
 from 1.9 to 1.12 installs is a beta.
@@ -1075,7 +1075,7 @@ from 1.9 to 1.12 installs is a beta.
 
   The same item switches back to the beta.
 
-## DSperate 4.0.2: the picture on its side (2026-11-26) — fixed for 1.13
+## DSperate 4.0.2: the picture on its side (2026-11-26) — fixed in 1.13
 
 The owner saw it on the second 1.13 test build: the two DS screens side by
 side but turned on their side, in a strip in the middle of the panel.
@@ -1093,7 +1093,7 @@ side but turned on their side, in a strip in the middle of the panel.
 * The A/B of 4.0.2 (2026-11-25) compared frame rates only. Its screen grab
   already showed the turned picture.
 
-## DSperate: the 3D at 2x by default — for 1.13
+## DSperate: the 3D at 2x by default — in 1.13
 
 DSperate 3.5.0 draws the 3D layer on the GPU at 1, 2 or 4 times the DS's
 resolution (`video.gpu3d_scale`, "no finer than the view shows": on the
@@ -1120,7 +1120,7 @@ beats an upscale of the 1x frame (as for the PSP), and DSperate presents
 through its own KMS output, past the Vulkan layer, so the layer could not
 upscale it anyway.
 
-## NPU UPSCALE: the 3DS, the PSP, PS1 and the 16-bit consoles enlarged on the NPU — for 1.13
+## NPU UPSCALE: the 3DS, the PSP, PS1 and the 16-bit consoles enlarged on the NPU — in 1.13
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
 every image up to 1.12 kept it off. NPU UPSCALE lets it enlarge an
@@ -1739,7 +1739,7 @@ in neither does anything else use GPIO0_C1 (its other functions, `npu-pins`
 and `can1m1`, are unused; no GPIO user). The NPU is powered only when NPU
 UPSCALE is turned on.
 
-## RetroArch's shaders on the Mali-G52: GLSL presets that do not compile, slang ones that crashed (2026-11-24) — the crash fixed for 1.13
+## RetroArch's shaders on the Mali-G52: GLSL presets that do not compile, slang ones that crashed (2026-11-24) — the crash fixed in 1.13
 
 Found while comparing NPU UPSCALE with RetroArch's shaders (above).
 
@@ -1791,7 +1791,7 @@ Found while comparing NPU UPSCALE with RetroArch's shaders (above).
   copy, 84 MB, for both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB
   each, left out).
 
-## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed for 1.12
+## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed in 1.12
 
 Seen by the owner with PortMaster's OpenEnroth port and a Russian CD copy of
 the game: the cursor moved, the intro could be skipped, but a click on a menu
@@ -4505,7 +4505,7 @@ today's master; they were not looked at.
   the message says `ignored`. `cleanup_filesystem.sh` removes eatmydata while
   `LD_PRELOAD` still names it. The loader carries on with a real `fsync`.
 
-## J2ME: both cores on the system OpenJDK 21 — not in the images from 1.7 to 1.11, fixed for 1.12
+## J2ME: both cores on the system OpenJDK 21 — not in the images from 1.7 to 1.11, fixed in 1.12
 
 **Found on 2026-11-21: the fix below never reached an image.** `finishing_touches-rk3562.sh`
 ran `patch-freej2me.py` and then, further down, copied `scripts/freej2me.sh`

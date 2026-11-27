@@ -169,7 +169,7 @@ KNOWN-ISSUES, "Headphones: the speaker played too".
 | c0c1473 | 1.13 | `rknpu`: a job that times out after an interrupt with an unexpected status no longer leaves the core pointing at it, or itself on the queue, once freed - the next submit crashed the kernel (use-after-free, soft lockups until a power cycle; KNOWN-ISSUES, "NPU UPSCALE") |
 
 The submodule was pinned at 84be12412 from 1.8 to 1.11; 70524fc9e is in
-1.12, c0c147352 in master for 1.13.
+1.12, c0c147352 in 1.13.
 
 ## Babble filter
 
@@ -364,7 +364,8 @@ left alone by darkos-ota: 1.7 -> 1.8 on the owner's dual-boot card
 (sha256 d5014cf6...): its package from 1.8 carries no loader, the one from
 1.7 carries it, gated on 1.5's sha256. 1.10 has the same p1 again: neither
 of its packages (from 1.9 and from 1.8) carries a loader. Nor do 1.11's (from
-1.10 and from 1.9): the same p1 once more.
+1.10 and from 1.9): the same p1 once more. Nor do 1.12's (from 1.11 and 1.10)
+or 1.13's (from 1.12 and 1.11): p1 still the same (md5 cb302b1c...).
 
 In 1.7 the image shipped the fork's release `rg52mini-1.5` (tag on
 6e4c1d91cb, `next-dev-g6e4c1d91cb`), its `uboot.img`: md5
