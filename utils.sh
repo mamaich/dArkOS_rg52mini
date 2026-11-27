@@ -92,9 +92,11 @@ function get_file() {
 # 2026-10-22 github.com stopped resolving for a minute at a time: one build
 # stopped at a clone, and an empty ls-remote would have made a cached core's
 # key miss and the core rebuild under qemu. A clone that fails removes what
-# it made, so the next try starts clean.
+# it made, so the next try starts clean. The tries after the first go over
+# HTTP/1.1: on 2026-11-26 GitHub's HTTP/2 broke big clones (ARMSX2, Azahar,
+# Dolphin: "stream not closed cleanly") again and again; HTTP/1.1 got them.
 function git() {
-  local wait rc
+  local wait rc h1=""
   case "$1" in
     clone|fetch|pull|ls-remote) ;;
     -C) case "$3" in clone|fetch|pull|ls-remote) ;; *) command git "$@"; return ;; esac ;;
@@ -102,10 +104,11 @@ function git() {
   esac
   for wait in 0 15 30 60; do
     if [ $wait != 0 ]; then
-      echo "git $*: failed, trying again in $wait s" >&2
+      echo "git $*: failed, trying again in $wait s over HTTP/1.1" >&2
       sleep $wait
+      h1=http.version=HTTP/1.1
     fi
-    command git "$@" && return 0
+    command git ${h1:+-c $h1} "$@" && return 0
     rc=$?
   done
   return $rc
@@ -121,19 +124,22 @@ function install_chroot_git() {  # the chroot's directory
   sudo tee "$1${CHROOT_GIT_DIR}/git" >/dev/null <<'EOF'
 #!/bin/bash
 # The dArkOS build's git (utils.sh): network commands tried again after 15, 30
-# and 60 s, and what a failed clone left in this directory removed first.
+# and 60 s over HTTP/1.1, and what a failed clone left in this directory
+# removed first.
 case "$1" in
   clone|fetch|pull|ls-remote) ;;
   submodule) [ "$2" == update ] || exec /usr/bin/git "$@" ;;
   *) exec /usr/bin/git "$@" ;;
 esac
 before=$(ls -A)
+h1=""
 for wait in 0 15 30 60; do
   if [ $wait != 0 ]; then
-    echo "git $*: failed, trying again in $wait s" >&2
+    echo "git $*: failed, trying again in $wait s over HTTP/1.1" >&2
     sleep $wait
+    h1=http.version=HTTP/1.1
   fi
-  /usr/bin/git "$@" && exit 0
+  /usr/bin/git ${h1:+-c $h1} "$@" && exit 0
   rc=$?
   if [ "$1" == clone ]; then
     comm -13 <(printf '%s\n' "$before") <(ls -A) | while read -r f; do rm -rf -- "$f"; done
