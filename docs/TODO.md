@@ -359,15 +359,27 @@ Taken:
   so every game compiles its shaders once more): Castlevania 59.1 fps against
   59.1-59.3, Luigi's Mansion 59.9 against 59.7, Super Mario 3D Land and Sonic
   Generations 60 with both. 3D Land's main thread took 37-38% against 34%,
-  its GPU thread 14% against 11%; the other three the same. A profile trained
-  on 2127 may win that back (to do; the core crashes on exit, so the profile
-  has to be written before RetroArch quits).
+  its GPU thread 14% against 11%; the other three the same. 2026-11-27 (the
+  owner's word): a profile trained on 2127,
+  `pgo/azahar-nano-2127-20261127.profdata.gz` (3D Land, Castlevania, Luigi's
+  Mansion, Sonic Generations, 150 s each from boot with an instrumented build
+  in the recipe's path, merged with 2126's at the same total count; the crash
+  on exit still leaves the profile written). Against 2126's profile on the
+  same core, both warm: the same fps, the main thread 37 against 38% (3D
+  Land), 36-37 against 38% (Luigi's Mansion), the GPU thread 10-13 against
+  11-14% (Sonic Generations 10-11 against 14). Taken.
 
 Not taken:
 - **Dolphin 44a1e00** (21 commits after b2c2c21: JitArm64 fctiwx NaN, SDL
   hotplug, SPSCQueue): built with b2c2c21's profile, the Soulcalibur II demo
   (SyncGPU) 26.98 fps against 27.84 over four runs each, Galaxy 2 26.40
-  against 26.55. A profile of its own might change that.
+  against 26.55. 2026-11-27 (the owner's word): with a profile of its own,
+  trained as b2c2c21's (Galaxy 2, Metroid Prime, the ND Demo, 150 s each; the
+  instrumented build ran them at the speed b2c2c21's did), three rounds:
+  Galaxy 2 26.42 against 26.43, Soulcalibur II 26.98 against 27.22. 44a1e00
+  ran as fast as with b2c2c21's profile, so the profile was not what cost.
+  Not taken; the profile is `~/rg52/sess19/oe/dpgo/dolphin-44a1e00-20261127.profdata.gz`
+  (sha256 67e59bb9...), the recipe `~/rg52/sess19/oe/up113b/dolphinsa.sh.44a1e00`.
 - **ARMSX2 2.9.7** (d4fe08fae, 339 commits; 0001 upstream): trained (Jak, God
   of War, Burnout 3) and merged with the 2.9.5 profile as before; three rounds
   against 2.9.5's build: Jak 28.8-29.2 vsync/s against 34.95-35.2 (the GS

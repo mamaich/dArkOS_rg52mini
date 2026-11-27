@@ -612,9 +612,10 @@ In master for 1.13, not released yet (VERSION says 1.13):
 - Emulators updated: DSperate 4.0.2 (DS: saves written safely, DSi sound
   and cameras, a tenth less CPU in Diddy Kong Racing DS), armGBA 2.0, the PS2
   game patches (TODO.md, "Upstream updates for 1.13"); Azahar 2127.0.1 with
-  GammaOS's changes carried over (each game compiles its shaders once more
-  on its first run), RetroArch's next branch, SDL 2.32.11, GameTank, the
-  PS1 core pcsx_rearmed (TODO.md, "second round").
+  GammaOS's changes carried over and a profile trained on it (each game
+  compiles its shaders once more on its first run), RetroArch's next branch,
+  SDL 2.32.11, GameTank, the PS1 core pcsx_rearmed (TODO.md, "second
+  round").
 - PortMaster: the image installs the stable channel again (2026.06.23-0015).
   Images 1.9 to 1.12 installed the beta. A card that has the beta keeps it,
   since an update does not touch the ROMs partition. To go back to stable,
