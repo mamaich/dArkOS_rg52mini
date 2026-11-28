@@ -259,9 +259,15 @@ typedef struct {
     GLuint trgb, fbrgb;         /* async compose: the finished picture OW x OH, and its FBO in our context */
     GLuint wfb;                 /* its FBO in the worker's context (FBOs are not shared) */
     EGLSyncKHR cfence;          /* the worker's compose of this slot (waited for before the picture is used / the slot reused) */
+    unsigned long fno;          /* the frame it was prepped in: its picture is shown only while young (MAXAGE) */
 } Slot;
 
-#define MAXE 6
+/* The NPU's picture is shown only for a frame at most this many frames old: after a size change the other size's
+ * last picture is not shown again, and when the NPU stops answering the program's own picture comes back instead of
+ * the last upscaled one standing still (2026-11-28) */
+#define MAXAGE 5
+
+#define MAXE 10                 /* sizes tried a session (one that failed keeps its place: not tried again) */
 typedef struct {
     int W, H, ok;               /* ok: 1 ready, -1 failed (no model, wrong tensors: not tried again) */
     rknn_context rc;
@@ -297,7 +303,10 @@ static struct {
     int nw, nh;                 /* the last small viewport (a native frame drawn at its own size, into an FBO) */
     int kx, ky, kw, kh, kk;     /* the last viewport that is kk (> S) times a console frame (HDMI 1080p: x4) */
     unsigned vseq, bseq, kseq, seq;   /* which of vw / bw / kw was set last */
-    unsigned long n_frames, n_prep, n_npu, n_skip, n_fail, n_geom;
+    int fw, fh;                 /* the window's size at the last frame: a viewport of all of it is never the frame */
+    unsigned long fno;          /* frames seen (the slots' age) */
+    int syms_ok;                /* load_syms done (once: the pointers outlive an eglTerminate) */
+    unsigned long n_frames, n_prep, n_npu, n_skip, n_fail, n_geom, n_old;
     double swap_ms; unsigned long n_swap;   /* the real swap (SDL_GL_SwapWindow / eglSwapBuffers): how long it blocks */
     double npu_ms, t_last, hook_ms, ph[6];   /* CPU ms: make ours current, prep, count read, compose, flush, back */
     unsigned long last_frames, last_npu;
@@ -864,7 +873,9 @@ static void init_once(void)
 }
 
 /* The frame's geometry: RetroArch draws the frame with glViewport(the frame's rectangle); a viewport that is S times
- * an even size is remembered (the window's own 1280x720 is not: 1280 is not a multiple of 3) */
+ * an even size is remembered. A viewport of the whole window (RetroArch's menu and notices) is never the frame and
+ * is left out: on the panel 1280x720 is no multiple of 3 anyway, but a 1080p TV's 1920x1080 is (640x360 x3), and a
+ * 576p or 480p one's too (2026-11-28) */
 static void viewport_seen(GLint x, GLint y, GLsizei w, GLsizei h)
 {
     int S = cfg.S;
@@ -875,6 +886,7 @@ static void viewport_seen(GLint x, GLint y, GLsizei w, GLsizei h)
         if (i == ns && ns < 12) { seen[ns][0] = w; seen[ns][1] = h; ns++; LOG("viewport %dx%d at (%d,%d)", w, h, x, y); }
     }
     if (!cfg.on || !S || w <= 0 || h <= 0) return;
+    if (G.fw > 0 && w == G.fw && h == G.fh) return;
     G.seq++;
     int k = 0;
     if (!(w % S == 0 && h % S == 0))
@@ -942,20 +954,29 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
     EGLint fw = 0, fh = 0;
     p_eglQuerySurface(dpy, surf, EGL_WIDTH, &fw);
     p_eglQuerySurface(dpy, surf, EGL_HEIGHT, &fh);
+    G.fw = fw; G.fh = fh;
+    G.fno++;
     int S = cfg.S, W = 0, H = 0, ox, gy0;
     /* the native frame: the viewport the program drew it with, or (a fixed size) centred. fx, fy, fw2 x fh2: the
      * area the program drew it into - the same as the S times area, or larger (scaled by S..S+1, see native_from) */
-    int fx, fy, fw2, fh2, stretch = 0;
+    int fx, fy, fw2, fh2, stretch = 0, kkp = 0;
     if (cfg.autosize || (G.vw == cfg.W * S && G.vh == cfg.H * S)) {
-        /* the scaled-by-more area only when it was set after the S times one and has a console shape (a full
-         * window viewport such as 1280x720 set after the frame's does not) */
+        /* the scaled-by-more area only when it was set after the S times one and has a console shape (viewports
+         * of the whole window are not taken at all, viewport_seen) */
         int nat = cfg.autosize && G.bw && G.bseq > G.vseq && G.bseq > G.kseq && native_from(G.bw, G.bh, &W, &H);
+        /* the latest frame-sized viewport is none of the sizes the models know (PS1's 512 or 640 wide, PAL's 256
+         * lines, a hi-res SNES frame): this frame is shown as the program drew it. (Up to 2026-11-28 the last S times
+         * viewport stood in for it however old, and a dark screen with a little text passed the count, upscaled
+         * from the wrong rectangle.) */
+        int unknown = cfg.autosize && G.bw && G.bseq > G.vseq && G.bseq > G.kseq && !nat;
         /* a frame enlarged an integer kk > S times (a TV): the S times picture is stretched over all of it */
         int kk = cfg.autosize && G.kw && G.kseq > G.vseq;
+        if (unknown) { G.n_geom++; return; }
         if (nat) {
             fx = G.bx; fy = G.by; fw2 = G.bw; fh2 = G.bh;
             ox = fx + (fw2 - W * S) / 2; gy0 = fy + (fh2 - H * S) / 2;
         } else if (kk) {
+            kkp = 1;
             W = G.kw / G.kk; H = G.kh / G.kk;
             fx = ox = G.kx; fy = gy0 = G.ky; fw2 = G.kw; fh2 = G.kh;
             stretch = 1;
@@ -1012,8 +1033,12 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
         cfence_wait(s);   /* its last picture (maybe never shown) is finished before its textures are written again */
         /* blits: dst pixel i samples src x0 + (i + 0.5) * fw2 / W - the block's centre (S = 3: its middle pixel;
          * scaled by 3.2: the middle of its 3-4 pixels); tb one to the right (or left when the area touches the
-         * window's right edge) - still inside the same block */
+         * window's right edge) - still inside the same block. A block of an even kk (a TV: x4) takes its left
+         * neighbour: pixels kk*i + kk/2 - 1 and kk*i + kk/2 are one source pixel in a frame enlarged kk times but two
+         * in one enlarged kk/2 times - a 640x480 frame x2 has the 320x240 x4's viewport (1280x960), and only this
+         * tells them apart (with the right neighbour both pixels fell in one source pixel: never counted, 2026-11-28) */
         int rx = (fx + fw2 < fw) ? 1 : -1;
+        if (kkp && !(G.kk & 1) && fx > 0) rx = -1;
         p_glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         p_glReadBuffer(GL_BACK);
         p_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s->fba);
@@ -1043,6 +1068,7 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
         p_glFlush();
         if (fence == EGL_NO_SYNC_KHR) G.n_fail++;
         else {
+            s->fno = G.fno;
             pthread_mutex_lock(&G.m);
             s->fence = fence;
             G.pend = E; G.pslot = w;
@@ -1052,7 +1078,8 @@ static void frame(EGLDisplay dpy, EGLSurface surf)
         }
     }
     { double t1 = now_ms(); G.ph[1] += t1 - tp; tp = t1; }
-    /* 4: the latest finished slot over the area, unless it was a menu */
+    /* 4: the latest finished slot over the area, unless it was a menu or is old (MAXAGE) */
+    if (ready >= 0 && G.fno - E->slot[ready].fno > MAXAGE) { G.n_old++; ready = -1; }
     if (ready >= 0) {
         Slot *s = &E->slot[ready];
         p_glBindBuffer(GL_SHADER_STORAGE_BUFFER, s->cnt);
@@ -1128,9 +1155,9 @@ restore:
             unsigned long nf = G.n_frames - G.last_frames, nn = G.n_npu - G.last_npu;
             Eng *L = G.last_e;
             LOG("5.0 s: frames %.1f/s, NPU %.1f/s (avg %.2f ms), hook %.2f ms/frame (CPU), %dx%d at (%d,%d) composed %lu menu %lu, "
-                "skipped %lu, failed %lu, other geometry %lu, not one colour %u",
+                "skipped %lu, failed %lu, other geometry %lu, too old %lu, not one colour %u",
                 nf / dt, nn / dt, G.n_npu ? G.npu_ms / G.n_npu : 0.0, G.n_frames ? G.hook_ms / G.n_frames : 0.0,
-                L ? L->W : 0, L ? L->H : 0, ox, gy0, L ? L->n_comp : 0ul, L ? L->n_menu : 0ul, G.n_skip, G.n_fail, G.n_geom,
+                L ? L->W : 0, L ? L->H : 0, ox, gy0, L ? L->n_comp : 0ul, L ? L->n_menu : 0ul, G.n_skip, G.n_fail, G.n_geom, G.n_old,
                 (L && L->ready >= 0) ? L->slot[L->ready].count : 0u);
             double k = G.n_frames ? 1.0 / G.n_frames : 0;
             LOG("   real swap %.2f ms (avg of %lu)", G.n_swap ? G.swap_ms / G.n_swap : 0.0, G.n_swap);
@@ -1158,7 +1185,7 @@ EXPORT EGLBoolean eglSwapBuffers(EGLDisplay dpy, EGLSurface surf)
     pthread_once(&once, init_once);
     if (!real_swap) return EGL_FALSE;
     if (cfg.on && G.state >= 0 && !in_sdl_swap) {
-        if (G.state == 0 && !load_syms()) G.state = -1;
+        if (G.state == 0 && !G.syms_ok && !(G.syms_ok = load_syms())) G.state = -1;
         if (G.state >= 0) frame(dpy, surf);
     }
     if (!cfg.stats) return real_swap(dpy, surf);
@@ -1177,7 +1204,7 @@ EXPORT void SDL_GL_SwapWindow(void *window)
     if (!real) *(void **)&real = dlsym(RTLD_NEXT, "SDL_GL_SwapWindow");
     if (!real) return;
     if (cfg.on && G.state >= 0) {
-        if (G.state == 0 && !load_syms()) G.state = -1;
+        if (G.state == 0 && !G.syms_ok && !(G.syms_ok = load_syms())) G.state = -1;
         if (G.state >= 0) {
             EGLDisplay d = p_eglGetCurrentDisplay();
             EGLSurface s = p_eglGetCurrentSurface(EGL_DRAW);

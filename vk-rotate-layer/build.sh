@@ -15,8 +15,10 @@ for f in sr_prep.comp:sr_prep_spv sr_prep_cell.comp:sr_prep_cell_spv sr_nat.vert
     SR="$SR ${f#*:}.h"
 done
 cat $SR > sr_spv.h
-# rknn_api.h is beside it (rknn-toolkit2 v2.5.0, LICENSE.rknn); librknnrt.so is dlopen'ed only with SR on
+# rknn_api.h is beside it (rknn-toolkit2 v2.5.0, LICENSE.rknn); librknnrt.so is dlopen'ed only with SR on.
+# -z nodelete: the loader unloads the layer at vkDestroyInstance, and an NPU thread that did not stop in time (a job
+# hung on the NPU) would go on in its code (npusr.inc.c, sr_device_free)
 ${CC:-gcc} -O2 -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -fPIC -shared \
-    -fvisibility=hidden -I. -o libVkLayer_DARKOS_rotate.so darkos_rotate_layer.c -lpthread -ldl
+    -fvisibility=hidden -Wl,-z,nodelete -I. -o libVkLayer_DARKOS_rotate.so darkos_rotate_layer.c -lpthread -ldl
 rm -f rotate_vert.h rotate_frag.h $SR
 echo "built: $(ls -l libVkLayer_DARKOS_rotate.so)"

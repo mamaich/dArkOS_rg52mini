@@ -65,12 +65,16 @@ static int g_debug = -1;
 static int g_rot = 90;
 static int g_scaled = 1;
 
-/* npusr: whether the knob is set (parsed in full by sr_cfg, npusr.inc.c) */
+/* npusr: whether the knob is set to something this layer can use (parsed in full by sr_cfg, npusr.inc.c): it needs
+   the frame's size, ":<W>x<H>". The GLES library's "x3:auto" (PS1 and the 16-bit consoles in RetroArch's gl) is not
+   for it: without this a TV's surface was taken for a pass that turns nothing and upscales nothing (2026-11-28). */
 static int g_sr_on_early;
 static void sr_cfg_early(void)
 {
     const char *e = getenv("DARKOS_NPU_SR");
-    g_sr_on_early = e && *e && *e != '0';
+    const char *c = e ? strchr(e, ':') : NULL;
+    int w = 0, h = 0;
+    g_sr_on_early = e && *e && *e != '0' && c && sscanf(c, ":%dx%d", &w, &h) == 2 && w > 0 && h > 0;
 }
 
 #define LOG(...) do { if (g_debug > 0) { fprintf(stderr, "darkos_rotate: " __VA_ARGS__); fputc('\n', stderr); } } while (0)

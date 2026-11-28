@@ -1226,6 +1226,70 @@ What it leaves to do: a check after a test update that the console's system
 files are the image's (TODO.md, "For 1.14"), so a file put in by hand cannot
 stand in for one the image lacks.
 
+## NPU UPSCALE: what the review of 1.13 found in its native code (2026-11-28) — fixed for 1.14
+
+The review of 1.13 read `npusr-gles/npusr_gles.c`, the layer's NPU part and
+the kernel's `rknpu` change whole. Nothing crashed or hung in normal play;
+what it found shows on a TV, in screens of sizes the models do not know, and
+when the NPU or the GPU fails. The owner: fix it for 1.14.
+
+The GLES library (PS1 and the 16-bit consoles in RetroArch's `gl`):
+
+- A viewport of the whole window is never taken for the frame. On a 1080p TV
+  1920x1080 is 3 x 640x360, so RetroArch's menu or a notice drawn last made
+  the frame "640x360": no upscale for that frame, and a size without a model
+  kept one of the six places in the engine table for the session (now ten).
+- A frame-sized viewport of a size the models do not know (PS1's 512 or 640
+  wide, PAL's 256 lines, a hi-res SNES frame) is shown as the program drew it.
+  The last 3x rectangle stood in for it however old, and a dark screen with a
+  little text passed the 1% count of non-flat blocks, enlarged from the wrong
+  rectangle.
+- On a TV a 640x480 frame scaled x2 has the viewport of a 320x240 one scaled
+  x4 (1280x960). The count read each block at its centre and one pixel to the
+  right: in an x2 frame both pixels are one source pixel, so it never saw
+  detail and the NPU enlarged every other pixel. A block of an even scale now
+  takes its left neighbour, which an x2 frame's pixel boundary separates.
+- The NPU's picture is shown only while it is at most five frames old: after a
+  size change the other size's old picture does not come back, and an NPU that
+  stops answering gives the program's own picture back instead of a frozen
+  upscaled one.
+- The symbols are looked up once, not on every swap until the geometry is
+  found.
+
+The Vulkan layer (3DS, PSP):
+
+- The same age limit (five presents).
+- A slot whose prep is not finished in a second stays busy until its fence
+  signals: it was released, and the next present could reset a fence still in
+  flight and overwrite the input under the GPU.
+- After a failed `QueueSubmit` the fences reset for it are signalled by empty
+  submissions: the next present of that image, and the swapchain's
+  destruction, waited for them for ever.
+- At `vkDestroyDevice` an NPU thread that does not stop within 2 s stays on
+  the exit list (exit() still waits for it before librknnrt's destructors), and
+  the layer is linked `-z nodelete`, so the thread never runs in unloaded code.
+- `DARKOS_NPU_SR` has to name a frame size (`:<W>x<H>`) before the layer takes
+  a TV's surface: the GLES library's `x3:auto` did, for a pass that upscaled
+  nothing.
+
+The kernel (`kernel_rk3562` 3845295e6): the task object of a submit has to be
+one of the caller's own GEM objects, looked up and referenced under the handle
+table's lock (a freed or foreign one: -EINVAL, "invalid task object"); and
+`rknpu_job_abort` waits for the interrupt handler (`synchronize_irq`) and
+then takes the core off the job before freeing it ("A timed-out NPU job hung
+the console", in the next section).
+
+Checked on 2026-11-28 on a card written from the 1.13 image, the fixed
+libraries bound over the image's and the fixed module loaded first after a
+boot: `npusr/tests/npu_stale_test.c` got both its submits refused (an address
+that is no object of the caller, an object freed just before; the module as
+shipped crashed on such a submit); 3DS, PSP, PS1 in `retroarch32`, Mega Drive
+and SwanStation with NPU UPSCALE at 60 fps, the NPU at 600 MHz and as fast as
+before (3DS 7.9 ms a job, PS1 6.5, PSP 10.7), "too old" 0, nothing in the
+kernel log; Mega Drive and 3DS without it at 60 fps, the NPU idle. Not run: a
+TV (the geometry changes are for it), an NPU job that times out, a failed
+submit.
+
 ## NPU UPSCALE: the 3DS, the PSP, PS1 and the 16-bit consoles enlarged on the NPU — in 1.13
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and
@@ -1385,13 +1449,13 @@ drawn.
   takes a reference without checking that the object is alive
   (`rknpu_job_alloc`), so a submit after the program's buffers were freed
   gives "refcount_t: addition on 0" and then a NULL `kv_addr` in
-  `rknpu_job_subcore_commit_pc`. That path is open still; what keeps it shut
-  is our libraries stopping their NPU thread before librknnrt frees anything
+  `rknpu_job_subcore_commit_pc`. Until 1.14 what kept that path shut was our
+  libraries stopping their NPU thread before librknnrt frees anything
   (`npu_stop`, the layer's `atexit()`). And the `irq_entry` reset leaves a
   window: between the handler's two takes of `irq_lock` an abort still sees
   the job marked and frees it while the core keeps pointing at it. Both
-  belong to the kernel's to-do for 1.14 (TODO.md, "What the review of 1.13
-  left").
+  fixed in kernel_rk3562 3845295e6 for 1.14 ("NPU UPSCALE: what the review of
+  1.13 found in its native code", above).
 - *The runtime and the models*: Rockchip's `librknnrt.so` 2.5.0, fetched by
   `build_npusr.sh` from rknn-toolkit2's release and checked by sha256 (its
   license allows distribution with applications for Rockchip's chips and

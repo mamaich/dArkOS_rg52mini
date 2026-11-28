@@ -13,8 +13,9 @@
  *   DARKOS_NPU_SR_LIB=...      librknnrt.so (default: found by dlopen)
  *   DARKOS_NPU_SR_STATS=1      counters on stderr every 5 s
  *
- * How: at present a compute pass, in a submission of its own, takes every S-th pixel of the area from the
- * program's picture and writes the NPU's input (5 luma channels, its native NC1HWC2 int8 layout) and the
+ * How (first written for ESPCN's "row5" models; the image now has space-to-depth ones, see below): at present a
+ * compute pass, in a submission of its own, takes every S-th pixel of the area from the program's picture and
+ * writes the NPU's input (5 luma channels, its native NC1HWC2 int8 layout) and the
  * colour into a free slot; a worker thread waits for that submission's fence and runs the NPU; the rotate
  * pass builds each pixel inside the area from the latest finished NPU output and the colour. Three slots
  * (the NPU's / the latest finished / being written); present never waits for the NPU: when the NPU is busy
@@ -22,8 +23,9 @@
  * (dma-buf). Written by the AI-SR session (2026-11-22/23); docs/KNOWN-ISSUES.md, "NPU UPSCALE".
  * dArkOS, 2026-11-25: an area that is not the upscaled frame's size (fit, fill, a TV) is no longer resampled
  * from the NPU's output in each of its pixels (four luma fetches and their unpacking: PSP on a 1080p TV took
- * the Mali to 99%, 54 fps): sr_decode.comp builds the upscaled frame in RGBA once a new NPU output, in the
- * present's command buffer, and sr_resample.frag samples it once a pixel, bilinearly.
+ * the Mali to 99%, 54 fps): a decode pass builds the upscaled frame in RGBA once a new NPU output, in the
+ * present's command buffer, and the frame's pass samples it once a pixel, bilinearly (now sr_decode.frag and
+ * sr_rect.frag, below).
  * The AI-SR session, 2026-11-25: the passes made cheaper, the picture the same (measured pass by pass offscreen on
  * the console, the Mali at 900 MHz). The native frame's colour and luma are drawn by a fragment pass into a colour
  * attachment (sr_nat) and the NPU's input is packed from it by two gathers a cell (sr_nin_s2d.comp), rather than
@@ -126,7 +128,12 @@ typedef struct {
     VkImageView vrgb;
     VkFramebuffer fb_rgb;
     unsigned gen, dec_gen;  /* this slot's NPU output (the worker counts them) and the one decoded into rgb */
+    unsigned long pno;      /* the present that prepped it: its output is shown only while it is young (SR_MAXAGE) */
 } SRSlot;
+
+/* The NPU's picture is shown only for a frame at most this many presents old: when the NPU stops answering (a job
+ * failing or hung), the program's own picture comes back instead of the last upscaled one standing still (2026-11-28) */
+#define SR_MAXAGE 5
 
 typedef struct SRDev {
     Dev *d;
@@ -214,7 +221,13 @@ static void *sr_worker(void *arg)
 
         int ok = 0;
         double dt = 0;
-        if (d->WaitForFences(d->device, 1, &sr->slot[k].fence, VK_TRUE, 1000000000ull) == VK_SUCCESS) {
+        /* until the prep has run: the slot stays busy meanwhile, so a present does not take it (and reset its fence)
+         * while its prep may still be on the GPU; a second at a time, to see a quit */
+        VkResult wr;
+        while ((wr = d->WaitForFences(d->device, 1, &sr->slot[k].fence, VK_TRUE, 1000000000ull)) == VK_TIMEOUT &&
+               !__atomic_load_n(&sr->quit, __ATOMIC_ACQUIRE))
+            SRLOG("prep of slot %d not finished in 1 s, waiting on", k);
+        if (wr == VK_SUCCESS) {
             rknn_tensor_attr in = sr->nin, out = sr->nout;
             in.pass_through = 1;
             double t0 = sr_now_ms();
@@ -278,7 +291,6 @@ static void sr_device_free(Dev *d)
 {
     SRDev *sr = d->sr;
     if (!sr) return;
-    sr_exit_track(sr, 0);
     if (sr->th_started) {
         pthread_mutex_lock(&sr->m);
         sr->quit = 1;
@@ -290,10 +302,14 @@ static void sr_device_free(Dev *d)
         ts.tv_sec += 2;
         if (pthread_timedjoin_np(sr->th, NULL, &ts) != 0) {
             SRLOG("worker did not stop in 2 s, leaving NPU resources to process exit");
-            d->sr = NULL;   /* free nothing under a live thread */
+            /* free nothing under a live thread, and keep it on the exit list: exit() still waits for it before
+             * librknnrt's destructors (the layer is linked -z nodelete, so its code stays while the thread runs) */
+            d->sr = NULL;
             return;
         }
+        sr->th_started = 0;
     }
+    sr_exit_track(sr, 0);
     VkDevice dv = d->device;
     d->DeviceWaitIdle(dv);
     for (int k = 0; k < SR_SLOTS; k++) {
@@ -960,7 +976,7 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
     pthread_mutex_lock(&sr->m);
     int ready = sr->ready, w = -1;
     unsigned rgen = ready >= 0 ? sr->slot[ready].gen : 0;
-    sr->n_present++;
+    unsigned long pno = ++sr->n_present;
     if (sr->pending < 0) {
         for (int k = 0; k < SR_SLOTS; k++)
             if (k != sr->busy && k != ready) { w = k; break; }
@@ -1029,10 +1045,19 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 1, &mb, 0, NULL, 0, NULL);
         d->EndCommandBuffer(cb);
         d->ResetFences(dv, 1, &sr->slot[w].fence);
+        sr->slot[w].pno = pno;
         VkSubmitInfo si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .waitSemaphoreCount = nw, .pWaitSemaphores = pi->pWaitSemaphores,
             .pWaitDstStageMask = stages, .commandBufferCount = 1, .pCommandBuffers = &cb };
         VkResult r = d->QueueSubmit(queue, 1, &si, sr->slot[w].fence);
-        if (r != VK_SUCCESS) { SRLOG("prep submit failed: %d", r); *res = r; return 1; }
+        if (r != VK_SUCCESS) {
+            /* both fences were reset for submissions that did not happen: signalled by empty ones, or the next present
+             * of this image and the swapchain's destruction would wait on them for ever */
+            SRLOG("prep submit failed: %d", r);
+            d->QueueSubmit(queue, 0, NULL, sr->slot[w].fence);
+            d->QueueSubmit(queue, 0, NULL, s->fence[idx]);
+            *res = r;
+            return 1;
+        }
         pthread_mutex_lock(&sr->m);
         sr->pending = w;
         sr->n_prep++;
@@ -1055,7 +1080,7 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
      * is, else the upscale (a notification over the frame upscaled with it: the owner, 2026-11-23, it reads
      * badly either way). Decided here once a frame rather than in each of the panel's pixels. */
     long nflat = ready >= 0 && sr->cnt_host ? (long)sr->slot[ready].mcnt[0] : -1;
-    int use_sr = ready >= 0 && !(nflat >= 0 && x->over > 0 && nflat > x->over);
+    int use_sr = ready >= 0 && pno - sr->slot[ready].pno <= SR_MAXAGE && !(nflat >= 0 && x->over > 0 && nflat > x->over);
     int32_t rot = s->rot;
     if (use_sr && x->resample && sr->slot[ready].dec_gen != rgen) {
         /* a new NPU output: the upscaled frame into the slot's RGBA image, once (a pass of its own) */
@@ -1126,7 +1151,12 @@ static int sr_present(Dev *d, Swap *s, VkQueue queue, const VkPresentInfoKHR *pi
         .waitSemaphoreCount = w >= 0 ? 0 : nw, .pWaitSemaphores = w >= 0 ? NULL : pi->pWaitSemaphores, .pWaitDstStageMask = stages,
         .commandBufferCount = 1, .pCommandBuffers = &cb, .signalSemaphoreCount = 1, .pSignalSemaphores = &s->done[idx] };
     VkResult r = d->QueueSubmit(queue, 1, &si, s->fence[idx]);
-    if (r != VK_SUCCESS) { SRLOG("present pass submit failed: %d", r); *res = r; return 1; }
+    if (r != VK_SUCCESS) {
+        SRLOG("present pass submit failed: %d", r);
+        d->QueueSubmit(queue, 0, NULL, s->fence[idx]);   /* reset above, never submitted: signalled by an empty one */
+        *res = r;
+        return 1;
+    }
     sr_stats(sr);
     VkPresentInfoKHR p2 = *pi;
     p2.waitSemaphoreCount = 1;

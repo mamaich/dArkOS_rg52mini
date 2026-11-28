@@ -687,6 +687,18 @@ In master for 1.14, not released yet (VERSION says 1.14):
   the build; the RetroArch launchers' second start (after a game failed to
   load) gets NPU UPSCALE's environment too; `make-ota.py` compares the second
   ADC of the dual-boot menu as well.
+- NPU UPSCALE, from the review of 1.13's native code: on a TV the window
+  itself and a 640x480 frame scaled x2 are no longer taken for a frame; a
+  screen of a size the models do not know is shown as drawn; the NPU's
+  picture is shown only while it is at most five frames old, so an NPU that
+  stops answering brings the game's own picture back; the Vulkan layer does
+  not reuse a slot still on the GPU, never waits for ever after a failed
+  submit, and keeps its code loaded while its NPU thread lives; the kernel
+  refuses a submit whose task buffer is not the caller's (the probable path
+  of the 2026-11-24 crash) and lets the interrupt handler finish before an
+  aborted job is freed (kernel_rk3562 3845295e6). Checked on the console:
+  KNOWN-ISSUES.md, "NPU UPSCALE: what the review of 1.13 found in its native
+  code".
 
 See TODO.md, "For 1.14", for what else is planned.
 
