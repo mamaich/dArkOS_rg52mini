@@ -699,6 +699,17 @@ In master for 1.14, not released yet (VERSION says 1.14):
   aborted job is freed (kernel_rk3562 3845295e6). Checked on the console:
   KNOWN-ISSUES.md, "NPU UPSCALE: what the review of 1.13 found in its native
   code".
+- malisx2 0.6.1 (ea6960d, with its profile `malisx2-20261127`): upstream's
+  0.6.0 and 0.6.1 merged by the malisx2 session, at 0.5.1's speed in its
+  runs; a new shader cache ID, so each game compiles its pipelines once more
+  after the update (KNOWN-ISSUES.md, "malisx2 0.6.1").
+- The update removes the `.ota-new` files it puts beside a user's own copies
+  of RetroArch's shaders (fetched with the Online Updater; from 1.12 to 1.13
+  there could be thousands): `ota/hooks/all-drop-shader-ota-new.sh`, in every
+  package from 1.14 on. The slang shaders keep following upstream, and a
+  release now checks the presets a new set changes on the console
+  (`tools/slangcheck`; OTA.md, "Release procedure"), with `SLANG_COMMIT` in
+  `build_retroarch.sh` to pin a broken set back.
 
 See TODO.md, "For 1.14", for what else is planned.
 

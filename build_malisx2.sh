@@ -77,8 +77,16 @@
 # wide lines, draw parameters, 8-bit indices, list restart, float controls,
 # custom border colours, the 1555 formats, image-to-buffer copies through a
 # linear render target) and Mesa moved to its November base with our compiler
-# changes rebased; driverInfo says 0.5.1, a new shader cache ID again), and
-# the work on the
+# changes rebased; driverInfo says 0.5.1, a new shader cache ID again;
+# ea6960d (e7778ed's code and two commits of docs), with the same Mesa:
+# upstream's 0.6.0 and 0.6.1 merged (for v7: forward pixel kill only for draws
+# that write every colour target, the job manager's atom stride probed on any
+# kernel, no image formats with a 3, 6 or 12 byte texel, maintenance4,
+# format_feature_flags2, copy_commands2, load_store_op_none, pipeline creation
+# feedback and cache control, host query reset; AFBC D32 depth planes copied
+# as upstream copies them, AFBC for sampled textures kept as ours); driverInfo
+# says 0.6.1, a new shader cache ID again, 1e9d66c5-40fc-9b3e-1417-abc041016fbb),
+# and the work on the
 # driver
 # itself has its own notes and session
 # (T:\Dump\RG52Mini\dArkOS\malisx2\README.md on the owner's PC).
@@ -105,19 +113,35 @@ fi
 MALISX2_REMOTE="https://github.com/mamaich/malisx2-rg52mini"
 # Pinned: a newer commit is a deliberate update (profile retrained, or the
 # functions it changed lose their profile data).
-MALISX2_COMMIT="eb79fed7f2f006deaf5f61efd211daa1309e39e9"
+MALISX2_COMMIT="ea6960d495f5bef88f42c8142e6cf3bfc8d38e3f"
 MALISX2_SRC="Arkbuild/home/ark/malisx2"
 MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # Profile for clang's profile-guided optimisation: trained by the malisx2
-# session on 0.5.1's code (eb79fed, Mesa 75e8561) on an RG52 Mini on
-# 2026-11-17, with the set named below; 2026-11-13's loses 8.9% of its weight
-# on this code. The malisx2 session's numbers on the console, its build of
-# this code with this profile against 4636921 with 2026-11-13's (LTO and a
-# profile in both, three rounds): God of War 17.89 against 18.00, Jak and
-# Daxter 14.40 against 14.47, Castlevania 20.15 against 19.84, the ND Demo
-# and Metroid Prime level, all within the spread; fitest 7/7 and 12/12
-# indirect, bctest 6/6, no GPU fault, no device lost, Castlevania's and
-# Mario's shaders the same to the byte.
+# session on 0.6.1's merge (c37d311, Mesa 75e8561) on an RG52 Mini on
+# 2026-11-27, with the set named below; e7778ed changed only the AFBC D32
+# copies since, which nothing in the set does, and builds with it without an
+# out-of-date warning (2026-11-17's would lose 0.2% of its weight on this
+# code: gfx_pack_state, push_begin, v7's pack_rsd). The malisx2 session's
+# numbers on the console, its build of c37d311 with this profile against
+# 1.11's code with 2026-11-17's (LTO and a profile in both, warm, two rounds
+# with the order turned, three runs each): God of War 17.74/18.07/18.22
+# against 17.15/17.92/17.82, Jak and Daxter 14.36/14.21/14.41 against
+# 14.39/14.36/14.30, Castlevania on 1.13's Azahar 48.5-48.9 ms of GPU a frame
+# against 47.8-50.0, the ND Demo and Metroid Prime level, all within the
+# spread; the same GPU memory, fitest 7/7 and 12/12 indirect, bctest 6/6 and
+# the depth-copy test pass, no GPU fault, no device lost, Castlevania's and
+# Mario's shaders the same to the byte as 1.11's. Their LTO+PGO build of
+# e7778ed (sha256 fc2f4e8b...) is the one to compare this recipe's library
+# with.
+# 2026-11-17's profile served eb79fed (0.5.1; 1.11 to 1.13): trained on
+# 0.5.1's code on 2026-11-17; 2026-11-13's lost 8.9% of its weight on that
+# code. The malisx2 session's numbers then, its build of that code with it
+# against 4636921 with 2026-11-13's (LTO and a profile in both, three
+# rounds): God of War 17.89 against 18.00, Jak and Daxter 14.40 against
+# 14.47, Castlevania 20.15 against 19.84, the ND Demo and Metroid Prime
+# level, all within the spread; fitest 7/7 and 12/12 indirect, bctest 6/6,
+# no GPU fault, no device lost, Castlevania's and Mario's shaders the same to
+# the byte.
 # 2026-11-13's profile served 4636921 (1.10): trained on f228314's code (upstream's main of 2026-11-12 merged, 17 commits
 # after 0.5.0; Mesa 3b0e036) on an RG52 Mini on 2026-11-13, with the set named
 # below. It goes with that code: 2026-11-08's profile lost the hot draw path
@@ -172,8 +196,8 @@ MALISX2_LIB="/usr/lib/aarch64-linux-gnu/malisx2/libvulkan_malisx2.so"
 # (Mesa's reach the compiler by absolute paths), so it is made for this tree
 # at /home/ark/malisx2, where the chroot builds it, with the build directory
 # in it (malisx2's docs/building.md).
-PGO="malisx2/pgo/malisx2-20261117.profdata.gz"
-PGO_SHA256="d6d63ee7644b0629c127831bf8bacbf074aa27241efd161b8f1a212f9969ad10"
+PGO="malisx2/pgo/malisx2-20261127.profdata.gz"
+PGO_SHA256="6b5fe87febb900cee74f104334541a19b20ac2ba7b228dfbb7381002123bbe6f"
 # Meson from its release, run from the tree: Debian trixie's 1.7.0 fails to
 # write the build of the Rust crate Mesa makes of structured sources
 # ("'CustomTargetIndex' object has no attribute 'subdir'"); 1.12.1 builds it.

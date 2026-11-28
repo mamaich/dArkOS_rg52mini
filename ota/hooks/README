@@ -15,6 +15,10 @@ rollback.
 
 all-<name>.sh goes into every package, after the releases' own hooks, in name
 order:
+- all-drop-shader-ota-new.sh removes the .ota-new files the client puts beside
+  a user's own copies of RetroArch's shaders (fetched with the Online Updater;
+  the image's GLSL and slang shaders follow upstream, so any release may change
+  them), from 1.14 on;
 - all-fix-root-dir.sh gives / back to root (the images up to 1.1's test
   builds had it as ark's) and removes what PPSSPP 1.12.3 left there;
 - all-gpu-links.sh points the links the build makes by hand back at libMali.so

@@ -592,10 +592,24 @@ fi
 # Cloned through utils.sh's git(), which tries again on a network failure (sudo git would not), and a
 # missing copy stops the build: an image without them would also make the next update delete them from
 # every console that has them.
+# Upstream's newest at each build (the owner, 2026-11-28: the new ones, but checked: before a release the
+# presets the new set changes are loaded on the console with the previous release's set and the new one,
+# tools/slangcheck and docs/OTA.md, "Release procedure"). SLANG_COMMIT pins a commit instead, for a set
+# that check finds broken until upstream mends it. 1.13 has 02bf134 (2026-11-20). The commit taken goes
+# to the build's log and Arkbuild_package_cache/<chipset>/slang-shaders.commit.
+SLANG_COMMIT=""
 if [ "$CHIPSET" == "rk3562" ]; then
   sudo rm -rf Arkbuild/home/ark/.config/retroarch/shaders/shaders_slang
   slangtmp=$(mktemp -d)
-  git clone --depth=1 https://github.com/libretro/slang-shaders.git "$slangtmp/shaders_slang" &&
+  if [ -n "$SLANG_COMMIT" ]; then
+    git init -q "$slangtmp/shaders_slang" &&
+      git -C "$slangtmp/shaders_slang" fetch --depth=1 https://github.com/libretro/slang-shaders.git "$SLANG_COMMIT" &&
+      git -C "$slangtmp/shaders_slang" checkout -q --force FETCH_HEAD
+  else
+    git clone --depth=1 https://github.com/libretro/slang-shaders.git "$slangtmp/shaders_slang"
+  fi &&
+    { echo "RetroArch's slang shaders: libretro/slang-shaders $(git -C "$slangtmp/shaders_slang" log -1 --format='%H %cs')" |
+        tee "Arkbuild_package_cache/${CHIPSET}/slang-shaders.commit" || true; } &&
     rm -rf "$slangtmp"/shaders_slang/{.git,configure,Makefile} &&
     sudo mkdir -p Arkbuild/home/ark/.config/retroarch/shaders &&
     sudo mv "$slangtmp/shaders_slang" Arkbuild/home/ark/.config/retroarch/shaders/

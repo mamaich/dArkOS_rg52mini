@@ -1972,7 +1972,33 @@ Found while comparing NPU UPSCALE with RetroArch's shaders (above).
   The owner asked for the slang shaders in the image (so that no one has
   to fetch them): `build_retroarch.sh` puts them in since 2026-11-25 (one
   copy, 84 MB, for both 64-bit RetroArchs; the GLSL clones' `.git`, 24 MB
-  each, left out).
+  each, left out). 1.13 has upstream's 02bf134 (2026-11-20), still upstream's
+  head on 2026-11-28.
+- **New sets, checked (2026-11-28, for 1.14).** The review of 1.13 asked
+  whether to pin the slang shaders; the owner: take the new ones, "but
+  checked: remember there were errors that made them not work here". The
+  build takes upstream's head (or `SLANG_COMMIT`, a pin for a set found
+  broken) and names the commit in its log; before a release
+  `tools/slangcheck/slangdeps.py` lists the presets the new set changes
+  against the previous image's (any file RetroArch reads for a preset: the
+  `.slangp`, its `#reference`s, the passes with their `#include`s, the
+  textures), and `tools/slangcheck/slangcheck.py` loads each in RetroArch's
+  Vulkan driver on the console, with the old set and with the new one, over
+  RetroArch's network commands (`SET_SHADER`, then `GET_STATUS`, answered
+  once the preset is loaded or refused; then two seconds of drawing): `ok`,
+  `fail` with RetroArch's error lines, `crash`, `hang` (OTA.md, "Release
+  procedure"; tools/slangcheck/README.md). Every preset at each release
+  would take hours: crt-geom loads in 1.1 s, xbr-lv3 2.2, scalefx 2.4,
+  crt-royale 21.4, a Mega Bezel preset 47.2. On 1.13's set those all load
+  and draw (xbr-lv3 and scalefx crashed 1.22.2 before patch 0027); a preset
+  naming a missing file gives "[Slang] Failed to open shader file", one with
+  a syntax error glslang's "compilation terminated", both `fail`.
+  - The update kept a user's own copies of these shaders (fetched with the
+    Online Updater) and put the image's beside each that differed as
+    `.ota-new` (thousands from 1.12 to 1.13, which RetroArch never reads);
+    from 1.14 every package removes them (`ota/hooks/all-drop-shader-ota-new.sh`,
+    the owner's word of 2026-11-28; the GLSL folders of both RetroArchs too,
+    since they follow upstream as well).
 
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed in 1.12
 
@@ -2698,6 +2724,38 @@ and no device lost, Castlevania's and Mario's shaders the same to the byte.
 Which 1555 formats Azahar and PPSSPP now pick was not looked into; the owner
 played 3DS and PSP games on this build on 2026-11-17 and saw no change in
 their menus and 2D pictures.
+
+**malisx2 0.6.1 (ea6960d, in master for 1.14).** Upstream's 0.6.0 and 0.6.1
+(9fbc7da) merged by the malisx2 session (c37d311), handed over on 2026-11-28;
+the owner the same day: into 1.14, or a newer one if it comes soon. For v7:
+forward pixel kill only for draws whose blending writes every colour target;
+the job manager's atom stride probed on any kernel (on the RG52 Mini the log
+says "64-byte atoms (stock kbase): the kernel refused stride 72", as meant);
+formats with a 3, 6 or 12 byte texel are vertex formats only;
+`VK_KHR_maintenance4`, `format_feature_flags2`, `copy_commands2`,
+`load_store_op_none`, pipeline creation feedback and cache control, host
+query reset. AFBC D32 depth planes are copied as upstream copies them
+(e7778ed: as R32F depth through the copy pass's depth target, where ours went
+as RGBA8 blocks through a colour target; the copy test reads back the same
+bits either way, and no game of the set makes such a copy); AFBC for sampled
+textures stays ours (upstream compresses attachments only). The rest is for
+other GPUs (Vulkan 1.2/1.3 on v9-v12, geometry and tessellation on v10-v12).
+Mesa as in 0.5.1 (75e8561). The profile is new (2026-11-27's, the same
+training set, taken on c37d311; 2026-11-17's would lose 0.2% of its weight on
+this code). driverInfo says 0.6.1; the shader cache ID changes
+(1e9d66c5-40fc-9b3e-1417-abc041016fbb), so each game compiles its pipelines
+once more after the update. The launchers are unchanged. The malisx2
+session's numbers on the console, 2026-11-27, its build of c37d311 with the
+new profile against 1.11's code with 2026-11-17's (LTO and a profile in
+both, warm, two rounds with the order turned): God of War 17.74/18.07/18.22
+against 17.15/17.92/17.82, Jak and Daxter 14.36/14.21/14.41 against
+14.39/14.36/14.30, Castlevania on 1.13's Azahar 48.5-48.9 ms of GPU a frame
+against 47.8-50.0, the ND Demo and Metroid Prime level: all within the
+spread. The same GPU memory, fitest 7/7 and 12/12 indirect, bctest 6/6 and
+the depth-copy test pass, no GPU fault, no device lost, the shaders of
+Castlevania and Super Mario 3D Land the same to the byte as 1.11's. Left for
+the 1.14 build: its library against the session's (fc2f4e8b...), `vulkaninfo`'s
+UUID, a smoke run on both drivers.
 
 **Arm's driver against malisx2 in Azahar at a raised resolution (2026-11-09).**
 Super Mario 3D Land as ES starts it, flips over 30 s, the owner's settings with

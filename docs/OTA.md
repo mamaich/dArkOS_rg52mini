@@ -319,6 +319,18 @@ may change, so the client checks free space and assumes no sizes.
    console by hand that the two images do not differ in stays and stands in
    for the image's. Before the release's checks, compare the console's system
    files with the new image's (or test on a card written from the image).
+   RetroArch's slang shaders follow upstream's head (the owner, 2026-11-28:
+   the new ones, but checked), so they are in the list whenever upstream
+   moved; the build's log names the commit taken. Then
+   `tools/slangcheck/slangdeps.py <old>/home/ark/.config/retroarch/shaders/shaders_slang
+   <new>/home/ark/.config/retroarch/shaders/shaders_slang -o changed.txt` (the
+   two images mounted) lists the presets the new set changes, new ones
+   included, and on the console `sudo tools/slangcheck/slangcheck.py --root
+   <set> --list changed.txt --out <set>.tsv` loads each in RetroArch's Vulkan
+   driver, once with the old set and once with the new (both copied to
+   `comptest`, the new image's RetroArch). A preset that works with the old
+   set and fails, crashes or hangs with the new one holds the release: pin
+   `SLANG_COMMIT` in `build_retroarch.sh` at the old commit, or find out why.
 3. Upload the package as an asset of the release, next to the image volumes.
 4. Only then commit and push `ota/rg52mini.json`; devices see the update from
    that moment.

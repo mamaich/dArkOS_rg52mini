@@ -14,22 +14,30 @@ the Vulkan layer, kernel_rk3562 3845295e6); build fixes (the 32-bit chroot
 before the NPU library, the slang clone, the launchers' second start,
 `make-ota.py`'s second ADC). Two of these were 1.13's known issues, written
 into its release notes on GitHub on 2026-11-28: PSP's NPU UPSCALE, and
-generic pads in ports on a card from the 1.13 image.
+generic pads in ports on a card from the 1.13 image. Also in master: malisx2
+0.6.1 (below), the hook that removes the shaders' `.ota-new` files, and the
+slang shaders' check (below, "What the review of 1.13 left").
 
 **To do for the release**, in this order (the build only on the owner's word):
 
 1. The upstream check (`tools/upstream/check.py`, at most once a day); what is
-   new goes to the owner, the pins are not moved without his word.
-2. malisx2 0.6.1 into `build_malisx2.sh` (below), if the owner takes it with
-   1.14.
-3. The decisions left to the owner from the review (below, "What the review
-   of 1.13 left"): the beta PortMaster's installer on cards updated from
-   1.9-1.12, the `.ota-new` files the 1.13 update may have left beside a
-   user's own slang shaders (a 1.14 hook could clean them), the slang clone's
-   pin, ARMSX2's cache key.
+   new goes to the owner, the pins are not moved without the owner's word.
+2. malisx2: 0.6.1 is in `build_malisx2.sh`. The owner, 2026-11-28: this one,
+   or a newer one if the malisx2 session hands one over before the build
+   (its pin and profile then go in instead, with that session's numbers).
+3. The one decision left to the owner from the review (below, "What the
+   review of 1.13 left"): the beta PortMaster's installer on cards updated
+   from 1.9-1.12. Decided on 2026-11-28: the shaders' `.ota-new` files go
+   (`ota/hooks/all-drop-shader-ota-new.sh`), the slang shaders follow
+   upstream with a check (step 4), ARMSX2's cache key stays as it is.
 4. The build; then the post-build check with what 1.13 lacked (OTA.md,
    "Release procedure", step 2): every runtime file changed since v1.13 found
-   in the image with its new content, `ppsspp.sh` among them.
+   in the image with its new content, `ppsspp.sh` among them. And the slang
+   shaders (OTA.md, step 2): the build's log names the commit it took
+   (1.13 has 02bf134); `tools/slangcheck/slangdeps.py` lists the presets the
+   new set changes against 1.13's image, and `slangcheck.py` loads each on the
+   console with 1.13's set and with the new one. One that worked and does not
+   any more: pin `SLANG_COMMIT` in `build_retroarch.sh` back and build again.
 5. Packages from 1.13 and 1.12 (N-1, N-2); the list of files of each read
    line by line.
 6. On the console, by the package from 1.13, on a card whose system files are
@@ -85,20 +93,22 @@ the parts that did not change.
   for what it carries; the rest from the image) checked on the console after
   the update's reboot, the differences printed. The post-build check should
   also compare every launcher with the tree, `ppsspp.sh` among them.
-* **malisx2 0.6.1** (the malisx2 session's handoff of 2026-11-28, the owner's
-  word to it: for the next releases). `MALISX2_COMMIT`
-  ea6960d495f5bef88f42c8142e6cf3bfc8d38e3f (the code is e7778ed, docs on top;
-  Mesa unchanged, 75e85610), a new profile `malisx2-20261127.profdata.gz`
-  (`T:\Dump\RG52Mini\dArkOS\malisx2\pgo\`, sha256 6b5fe87f...; trained on
-  c37d311, builds e7778ed with the same 12 warnings as 0.5.1), their LTO+PGO
-  build of it fc2f4e8b... (`~/rg52/malisx2-work/out/libvulkan_malisx2-pgouse-061f.so`)
-  to compare the recipe's library with. A new pipeline cache UUID
+* **malisx2 0.6.1** (the malisx2 session's handoff of 2026-11-28; the owner
+  the same day: into 1.14, or a newer one if it comes soon). **In master**:
+  `MALISX2_COMMIT` ea6960d495f5bef88f42c8142e6cf3bfc8d38e3f (the code is
+  e7778ed, docs on top; Mesa unchanged, 75e85610) and its profile
+  `malisx2/pgo/malisx2-20261127.profdata.gz` (sha256 6b5fe87f...; trained on
+  c37d311, builds e7778ed with the same 12 warnings as 0.5.1) in
+  `build_malisx2.sh`; KNOWN-ISSUES.md, "malisx2 0.6.1". Their LTO+PGO build
+  of it, fc2f4e8b... (`~/rg52/malisx2-work/out/libvulkan_malisx2-pgouse-061f.so`),
+  is what the recipe's library is compared with. A new pipeline cache UUID
   (1e9d66c5-40fc-9b3e-1417-abc041016fbb): each emulator builds its pipeline
   and shader caches once more after the update, as with 1.11. Their runs of
   2026-11-27 on the console against 0.5.1 (God of War, Jak, the ND Demo,
-  Metroid Prime, Castlevania on 1.13's Azahar): within the spread. To do when
-  1.14 is prepared: the pin and the profile in `build_malisx2.sh`, the
-  recipe's library against theirs, `vulkaninfo`'s UUID, a smoke run.
+  Metroid Prime, Castlevania on 1.13's Azahar): within the spread. Left for
+  the build: the recipe's library against theirs (driverInfo, the cache
+  UUID; the sha256 differs, as with 0.5.1), `vulkaninfo`, a smoke run on both
+  drivers.
 * **What the review of 1.13 left** (the owner's `/code-review` of the range
   v1.12..v1.13, 2026-11-27/28; four of its finders reported before the usage
   limit stopped it, each candidate then checked here). Fixed in master: the
@@ -138,12 +148,23 @@ the parts that did not change.
     file that differs (fetched with the Online Updater) and puts the image's
     beside it as `.ota-new`, possibly thousands of them; and the clone follows
     upstream's head, so each image carries its churn into the next package
-    (OTA.md's rule says pin such things). The GLSL clones' `.git` (about 48 MB)
-    stays on updated cards: make-ota never looks into `.git`.
+    (OTA.md's rule says pin such things). **Decided** (the owner, 2026-11-28):
+    the `.ota-new` files go, in every package from 1.14 on
+    (`ota/hooks/all-drop-shader-ota-new.sh`: under the two RetroArchs'
+    `shaders` folders only, the user's copies kept; tried on the console with
+    files made as the client makes them); the shaders follow upstream's head,
+    "but checked: remember the errors that made them not work here" (1.13's
+    crash of RetroArch on presets sized from the source). The check:
+    `tools/slangcheck` (KNOWN-ISSUES.md, "RetroArch's shaders on the
+    Mali-G52"), a pin for a broken set: `SLANG_COMMIT` in `build_retroarch.sh`.
+    Still open: the GLSL clones' `.git` (about 48 MB) stays on updated cards,
+    since make-ota never looks into `.git`; the hook could remove it too (not
+    asked for).
   - ARMSX2's cache key hashes `build_pcsx2sa.sh` whole, so moving the PS2
     game patches' pin in it rebuilt ARMSX2 for 1.13 (same source and profile,
     another binary; God of War 38.1 and Jak 17.4 against 1.12's 37.7 and 17.1,
-    so not slower). The key should leave that line out.
+    so not slower). The key could leave that line out. **The owner,
+    2026-11-28: leave it as it is.**
   - `build_retroarch.sh`: the hold-back of parallel_n64 and yabasanshiro to the
     old prebuilt builds is in the 64-bit loop only; the 32-bit one takes both
     from whatever pin is set (no effect in 1.13: the armhf files did not change).
