@@ -47,6 +47,8 @@ EMUS = re.compile(r"^(retroarch|retroarch32|PPSSPPSDL|dolphin-emu|armsx2|drastic
 FAILED = re.compile(r"Failed applying shader|Failed to create preset|Failed to (load|parse|compile|create)", re.I)
 DETAIL = re.compile(r"(\[(slang|Vulkan|Shaders?|SPIR-?V|glslang)[^\]]*\].*(fail|error|invalid|refus|unknown|not |missing))"
                     r"|^\s*ERROR:|Failed applying shader", re.I)
+# The owner's cfg keeps saves, states and screenshots beside the game (*_in_content_dir), which
+# beats the folders below unless turned off here too.
 OVERRIDES = """video_driver = "vulkan"
 video_shader_enable = "true"
 video_shader_delay = "0"
@@ -57,6 +59,9 @@ config_save_on_exit = "false"
 audio_enable = "false"
 savestate_auto_load = "false"
 savestate_auto_save = "false"
+savefiles_in_content_dir = "false"
+savestates_in_content_dir = "false"
+screenshots_in_content_dir = "false"
 savefile_directory = "%s/saves"
 savestate_directory = "%s/states"
 screenshot_directory = "%s"
