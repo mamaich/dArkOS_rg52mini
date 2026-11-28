@@ -51,7 +51,12 @@ Files with `rk3562` or `rg52mini` in their names are this device's. The others
 are upstream's ([christianhaitian/dArkOS](https://github.com/christianhaitian/dArkOS)
 through [bmdhacks/dArkOS_rg52mini](https://github.com/bmdhacks/dArkOS_rg52mini))
 and serve other devices too: change them only when the RG52 Mini needs it, so
-that upstream's changes keep merging.
+that upstream's changes keep merging. Where a plain file has a twin with the
+unit's name (`ppsspp/ppsspp.sh.rg52mini` beside `ppsspp/ppsspp.sh`; the build
+scripts test for `<file>.${UNIT}`), the image gets the twin and never the
+plain one: edit the twin. 1.13's NPU part for the PSP went into the plain
+launcher and so into no image (KNOWN-ISSUES.md, "NPU UPSCALE did nothing for
+the PSP in 1.13").
 
 Related repositories, each with its own history and notes:
 [mamaich/kernel_rk3562](https://github.com/mamaich/kernel_rk3562),

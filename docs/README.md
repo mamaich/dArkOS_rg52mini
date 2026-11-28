@@ -667,8 +667,15 @@ booted from the card with 1.13's dtb on `/boot` (2026-11-26). The release
 packages from 1.12 and 1.11 were made the same way from the published images
 and not installed.
 
-In master for 1.14, not released yet (VERSION says 1.14): nothing yet; see
-TODO.md.
+In master for 1.14, not released yet (VERSION says 1.14):
+
+- NPU UPSCALE works for the PSP: 1.13's image had no NPU part in the PSP's
+  launcher, as it went into `ppsspp/ppsspp.sh` and this image installs
+  `ppsspp/ppsspp.sh.rg52mini`; with the option ON a PSP game started as
+  without it (KNOWN-ISSUES.md, "NPU UPSCALE did nothing for the PSP in
+  1.13"). Checked on a card written from the 1.13 image, on the panel.
+
+See TODO.md, "For 1.14", for what else is planned.
 
 freej2me-plus, silently missing from earlier images, is built and starts (on
 a JDK 11 it downloads), but drew a white, torn picture on the RG52 Mini

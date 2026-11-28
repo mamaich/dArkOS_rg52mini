@@ -43,7 +43,31 @@ if  [[ $1 == "standalone" ]]; then
   # stale counter and silently drops all settings changes.  Wipe it pre-launch.
   sudo rm -f /dev/shm/PPSSPP_ID
   cp -f $roms_config_directory_std/PSP/SYSTEM/ppsspp.ini.sdl $roms_config_directory_std/PSP/SYSTEM/ppsspp.ini
-  /opt/ppsspp/PPSSPPSDL --xres 1280 --yres 720 "$2"
+  # NPU UPSCALE (EmulationStation's EMULATOR SETTINGS): the PSP's 480x272 enlarged by the NPU in
+  # the Vulkan rotate layer, as big as PPSSPP's own settings make the picture. darkos-npusr
+  # prints the --appendconfig file and the layer's DARKOS_NPU_SR. PPSSPP saves what
+  # --appendconfig gives it into its ini files; darkos-npusr puts those keys back before
+  # ppsspp.ini goes to ppsspp.ini.sdl. With the upscale PPSSPP takes the screen's own mode
+  # (--fullscreen): darkos-npusr reckons the picture's size from that, on a TV too. Without
+  # it the launch is as it always was.
+  # (1.13 had this part in ppsspp/ppsspp.sh, the other devices' launcher, which this image
+  # does not install: NPU UPSCALE did nothing for the PSP. KNOWN-ISSUES.md.)
+  npusr=/usr/local/bin/darkos-npusr
+  npu=()
+  window=(--xres 1280 --yres 720)
+  if [ -x "$npusr" ]; then
+    [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
+    if [ "$DARKOS_NPU_UPSCALE" = on ] && npuout=$("$npusr" ppsspp "$roms_config_directory_std/PSP/SYSTEM"); then
+      npucfg=${npuout%%$'\n'*}
+      npusr_sr=${npuout#*$'\n'}
+      [ "$npusr_sr" = "$npuout" ] && npusr_sr=x2:480x272
+      export DARKOS_NPU_SR=$npusr_sr
+      npu=(--appendconfig="$npucfg")
+      window=(--fullscreen)
+    fi
+  fi
+  /opt/ppsspp/PPSSPPSDL "${window[@]}" "${npu[@]}" "$2"
+  [ ${#npu[@]} -gt 0 ] && "$npusr" restore
   cp -f $roms_config_directory_std/PSP/SYSTEM/ppsspp.ini $roms_config_directory_std/PSP/SYSTEM/ppsspp.ini.sdl
   sudo systemctl stop killer_daemon.service
 elif [[ $1 == "standalone-2021" ]]; then

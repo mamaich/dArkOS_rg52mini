@@ -2,6 +2,59 @@
 
 A working list, not a roadmap. Ordered by what a build would answer soonest.
 
+## For 1.14
+
+Found by the check of the 1.13 release on 2026-11-28 (the owner asked whether
+pads over USB and Bluetooth, or anything else, got broken or slower again; the
+tree, the image and the package from 1.12 compared file by file, the kernel's
+and Debian's parts too). Input came out as it was in 1.12: the kernel's change
+is the NPU's nodes and `rknpu` as a module, Debian's packages differ in krb5,
+zstd and shadow only, SDL 2.32.11's joystick code differs from 2.32.10's in a
+sensor axis order for Nintendo pads, three device ids and a libusb check, our
+SDL patches all applied in the release build (its log) and the ES binary has
+es-0010's pad hiding beside es-0011, `es_input.cfg`, `darkos-portpads` and
+`ra-extpads.py` are 1.12's byte for byte, the RetroArch launchers start
+RetroArch as before with the option off and keep the pads' order with it on,
+PortMaster's stable 2026.06.23 on a card written from the image has all of
+`portmaster-e2big.sh`'s parts (the pad hiding too; its journal on that card).
+On that card, with no real pad at hand, two virtual ones (uinput: an Xbox 360
+pad on the USB bus, a DualShock 4 on the Bluetooth one): SDL lists each beside
+the console's controls, `ra-extpads.py` makes each player 1 with the console's
+controls second and writes its RetroArch profile from ES's mapping,
+`darkos-portpads auto` hides the console's controls from a port while one is
+in and not otherwise. A real pad's own path (xpad, the Bluetooth stack) is in
+the parts that did not change.
+
+* **NPU UPSCALE for the PSP: the fixed launcher on a TV.** The fix is in
+  master (KNOWN-ISSUES.md, "NPU UPSCALE did nothing for the PSP in 1.13") and
+  checked on a card written from the 1.13 image, on the panel: the option OFF
+  (the launch unchanged), ON, and PPSSPP's ini files back as they were. Left:
+  one run on a TV with the option ON, and PSP Minis. The owner's working card
+  still has the launcher put in by hand on 2026-11-23 (`ppsspp/ppsspp.sh` with
+  the NPU part): it is not the release's, and the next update replaces it.
+* **After a test update, compare the console with the image.** `darkos-ota`
+  looks only at the files its package carries, so a file put on the console by
+  hand that the two images do not differ in stays, and stands in for what the
+  image lacks: that is how the PSP's launcher passed every check of 1.13. A
+  list of sha256 of the image's system files (the package's manifest has them
+  for what it carries; the rest from the image) checked on the console after
+  the update's reboot, the differences printed. The post-build check should
+  also compare every launcher with the tree, `ppsspp.sh` among them.
+* **malisx2 0.6.1** (the malisx2 session's handoff of 2026-11-28, the owner's
+  word to it: for the next releases). `MALISX2_COMMIT`
+  ea6960d495f5bef88f42c8142e6cf3bfc8d38e3f (the code is e7778ed, docs on top;
+  Mesa unchanged, 75e85610), a new profile `malisx2-20261127.profdata.gz`
+  (`T:\Dump\RG52Mini\dArkOS\malisx2\pgo\`, sha256 6b5fe87f...; trained on
+  c37d311, builds e7778ed with the same 12 warnings as 0.5.1), their LTO+PGO
+  build of it fc2f4e8b... (`~/rg52/malisx2-work/out/libvulkan_malisx2-pgouse-061f.so`)
+  to compare the recipe's library with. A new pipeline cache UUID
+  (1e9d66c5-40fc-9b3e-1417-abc041016fbb): each emulator builds its pipeline
+  and shader caches once more after the update, as with 1.11. Their runs of
+  2026-11-27 on the console against 0.5.1 (God of War, Jak, the ND Demo,
+  Metroid Prime, Castlevania on 1.13's Azahar): within the spread. To do when
+  1.14 is prepared: the pin and the profile in `build_malisx2.sh`, the
+  recipe's library against theirs, `vulkaninfo`'s UUID, a smoke run.
+
 ## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day; released 2026-11-27)
 
 **Released as 1.13 on 2026-11-27**: build 20261127135106, from 1d3f6b2 (tag

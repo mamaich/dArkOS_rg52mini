@@ -1120,6 +1120,66 @@ beats an upscale of the 1x frame (as for the PSP), and DSperate presents
 through its own KMS output, past the Vulkan layer, so the layer could not
 upscale it anyway.
 
+## NPU UPSCALE did nothing for the PSP in 1.13 (2026-11-28) — fixed for 1.14
+
+In 1.13's image the PSP's launcher has no NPU part: with NPU UPSCALE ON for
+PSP or PSP Minis the game starts as without it, PPSSPP's own picture, no
+message. The other systems are not affected (their launchers are the three
+RetroArch ones, which the image has as in the tree).
+
+The build installs `ppsspp/ppsspp.sh.rg52mini` as `/usr/local/bin/ppsspp.sh`
+when the unit has such a file (`build_ppssppsa.sh`), and the NPU part
+(435872a, 88b4def, then 7cbb169) went into `ppsspp/ppsspp.sh`, the other
+devices' launcher, which this image never gets. Found on 2026-11-28, after the
+release, by looking for each runtime file changed since 1.12 in the 1.13
+image: that one alone was not there. The image's `ppsspp.sh` is 1.12's byte
+for byte, so the PSP itself runs as in 1.12.
+
+Why every check passed: on the owner's console the launcher with the NPU part
+was put in by hand on 2026-11-23, from `ppsspp/ppsspp.sh`, and no update took
+it away again. A package carries only what differs between two images, and
+`ppsspp.sh` does not differ between 1.12's and 1.13's; the script of the first
+test update reasoned "it differs from 1.12, so the package replaces it", which
+holds for a file the new image changes and for no other. So the PSP rows of
+the NPU checks, on the panel and on a TV, and of every smoke run since then
+ran that hand-put file (with `--fullscreen`, where the image's launcher has
+`--xres 1280 --yres 720`), and the post-build check compared the RetroArch
+launchers, `nds.sh` and `darkos-npusr` with the tree, not `ppsspp.sh`. The
+"ld.so warning in every PSP run on a TV" that 7cbb169 answered was that file's
+too: the image's launcher preloads nothing.
+
+The fix: the same part in `ppsspp/ppsspp.sh.rg52mini`. A run with the upscale
+starts PPSSPP with `--fullscreen`, the screen's own mode, which is what
+`darkos-npusr` reckons the picture's size from, on a TV too, and how the part
+was tried all along; a run without it starts as before. `ppsspp/ppsspp.sh` is
+back to what 1.12 had.
+
+Checked on 2026-11-28 on a card written from the 1.13 image (the owner's new
+dual-boot card), each run as ES starts the game (Ape Escape Racing's demo),
+the launcher bound over the image's for the run, on the panel:
+
+| launcher | NPU UPSCALE | PPSSPP started with | `DARKOS_NPU_SR` | NPU interrupts in 5 s | fps |
+|---|---|---|---|---|---|
+| the image's (1.13) | ON | `--xres 1280 --yres 720` | none | 0 | 60.0 |
+| fixed | OFF | `--xres 1280 --yres 720` | none | 0 | 59.9 |
+| fixed | ON | `--fullscreen --appendconfig=/tmp/darkos-npusr-ppsspp.ini` | `x3:480x272:a2:fit` | 300 | 59.9 |
+
+With PPSSPP alone ended by SIGTERM in the game, as `killer_daemon` ends it on
+the hotkey, the launcher went on: `darkos-npusr`'s record gone,
+`ppsspp.ini.sdl` with the owner's keys again (2x render, no integer scale;
+only the run count and the recent list differ, as after any game), the game's
+own `<ID>_ppsspp.ini` as it was. A record left by a run killed whole (the
+test harness stops the launcher with the game) was cleared by
+`darkos-npusr restore`, the ini files as saved before. On stubs the part
+starts PPSSPP with the right arguments in each case (off, on, the helper
+answering one line or refusing, no helper, a record left over). Not run: on a
+TV (the part is the one tried there on 2026-11-25, from the other file), PSP
+Minis.
+
+What it leaves to do: a check after a test update that the console's system
+files are the image's (TODO.md, "For 1.14"), so a file put in by hand cannot
+stand in for one the image lacks.
+
 ## NPU UPSCALE: the 3DS, the PSP, PS1 and the 16-bit consoles enlarged on the NPU — in 1.13
 
 The RK3562 has a 1 TOPS NPU that nothing used: the vendor's firmware and

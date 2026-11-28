@@ -33,9 +33,7 @@ if  [[ $1 == "standalone" ]]; then
   sudo rm -f /dev/shm/PPSSPP_ID
   cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini
   xres="$(cat /sys/class/graphics/fb0/modes | grep -o -P '(?<=:).*(?=p-)' | cut -dx -f1)"
-  # ArkOS's older SDL for HDMI. dArkOS ships only its own SDL, which drives HDMI itself: without
-  # the file the preload only printed an ld.so warning in every PSP run on a TV.
-  if [ $xres -ge "1280" ] && [ -e /usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0 ]; then
+  if [ $xres -ge "1280" ]; then
     HDMI="/usr/lib/aarch64-linux-gnu/libSDL2-2.0.so.0.10.0"
   fi
   # On low-memory devices (RG43H Pro = 1GB), enable a 1G zram swap so PPSSPP
@@ -52,25 +50,7 @@ if  [[ $1 == "standalone" ]]; then
       printf "Launching ppsspp emulation now" >> /dev/tty1
     fi
   fi
-  # dArkOS RG52 Mini: NPU UPSCALE (EmulationStation's EMULATOR SETTINGS): the PSP's 480x272 enlarged
-  # by the NPU in the Vulkan rotate layer, as big as PPSSPP's own settings make the picture.
-  # darkos-npusr prints the --appendconfig file and the layer's DARKOS_NPU_SR. PPSSPP saves what
-  # --appendconfig gives it into its ini files; darkos-npusr puts those keys back before ppsspp.ini
-  # goes to ppsspp.ini.sdl.
-  npusr=/usr/local/bin/darkos-npusr
-  npu=()
-  if [ -x "$npusr" ]; then
-    [ -e /home/ark/.config/darkos-npusr/restore.json ] && "$npusr" restore
-    if [ "$DARKOS_NPU_UPSCALE" = on ] && npuout=$("$npusr" ppsspp "/$directory/psp/ppsspp/PSP/SYSTEM"); then
-      npucfg=${npuout%%$'\n'*}
-      npusr_sr=${npuout#*$'\n'}
-      [ "$npusr_sr" = "$npuout" ] && npusr_sr=x2:480x272
-      export DARKOS_NPU_SR=$npusr_sr
-      npu=(--appendconfig="$npucfg")
-    fi
-  fi
-  LD_PRELOAD="$HDMI" /opt/ppsspp/PPSSPPSDL --fullscreen "${npu[@]}" "$2"
-  [ ${#npu[@]} -gt 0 ] && "$npusr" restore
+  LD_PRELOAD="$HDMI" /opt/ppsspp/PPSSPPSDL --fullscreen "$2"
   cp -f /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini /$directory/psp/ppsspp/PSP/SYSTEM/ppsspp.ini.sdl
   sudo systemctl stop killer_daemon.service
 elif [[ $1 == "standalone-2021" ]]; then
