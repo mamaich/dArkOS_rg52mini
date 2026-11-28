@@ -66,9 +66,55 @@ the parts that did not change.
   `make-ota.py` (README.md, "In master for 1.14"). Wrong on checking: an Xbox
   360 pad's buttons swapped in ports (SDL's own mapping is used, right), the
   rumble PS1 core's config folder (it reports "PCSX-ReARMed" too). Left:
-  - Not reviewed: the native NPU code (`npusr-gles/`, `vk-rotate-layer/`'s
-    NPU part, the kernel's `rknpu` change, the models' scripts); its finders
-    stopped before reporting.
+  - The native NPU code, reviewed on 2026-11-28 by four finders (each file
+    read whole; nothing run but one check on the console). Nothing that
+    crashes or hangs in normal play; with NPU UPSCALE off the Vulkan layer is
+    as in 1.12. NPU UPSCALE with the malisx2 driver, which nobody had tried,
+    works (3DS and PSP: 60 fps, the NPU at 60 jobs a second). What is left,
+    the most visible first:
+    - GLES, on a TV: a PS1 frame of 640x480 or 512x480 that RetroArch scales
+      x2 (1280x960) passes for a 320x240 or 256x240 one scaled x4, and the
+      check for "not a console frame" cannot see it (both pixels it reads come
+      from one source pixel): the NPU enlarges every other pixel, thin lines
+      and small text go. SNES 512x448 the same. (`viewport_seen`, the `kk`
+      path; high confidence.)
+    - GLES, on the panel: when a game leaves the sizes the models know (PS1
+      hi-res, PAL 256 lines), the last known frame rectangle is used however
+      old it is; the 1% count of non-flat blocks throws most such frames out,
+      but a dark screen with a little text passes, enlarged from the wrong
+      place. (`frame()`: the `G.vw` fallback.)
+    - GLES, on a 1080p TV: the full window (1920x1080) passes for an x3 frame
+      of 640x360; when it is the last viewport before the swap that frame has
+      no upscale, and each size without a model takes one of six engine slots
+      for the session.
+    - GLES and the layer: the last good NPU picture is shown however old: for
+      a frame or two after a size change, and for good if the NPU stops
+      answering (the game then looks frozen while the sound goes on). A
+      fallback to the plain pass after a few frames without a new one.
+    - GLES, `fit` on a TV: the stretched picture is written over a larger
+      rectangle than the one the menu check reads, so RetroArch's notices in
+      the margins are drawn over.
+    - GLES: `load_syms` runs on every swap until the frame's geometry is found
+      (about 75 symbol lookups a frame when it never is).
+    - The layer, on exit: `sr_device_free` drops the device from the exit list
+      before it joins the NPU thread, and after a 2 s timeout leaves the thread
+      running in a layer the loader may unload (no `-z nodelete`): an NPU job
+      hung at the moment a game closes would end in SIGSEGV. A failed
+      `QueueSubmit` after `ResetFences` leaves a fence nobody signals (the next
+      present of that image waits for ever; needs a submit to fail, as on
+      out-of-memory).
+    - The kernel (`kernel_rk3562` drivers/rknpu): the raw task-buffer pointer
+      taken from the ioctl without checking the object (the probable path of
+      the 2026-11-24 crash; KNOWN-ISSUES.md, "A timed-out NPU job hung the
+      console"), and the window around `irq_entry` in the interrupt handler;
+      both reached only when an NPU job times out, and then they can hang the
+      console. A fix: look the object up by handle under the lock with
+      `kref_get_unless_zero`, and in `rknpu_job_abort` clear the core's job
+      unconditionally and `synchronize_irq()` before freeing.
+    - Small: the header of `npusr.inc.c` names shaders that are now
+      `sr_decode.frag` and `sr_rect.frag`; the test-only `ALLOC=heap` mode
+      leaks a file and a mapping per buffer; the layer takes a TV's surface for
+      any `DARKOS_NPU_SR`, including a string only the GLES library parses.
   - An updated card from 1.9-1.12 keeps the beta PortMaster's installer in
     `roms/tools` (the update does not touch the ROMs partition): a card where
     PortMaster is not installed yet, or is reinstalled, gets the beta again.

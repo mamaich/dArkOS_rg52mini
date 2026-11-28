@@ -1379,6 +1379,19 @@ drawn.
   that never calls `vkDestroyDevice`. A side finding: after `rmmod rknpu`
   and a reload its governor keeps the NPU at 300 MHz (the module stays
   loaded in normal use).
+  **The review of 2026-11-28 doubts that c0c1473 closed the path of that
+  crash** (read, not run). The trace fits a stale `task_obj_addr`: the
+  driver takes the raw kernel pointer of the task buffer from the ioctl and
+  takes a reference without checking that the object is alive
+  (`rknpu_job_alloc`), so a submit after the program's buffers were freed
+  gives "refcount_t: addition on 0" and then a NULL `kv_addr` in
+  `rknpu_job_subcore_commit_pc`. That path is open still; what keeps it shut
+  is our libraries stopping their NPU thread before librknnrt frees anything
+  (`npu_stop`, the layer's `atexit()`). And the `irq_entry` reset leaves a
+  window: between the handler's two takes of `irq_lock` an abort still sees
+  the job marked and frees it while the core keeps pointing at it. Both
+  belong to the kernel's to-do for 1.14 (TODO.md, "What the review of 1.13
+  left").
 - *The runtime and the models*: Rockchip's `librknnrt.so` 2.5.0, fetched by
   `build_npusr.sh` from rknn-toolkit2's release and checked by sha256 (its
   license allows distribution with applications for Rockchip's chips and
