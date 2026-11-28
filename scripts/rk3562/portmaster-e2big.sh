@@ -44,6 +44,10 @@
 # most ports take SDL's first game controller, and the console's controls come first. Not for
 # PortMaster's own menu (pm_launch.txt calls get_controls as well), which reads every pad.
 #
+# And in 2026.06 get_controls starts SDL's mapping file from PortMaster's whole database, as
+# 2026.11 does (control_fulldb below): started empty, a pad SDL has no mapping of its own for was
+# no game controller in a port (dArkOS 1.13, found 2026-11-28).
+#
 # PortMaster overwrites its files when it updates itself, so this runs at boot
 # and from portmaster-e2big.path whenever mod_dArkOS.txt or control.txt changes.
 
@@ -79,12 +83,49 @@ print("patched")
 PY
 }
 
+# control.txt (2026.06, the stable channel): get_controls starts /tmp/gamecontrollerdb.txt from
+# PortMaster's whole gamecontrollerdb.txt, as 2026.11 does, instead of empty. Started empty, the file
+# had only mapper.py's line for the console's controls (mapper.py reads ~/.config/emulationstation/
+# es_input.cfg, which has those alone), so a pad SDL has no mapping of its own for - a generic USB pad
+# such as DragonRise's 0079:0006, an 8BitDo in D-input mode - was no game controller in a port, and
+# with HIDE BUILT-IN GAMEPAD on AUTO the port had none at all. Cards written from images 1.9 to 1.12
+# have the beta, which does this itself; images from 1.13 install 2026.06 again. The E2BIG guards
+# above and in mod_dArkOS.txt keep the exported variable small, as with 2026.11.
+# Prints "patched" when it did; exit 0 when there is nothing to do, 2 when the line is not there.
+control_fulldb() {
+  python3 - "$1" <<'PY'
+import sys
+MARK = "# dArkOS RG52 Mini: the whole controller database"
+FULL = '    cp "$controlfolder/gamecontrollerdb.txt" /tmp/gamecontrollerdb.txt\n'
+OLD = '  else\n    echo "" > /tmp/gamecontrollerdb.txt\n  fi\n'
+NEW = '''  else
+    # dArkOS RG52 Mini: the whole controller database (added by /usr/local/bin/portmaster-e2big.sh)
+    # 2026.06 started this file empty: a pad SDL has no mapping of its own for was no game
+    # controller in a port. 2026.11 starts it from PortMaster's database, as this does.
+''' + FULL + '''  fi
+'''
+p = sys.argv[1]
+s = open(p, encoding="utf-8", newline="").read()
+if MARK in s or FULL in s:
+    sys.exit(0)
+if s.count(OLD) != 1:
+    sys.exit(2)
+# in place: the file keeps its owner, mode and ACL
+open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD, NEW))
+print("patched")
+PY
+}
+
 # control.txt: get_controls hides the console's controls from SDL when darkos-portpads says so.
-# Same anchor and exit codes as control_e2big.
+# Same anchor and exit codes as control_e2big. A block that images 1.11 and 1.12 put in lacks
+# PortMaster.sh in its case (2026.06's menu calls get_controls from there): that line is brought up
+# to date ("upgraded"), as the block is otherwise never written again.
 control_hidepad() {
   python3 - "$1" <<'PY'
 import sys
 MARK = "# dArkOS RG52 Mini: built-in pad hidden"
+OLD_CASE = "    *pm_launch.txt*) ;;\n"
+NEW_CASE = "    *pm_launch.txt*|*/PortMaster.sh*) ;;\n"
 OLD = '  sdl_controllerconfig="$(< "${SDL_GAMECONTROLLERCONFIG_FILE}")"\n'
 NEW = OLD + '''  # dArkOS RG52 Mini: built-in pad hidden from the port's SDL (added by /usr/local/bin/portmaster-e2big.sh)
   # Most ports take SDL's first game controller, and the console's controls come first: with a
@@ -109,6 +150,9 @@ NEW = OLD + '''  # dArkOS RG52 Mini: built-in pad hidden from the port's SDL (ad
 p = sys.argv[1]
 s = open(p, encoding="utf-8", newline="").read()
 if MARK in s:
+    if NEW_CASE not in s and s.count(OLD_CASE) == 1:
+        open(p, "w", encoding="utf-8", newline="").write(s.replace(OLD_CASE, NEW_CASE))
+        print("upgraded")
     sys.exit(0)
 if s.count(OLD) != 1:
     sys.exit(2)
@@ -225,7 +269,11 @@ LIBGL
     [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, left as it is"
     r=$(control_hidepad "$ct"); rc=$?
     [ "$r" = patched ] && logger -t portmaster-e2big "built-in pad hiding added to get_controls in $ct"
+    [ "$r" = upgraded ] && logger -t portmaster-e2big "built-in pad hiding in $ct: PortMaster's own menu (PortMaster.sh) left alone too"
     [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, no built-in pad hiding"
+    r=$(control_fulldb "$ct"); rc=$?
+    [ "$r" = patched ] && logger -t portmaster-e2big "get_controls in $ct starts from the whole controller database"
+    [ $rc = 2 ] && logger -t portmaster-e2big "$ct: get_controls not as expected, the controller database left as it is"
   fi
   pw="$dir/pugwash"
   if [ -f "$pw" ]; then

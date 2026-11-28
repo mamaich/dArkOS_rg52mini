@@ -67,7 +67,7 @@ rc=$?
 # release's wrapper)
 if [ $rc -eq 1 ] && [ $((SECONDS - start)) -lt 10 ] && [ -x "$bioscheck" ] && "$bioscheck" enabled; then
   log=$(mktemp /tmp/retroarch-failed.XXXXXX)
-  /opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" ${ext:+"--appendconfig=$ext"} --verbose "$@" 2>&1 | tail -n 300 > "$log"
+  env "${npuenv[@]}" /opt/retroarch-next/bin/retroarch -c "$N/retroarch.cfg" ${ext:+"--appendconfig=$ext"} --verbose "$@" 2>&1 | tail -n 300 > "$log"
   [ "${PIPESTATUS[0]}" -eq 1 ] && "$bioscheck" failed retroarch-next "$log" "$@"
   rm -f "$log"
 fi

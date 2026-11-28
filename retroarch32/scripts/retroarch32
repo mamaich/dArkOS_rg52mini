@@ -116,7 +116,7 @@ else
   # back to ES in silence; a game that does load this time just runs.
   if [ $rc -eq 1 ] && [ $((SECONDS - start)) -lt 10 ] && [ -x "$bioscheck" ] && "$bioscheck" enabled; then
     log=$(mktemp /tmp/retroarch-failed.XXXXXX)
-    /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} --verbose "$@" 2>&1 | tail -n 300 > "$log"
+    env "${npuenv[@]}" /opt/retroarch/bin/${emulator} -c /home/ark/.config/${emulator}/retroarch.cfg ${ext:+"--appendconfig=$ext"} --verbose "$@" 2>&1 | tail -n 300 > "$log"
     [ "${PIPESTATUS[0]}" -eq 1 ] && "$bioscheck" failed "$emulator" "$log" "$@"
     rm -f "$log"
   fi

@@ -45,6 +45,17 @@ if [ "$(sha256sum "$rknnrt32" 2>/dev/null | cut -d' ' -f1)" != "$RKNNRT32_SHA256
 fi
 sudo mkdir -p Arkbuild/usr/lib/arm-linux-gnueabihf
 sudo install -m 644 "$rknnrt32" Arkbuild/usr/lib/arm-linux-gnueabihf/librknnrt.so
+# The 32-bit chroot may not be there yet: RetroArch32 and retrorun32 set it up, and when nothing of
+# theirs changed they come from the package cache without it. call_chroot32 sets it up only when there
+# is no Arkbuild32 at all, so it is done here before anything is made in it (the mkdir below made a bare
+# Arkbuild32, the chroot was never set up, and the build stopped; 1.13's builds all rebuilt RetroArch32).
+if [ ! -e Arkbuild32/usr/bin/bash ]; then
+  if [ -d Arkbuild32 ]; then
+    echo "ERROR: Arkbuild32 is there but is no chroot (left by an earlier build?); remove it and build again"
+    exit 1
+  fi
+  setup_arkbuild32
+fi
 sudo rm -rf Arkbuild32/home/ark/npusr-gles
 sudo mkdir -p Arkbuild32/home/ark/npusr-gles
 sudo cp npusr-gles/npusr_gles.c npusr-gles/build.sh vk-rotate-layer/rknn_api.h Arkbuild32/home/ark/npusr-gles/

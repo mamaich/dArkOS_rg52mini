@@ -70,8 +70,10 @@ BOOT_EXCLUDE = ["dualboot", "bootmenu_*.bmp", "bootmenu2_*.bmp",
                 "firstboot.sh", "expandtoexfat.sh", "fstab.exfat", "fstab.dualboot",
                 "doneit"]
 
-# Nodes of the device tree the boot loader's menu uses on a dual-boot card.
-DTB_NODES = [r"play_joystick", r"adc-keys", r"saradc@ffaa0000",
+# Nodes of the device tree the boot loader's menu uses on a dual-boot card. Both ADCs: play_joystick
+# reads most of its channels and adc-keys its one from saradc@ff730000 (added 2026-11-28; 1.12's and
+# 1.13's are the same).
+DTB_NODES = [r"play_joystick", r"adc-keys", r"saradc@ffaa0000", r"saradc@ff730000",
              r"dsi@ffb10000", r"panel@0", r"backlight"]
 
 

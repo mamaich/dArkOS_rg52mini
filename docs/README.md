@@ -674,6 +674,19 @@ In master for 1.14, not released yet (VERSION says 1.14):
   `ppsspp/ppsspp.sh.rg52mini`; with the option ON a PSP game started as
   without it (KNOWN-ISSUES.md, "NPU UPSCALE did nothing for the PSP in
   1.13"). Checked on a card written from the 1.13 image, on the panel.
+- Ports take a generic USB pad again on a card written from 1.13: the stable
+  PortMaster (2026.06) gave a port's SDL no mapping for a pad SDL does not
+  know itself, so such a pad was no controller, and with HIDE BUILT-IN GAMEPAD
+  on AUTO the port had none (KNOWN-ISSUES.md, "Ports: a generic pad was no
+  controller on cards written from 1.13"). On a card still on the stable
+  channel from an image up to 1.8, PortMaster's own menu no longer loses the
+  console's controls while a pad is in.
+- The build: the 32-bit chroot is set up before the NPU library's armhf
+  build when RetroArch32 comes from the cache (it stopped the build then);
+  RetroArch's slang shaders are cloned with retries and their absence stops
+  the build; the RetroArch launchers' second start (after a game failed to
+  load) gets NPU UPSCALE's environment too; `make-ota.py` compares the second
+  ADC of the dual-boot menu as well.
 
 See TODO.md, "For 1.14", for what else is planned.
 

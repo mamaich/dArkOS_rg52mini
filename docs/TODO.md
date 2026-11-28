@@ -7,7 +7,10 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 Found by the check of the 1.13 release on 2026-11-28 (the owner asked whether
 pads over USB and Bluetooth, or anything else, got broken or slower again; the
 tree, the image and the package from 1.12 compared file by file, the kernel's
-and Debian's parts too). Input came out as it was in 1.12: the kernel's change
+and Debian's parts too). Input came out as it was in 1.12 but for one thing on
+cards written from the 1.13 image, found by the review and fixed in master:
+a generic USB pad was no controller in ports (KNOWN-ISSUES.md, "Ports: a
+generic pad was no controller on cards written from 1.13"). The rest: the kernel's change
 is the NPU's nodes and `rknpu` as a module, Debian's packages differ in krb5,
 zstd and shadow only, SDL 2.32.11's joystick code differs from 2.32.10's in a
 sensor axis order for Nintendo pads, three device ids and a libusb check, our
@@ -54,6 +57,48 @@ the parts that did not change.
   Metroid Prime, Castlevania on 1.13's Azahar): within the spread. To do when
   1.14 is prepared: the pin and the profile in `build_malisx2.sh`, the
   recipe's library against theirs, `vulkaninfo`'s UUID, a smoke run.
+* **What the review of 1.13 left** (the owner's `/code-review` of the range
+  v1.12..v1.13, 2026-11-27/28; four of its finders reported before the usage
+  limit stopped it, each candidate then checked here). Fixed in master: the
+  PSP launcher, ports and generic pads, the pad-hiding block of old stable
+  cards, the 32-bit chroot before the NPU library's armhf build, the slang
+  clone, the RetroArch launchers' second start, the second ADC in
+  `make-ota.py` (README.md, "In master for 1.14"). Wrong on checking: an Xbox
+  360 pad's buttons swapped in ports (SDL's own mapping is used, right), the
+  rumble PS1 core's config folder (it reports "PCSX-ReARMed" too). Left:
+  - Not reviewed: the native NPU code (`npusr-gles/`, `vk-rotate-layer/`'s
+    NPU part, the kernel's `rknpu` change, the models' scripts); its finders
+    stopped before reporting.
+  - An updated card from 1.9-1.12 keeps the beta PortMaster's installer in
+    `roms/tools` (the update does not touch the ROMs partition): a card where
+    PortMaster is not installed yet, or is reinstalled, gets the beta again.
+    A hook could replace the installer when its sha256 is a 1.9-1.12 one, but
+    the package would have to carry the 24 MB installer; or say it in the notes.
+  - The slang shaders under `/home`: the update keeps a user's own copy of a
+    file that differs (fetched with the Online Updater) and puts the image's
+    beside it as `.ota-new`, possibly thousands of them; and the clone follows
+    upstream's head, so each image carries its churn into the next package
+    (OTA.md's rule says pin such things). The GLSL clones' `.git` (about 48 MB)
+    stays on updated cards: make-ota never looks into `.git`.
+  - ARMSX2's cache key hashes `build_pcsx2sa.sh` whole, so moving the PS2
+    game patches' pin in it rebuilt ARMSX2 for 1.13 (same source and profile,
+    another binary; God of War 38.1 and Jak 17.4 against 1.12's 37.7 and 17.1,
+    so not slower). The key should leave that line out.
+  - `build_retroarch.sh`: the hold-back of parallel_n64 and yabasanshiro to the
+    old prebuilt builds is in the 64-bit loop only; the 32-bit one takes both
+    from whatever pin is set (no effect in 1.13: the armhf files did not change).
+  - `build_sdl2_ondevice.sh` (a developer tool) still builds 2.32.10 and links
+    `libSDL2-2.0.so.0` to its file; on a 1.13 console it would take SDL back.
+  - `resume_body.sh` lacks build_vkselect, build_malisx2, build_trigaxesoff and
+    build_gl4es of `build_rg52mini.sh` (older than 1.13): a resumed build makes
+    an image without them.
+  - NPU UPSCALE is not offered for megadrivemsu, snesmsu, satellaview, nor the
+    arcade folders with Neo Geo sets, though the launchers would serve them.
+  - retroarch-next 25a1ee8 rewrote how `udev_joypad.c` reads pads (epoll); a
+    pad plugged in or out during a game there was not tried.
+  - Dolphin: a Wii game that takes a GameCube pad too (Mario Kart Wii, Brawl)
+    gets each press of the console's controls from both the new Wiimote and the
+    GameCube pad; not seen in a game yet.
 
 ## For 1.13 (the owner, 2026-11-22: not into the 1.12 build, which was released that day; released 2026-11-27)
 

@@ -1075,6 +1075,52 @@ from 1.9 to 1.12 installs is a beta.
 
   The same item switches back to the beta.
 
+## Ports: a generic pad was no controller on cards written from 1.13 (2026-11-28) — fixed for 1.14
+
+The stable PortMaster 2026.06.23, which images up to 1.8 and from 1.13 install,
+starts SDL's mapping file for a port (`/tmp/gamecontrollerdb.txt`,
+`SDL_GAMECONTROLLERCONFIG_FILE`) empty, and `mapper.py` then adds the pads of
+`~/.config/emulationstation/es_input.cfg`, which has the console's controls
+alone. So in a port SDL knows a pad only from its own built-in mappings, or
+when the pad reports `BTN_GAMEPAD` and gets an automatic one. A generic USB pad
+does neither (DragonRise's 0079:0006, cheap SNES-style pads, an 8BitDo in
+D-input mode): it was no game controller, and with ES's HIDE BUILT-IN GAMEPAD
+on AUTO (the default since 1.11), which hides the console's controls while a
+pad ES knows is in, the port had no controller at all. The 2026.11 beta that
+images 1.9 to 1.12 installed starts the file from PortMaster's whole
+`gamecontrollerdb.txt` (about 1800 mappings), the only difference in
+`get_controls` between the two. Found by the check of the 1.13 release
+(the review's finders, then on the console).
+
+On a card written from the 1.13 image, two virtual pads (uinput) and the
+image's SDL asked what a port's `get_controls` leaves it (2026-11-28):
+
+| `get_controls` | HIDE BUILT-IN GAMEPAD | Xbox 360 pad | DragonRise 0079:0006 | the console's controls |
+|---|---|---|---|---|
+| 2026.06 (cards from 1.13) | AUTO | controller (SDL's own mapping) | not a controller | hidden |
+| 2026.06 | NO | controller | not a controller | controller |
+| whole database (1.9 to 1.12, and the fix) | AUTO | controller | controller ("USB gamepad") | hidden |
+| whole database | NO | controller | controller | controller |
+
+The Xbox 360 pad's buttons are right in all four (A, B, the shoulders: SDL's
+built-in mapping or PortMaster's, both label-true). So the pads SDL knows
+(Xbox 360 and XInput ones, ShanWan, the PlayStation and Switch pads) were not
+touched; the unknown generic ones were.
+
+The fix: `portmaster-e2big.sh` patches 2026.06's `get_controls` to start the
+file from the whole database, as 2026.11 does (`control_fulldb`, at boot and
+whenever PortMaster rewrites `control.txt`). The E2BIG guards already cut the
+exported variable down to `mapper.py`'s lines, as with 2026.11. A card with
+the beta has the line already and is left as it is. Tried on copies of
+`control.txt` (2026.06 as installed, 2026.06 patched by 1.12's script, the
+beta): each gets every part once, a second run changes nothing.
+
+The same commit brings up to date the pad-hiding block that 1.11 and 1.12 put
+into a 2026.06 `control.txt`: it lacked `*/PortMaster.sh*` in its case, so on
+a card first written from an image up to 1.8 and still on the stable channel,
+PortMaster's own menu got the console's controls hidden while a pad was in.
+1.13 had changed the block but wrote it only into a file without one.
+
 ## DSperate 4.0.2: the picture on its side (2026-11-26) — fixed in 1.13
 
 The owner saw it on the second 1.13 test build: the two DS screens side by
