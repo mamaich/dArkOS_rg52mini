@@ -4,6 +4,48 @@ A working list, not a roadmap. Ordered by what a build would answer soonest.
 
 ## For 1.14
 
+**Where 1.14 stands** (2026-11-28; VERSION says 1.14, no image built yet). In
+master since v1.13 (docs/README.md, "In master for 1.14"): NPU UPSCALE for the
+PSP in the launcher the image installs; ports take a generic USB pad again on
+a card written from 1.13 (PortMaster 2026.06's `get_controls` from the whole
+controller database), and PortMaster's own menu keeps the console's controls
+on an old stable card; the native NPU fixes of the review (the GLES library,
+the Vulkan layer, kernel_rk3562 3845295e6); build fixes (the 32-bit chroot
+before the NPU library, the slang clone, the launchers' second start,
+`make-ota.py`'s second ADC). Two of these were 1.13's known issues, written
+into its release notes on GitHub on 2026-11-28: PSP's NPU UPSCALE, and
+generic pads in ports on a card from the 1.13 image.
+
+**To do for the release**, in this order (the build only on the owner's word):
+
+1. The upstream check (`tools/upstream/check.py`, at most once a day); what is
+   new goes to the owner, the pins are not moved without his word.
+2. malisx2 0.6.1 into `build_malisx2.sh` (below), if the owner takes it with
+   1.14.
+3. The decisions left to the owner from the review (below, "What the review
+   of 1.13 left"): the beta PortMaster's installer on cards updated from
+   1.9-1.12, the `.ota-new` files the 1.13 update may have left beside a
+   user's own slang shaders (a 1.14 hook could clean them), the slang clone's
+   pin, ARMSX2's cache key.
+4. The build; then the post-build check with what 1.13 lacked (OTA.md,
+   "Release procedure", step 2): every runtime file changed since v1.13 found
+   in the image with its new content, `ppsspp.sh` among them.
+5. Packages from 1.13 and 1.12 (N-1, N-2); the list of files of each read
+   line by line.
+6. On the console, by the package from 1.13, on a card whose system files are
+   the image's (the owner's new dual-boot card has `ppsspp.sh` and
+   `portmaster-e2big.sh` from master by hand: the same as 1.14's, so the update
+   finds them new already): the usual smoke run; NPU UPSCALE for 3DS, PSP,
+   PS1 and Mega Drive on the panel and on a TV (the geometry fixes are for the
+   TV, and the PSP's launcher has not run there); a port with a generic USB
+   pad if one is at hand (else the virtual pads of 2026-11-28); PortMaster's
+   menu with a pad in.
+7. The release notes in general words, the draft beside the scripts in
+   `~/rg52/sess19` (not in the repo): 1.13's two known issues fixed; the NPU
+   more robust (a picture that stops is no longer frozen on screen); the
+   kernel's NPU driver; malisx2 0.6.1 if taken (each emulator builds its
+   shader caches once more after the update).
+
 Found by the check of the 1.13 release on 2026-11-28 (the owner asked whether
 pads over USB and Bluetooth, or anything else, got broken or slower again; the
 tree, the image and the package from 1.12 compared file by file, the kernel's

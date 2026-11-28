@@ -305,6 +305,20 @@ may change, so the client checks free space and assumes no sizes.
    version after the old one, oldest first), so a hook has to work on any
    later build too. Up to 2026-10-26 make-ota took the new release's hooks
    only; the 1.1 → 1.3 package lost nothing by it, since 1.2 had none.
+   The other way round too: every runtime file changed since the previous
+   release (`git diff --name-status v<N-1> HEAD`, the scripts, launchers and
+   configs that go into the image) has to be found in the new image with its
+   new content (sha256 of `git show HEAD:<file>` against the image's files).
+   A file the image does not take is a change that reaches no one: where a
+   plain file has a twin with the unit's name (`ppsspp/ppsspp.sh.rg52mini`),
+   the build installs the twin. 1.13 shipped the PSP's NPU UPSCALE in the
+   plain launcher and so not at all (KNOWN-ISSUES.md, "NPU UPSCALE did nothing
+   for the PSP in 1.13").
+   And a test update on the console proves only what the package carries:
+   `darkos-ota` looks at the files in its manifest, so a file put on the
+   console by hand that the two images do not differ in stays and stands in
+   for the image's. Before the release's checks, compare the console's system
+   files with the new image's (or test on a card written from the image).
 3. Upload the package as an asset of the release, next to the image volumes.
 4. Only then commit and push `ota/rg52mini.json`; devices see the update from
    that moment.
