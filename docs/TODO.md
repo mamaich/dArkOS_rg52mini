@@ -159,8 +159,13 @@ the parts that did not change.
     `CRCsum="0000000000"`), not by sha256: of 1.9's to 1.11's only 1.12's is at
     hand. Tried on the console: 1.12's replaced, an installer of the user's
     (another CRC, or another header) and a card without the copy untouched,
-    twice. A PortMaster installed already keeps its channel (KNOWN-ISSUES.md
-    says how to go back).
+    twice. The new file keeps the old one's owner, mode and ACL: on the
+    dual-boot card `/roms` is Android's ext4 (`ark:media_rw`, 770, folders
+    with a default ACL that a new file takes, and the console's `cp` does not
+    take it off), which the first version of the hook turned into a root-owned
+    file with an ACL; on exFAT the mount sets them (tried on vfat in WSL, whose
+    kernel has no exFAT). A PortMaster installed already keeps its channel
+    (KNOWN-ISSUES.md says how to go back).
   - The slang shaders under `/home`: the update keeps a user's own copy of a
     file that differs (fetched with the Online Updater) and puts the image's
     beside it as `.ota-new`, possibly thousands of them; and the clone follows

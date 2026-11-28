@@ -38,9 +38,29 @@ for k in (b"filesizes", b"totalsize", b"MD5", b"CRCsum"):
     h = re.sub(rb'^(' + k + rb')="[^"\n]*"$', rb'\1=""', h, count=1, flags=re.M)
 sys.exit(0 if hashlib.sha256(h).hexdigest() == STABLE_2026_06 else 1)
 PY
+# The new content under the old file's owner, mode and ACL: on a dual-boot card /roms is Android's
+# ext4 (ark:media_rw, 770, a default ACL on the folders that a file made here would take, and the
+# console's cp leaves it); on exFAT the mount gives every file the same, and cp cannot set them
+# (it still makes the file).
 tmp=/roms/tools/.ota-tmp.Install.PortMaster.sh
-if cp "$N" "$tmp" && mv -f "$tmp" "$F"; then
-  chmod 777 "$F" 2>/dev/null
+rm -f "$tmp"
+cp -p --attributes-only "$F" "$tmp" 2>/dev/null
+[ -e "$tmp" ] && python3 - "$F" "$tmp" <<'PY'
+import os, sys
+src, dst, a = sys.argv[1], sys.argv[2], "system.posix_acl_access"
+try:
+    v = os.getxattr(src, a)
+except OSError:
+    v = None
+try:
+    if v is not None:
+        os.setxattr(dst, a, v)
+    elif a in os.listxattr(dst):
+        os.removexattr(dst, a)
+except OSError:
+    pass
+PY
+if cat "$N" > "$tmp" && mv -f "$tmp" "$F"; then
   echo "  $F: the stable PortMaster's installer, in place of the beta one of images 1.9-1.12"
 else
   rm -f "$tmp"
