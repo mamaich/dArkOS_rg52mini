@@ -59,8 +59,11 @@ beta one; the slang shaders' check (below, "What the review of 1.13 left").
 7. The release notes in general words, the draft beside the scripts in
    `~/rg52/sess19` (not in the repo): 1.13's two known issues fixed; the NPU
    more robust (a picture that stops is no longer frozen on screen); the
-   kernel's NPU driver; malisx2 0.6.1 if taken (each emulator builds its
-   shader caches once more after the update).
+   kernel's NPU driver; malisx2 0.6.1 (each emulator builds its shader caches
+   once more after the update); on a card updated from 1.9-1.12 the update
+   replaces the beta PortMaster installer with the stable one, while a
+   PortMaster installed already stays on its channel (the switch to stable,
+   as in 1.13's notes); the update clears what it left beside the shaders.
 
 Found by the check of the 1.13 release on 2026-11-28 (the owner asked whether
 pads over USB and Bluetooth, or anything else, got broken or slower again; the
