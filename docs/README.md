@@ -705,11 +705,17 @@ In master for 1.14, not released yet (VERSION says 1.14):
   after the update (KNOWN-ISSUES.md, "malisx2 0.6.1").
 - The update removes the `.ota-new` files it puts beside a user's own copies
   of RetroArch's shaders (fetched with the Online Updater; from 1.12 to 1.13
-  there could be thousands): `ota/hooks/all-drop-shader-ota-new.sh`, in every
-  package from 1.14 on. The slang shaders keep following upstream, and a
-  release now checks the presets a new set changes on the console
+  there could be thousands) and the GLSL clones' `.git` that images up to
+  1.12 left on their cards (48 MB): `ota/hooks/all-drop-shader-leftovers.sh`,
+  in every package from 1.14 on. The slang shaders keep following upstream,
+  and a release now checks the presets a new set changes on the console
   (`tools/slangcheck`; OTA.md, "Release procedure"), with `SLANG_COMMIT` in
   `build_retroarch.sh` to pin a broken set back.
+- A card updated from 1.9-1.12 gets the stable PortMaster's installer in
+  `roms/tools` in place of those images' beta one, so a PortMaster installed
+  there from now on is the stable one (`ota/hooks/1.14-portmaster-stable-installer.sh`,
+  from a copy the image keeps in `/usr/share/darkos/portmaster`; KNOWN-ISSUES.md,
+  "PortMaster: images 1.9 to 1.12 installed the beta channel").
 
 See TODO.md, "For 1.14", for what else is planned.
 

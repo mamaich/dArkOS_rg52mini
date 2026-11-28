@@ -1013,6 +1013,11 @@ PMhas=$([ -f Install.PortMaster.sh ] && python3 scripts/rk3562/pm-installer-vers
 echo "PortMaster installer: installs ${PMhas:-nothing}, the stable channel is ${PMver:-unknown}"
 [ -n "${PMhas}" ] && [ "${PMhas}" = "${PMver}" ]
 verify_action
+# And a copy on the root, for ota/hooks/1.14-portmaster-stable-installer.sh: it puts the image's
+# installer over the beta one that cards made from 1.9 to 1.12 still have in roms/tools. The
+# ROMs partition is no part of an update (make-ota leaves roms.tar out); the root is.
+sudo install -D -m 644 Install.PortMaster.sh Arkbuild/usr/share/darkos/portmaster/Install.PortMaster.sh
+verify_action
 sudo mv -f Install.PortMaster.sh ${fat32_mountpoint}/tools/Install.PortMaster.sh
 chmod 777 ${fat32_mountpoint}/tools/Install.PortMaster.sh
 

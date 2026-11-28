@@ -1074,6 +1074,18 @@ from 1.9 to 1.12 installs is a beta.
      version. PortMaster downloads it, says it is installed, and restarts.
 
   The same item switches back to the beta.
+* **And the installer it came from stays too** (the review of 1.13, 2026-11-28).
+  An updated card from 1.9-1.12 still had their installer in `roms/tools`, so
+  PortMaster installed there for the first time, or again, came as the beta.
+  The owner: replace it. From 1.14 the update does
+  (`ota/hooks/1.14-portmaster-stable-installer.sh`): the image keeps a copy of
+  its installer on the root (`/usr/share/darkos/portmaster`; the ROMs
+  partition's `roms.tar` is no part of a package), and the hook puts it over
+  an installer that is one of those, known by what their repack left: the
+  stable 2026.06 installer's header with `CRCsum="0000000000"` (1.12's, which
+  installs 2026.11.17-0700, has it; of 1.9's to 1.11's no copy is at hand).
+  Any other installer is left alone. A PortMaster installed already keeps its
+  channel: the way back is above.
 
 ## Ports: a generic pad was no controller on cards written from 1.13 (2026-11-28) — fixed for 1.14
 
@@ -1996,9 +2008,13 @@ Found while comparing NPU UPSCALE with RetroArch's shaders (above).
   - The update kept a user's own copies of these shaders (fetched with the
     Online Updater) and put the image's beside each that differed as
     `.ota-new` (thousands from 1.12 to 1.13, which RetroArch never reads);
-    from 1.14 every package removes them (`ota/hooks/all-drop-shader-ota-new.sh`,
+    from 1.14 every package removes them (`ota/hooks/all-drop-shader-leftovers.sh`,
     the owner's word of 2026-11-28; the GLSL folders of both RetroArchs too,
-    since they follow upstream as well).
+    since they follow upstream as well). The same hook removes the GLSL
+    clones' `.git` that images up to 1.12 left on the cards they made (24 MB
+    for each RetroArch; an update never looks into a `.git`) and the
+    Sharp-Shimmerless clone's inside, when their origin is the image's clone;
+    the build leaves that one out too from 1.14.
 
 ## OpenEnroth (Might and Magic VII): clicks missed the cursor (2026-11-21) — fixed in 1.12
 

@@ -15,8 +15,9 @@ before the NPU library, the slang clone, the launchers' second start,
 `make-ota.py`'s second ADC). Two of these were 1.13's known issues, written
 into its release notes on GitHub on 2026-11-28: PSP's NPU UPSCALE, and
 generic pads in ports on a card from the 1.13 image. Also in master: malisx2
-0.6.1 (below), the hook that removes the shaders' `.ota-new` files, and the
-slang shaders' check (below, "What the review of 1.13 left").
+0.6.1 (below); the hooks that remove the shaders' `.ota-new` files and the
+GLSL clones' `.git`, and that put the stable PortMaster installer over 1.9-1.12's
+beta one; the slang shaders' check (below, "What the review of 1.13 left").
 
 **To do for the release**, in this order (the build only on the owner's word):
 
@@ -25,11 +26,14 @@ slang shaders' check (below, "What the review of 1.13 left").
 2. malisx2: 0.6.1 is in `build_malisx2.sh`. The owner, 2026-11-28: this one,
    or a newer one if the malisx2 session hands one over before the build
    (its pin and profile then go in instead, with that session's numbers).
-3. The one decision left to the owner from the review (below, "What the
-   review of 1.13 left"): the beta PortMaster's installer on cards updated
-   from 1.9-1.12. Decided on 2026-11-28: the shaders' `.ota-new` files go
-   (`ota/hooks/all-drop-shader-ota-new.sh`), the slang shaders follow
-   upstream with a check (step 4), ARMSX2's cache key stays as it is.
+3. The owner's decisions on what the review of 1.13 left (below), all of
+   2026-11-28 and in master: the shaders' `.ota-new` files and the GLSL
+   clones' `.git` go (`ota/hooks/all-drop-shader-leftovers.sh`), the beta
+   PortMaster installer of cards updated from 1.9-1.12 is replaced by the
+   stable one (`ota/hooks/1.14-portmaster-stable-installer.sh`, from the copy
+   the image now keeps at `/usr/share/darkos/portmaster`: 24 MB more in the
+   image and in the packages), the slang shaders follow upstream with a check
+   (step 4), ARMSX2's cache key stays as it is.
 4. The build; then the post-build check with what 1.13 lacked (OTA.md,
    "Release procedure", step 2): every runtime file changed since v1.13 found
    in the image with its new content, `ppsspp.sh` among them. And the slang
@@ -47,7 +51,11 @@ slang shaders' check (below, "What the review of 1.13 left").
    PS1 and Mega Drive on the panel and on a TV (the geometry fixes are for the
    TV, and the PSP's launcher has not run there); a port with a generic USB
    pad if one is at hand (else the virtual pads of 2026-11-28); PortMaster's
-   menu with a pad in.
+   menu with a pad in. The new hooks on that update: before it, 1.12's beta
+   installer in `roms/tools`, a `shaders_glsl/.git` with libretro's origin and
+   a few `.ota-new` beside the shaders (the files of 2026-11-28 are in
+   `/home/ark/comptest/pmhook`); after it, the image's installer, no `.git`, no
+   `.ota-new`, the hooks' lines in the update's log.
 7. The release notes in general words, the draft beside the scripts in
    `~/rg52/sess19` (not in the repo): 1.13's two known issues fixed; the NPU
    more robust (a picture that stops is no longer frozen on screen); the
@@ -142,24 +150,36 @@ the parts that did not change.
   - An updated card from 1.9-1.12 keeps the beta PortMaster's installer in
     `roms/tools` (the update does not touch the ROMs partition): a card where
     PortMaster is not installed yet, or is reinstalled, gets the beta again.
-    A hook could replace the installer when its sha256 is a 1.9-1.12 one, but
-    the package would have to carry the 24 MB installer; or say it in the notes.
+    **Done** (the owner, 2026-11-28: replace it with a hook):
+    `ota/hooks/1.14-portmaster-stable-installer.sh` puts the image's installer
+    over it, from a copy the image keeps on the root since then
+    (`/usr/share/darkos/portmaster/Install.PortMaster.sh`,
+    `finishing_touches-rk3562.sh`; roms.tar is no part of a package). It knows
+    those installers by what their repack left (the 2026.06 stable header,
+    `CRCsum="0000000000"`), not by sha256: of 1.9's to 1.11's only 1.12's is at
+    hand. Tried on the console: 1.12's replaced, an installer of the user's
+    (another CRC, or another header) and a card without the copy untouched,
+    twice. A PortMaster installed already keeps its channel (KNOWN-ISSUES.md
+    says how to go back).
   - The slang shaders under `/home`: the update keeps a user's own copy of a
     file that differs (fetched with the Online Updater) and puts the image's
     beside it as `.ota-new`, possibly thousands of them; and the clone follows
     upstream's head, so each image carries its churn into the next package
     (OTA.md's rule says pin such things). **Decided** (the owner, 2026-11-28):
     the `.ota-new` files go, in every package from 1.14 on
-    (`ota/hooks/all-drop-shader-ota-new.sh`: under the two RetroArchs'
+    (`ota/hooks/all-drop-shader-leftovers.sh`: under the two RetroArchs'
     `shaders` folders only, the user's copies kept; tried on the console with
     files made as the client makes them); the shaders follow upstream's head,
     "but checked: remember the errors that made them not work here" (1.13's
     crash of RetroArch on presets sized from the source). The check:
     `tools/slangcheck` (KNOWN-ISSUES.md, "RetroArch's shaders on the
     Mali-G52"), a pin for a broken set: `SLANG_COMMIT` in `build_retroarch.sh`.
-    Still open: the GLSL clones' `.git` (about 48 MB) stays on updated cards,
-    since make-ota never looks into `.git`; the hook could remove it too (not
-    asked for).
+    The GLSL clones' `.git` (about 48 MB on a card updated from an image up to
+    1.12; make-ota never looks into `.git`) goes too (the owner, the same day):
+    the same hook removes `shaders_glsl/.git` and the Sharp-Shimmerless clone's
+    inside it (132 KB, in the 1.13 image as well; the build leaves it out from
+    1.14) of both RetroArchs when their origin is the image's clone, and keeps
+    any other. Tried on the console the same way.
   - ARMSX2's cache key hashes `build_pcsx2sa.sh` whole, so moving the PS2
     game patches' pin in it rebuilt ARMSX2 for 1.13 (same source and profile,
     another binary; God of War 38.1 and Jak 17.4 against 1.12's 37.7 and 17.1,
